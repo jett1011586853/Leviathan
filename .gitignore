@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+
+# Provider credentials and local environment
+.env
+.env.*
+!.env.example
+
+# Local Leviathan/legacy workspace state
+.leviathan/settings.local.json
+.claude/settings.local.json
+
+# Logs and diagnostics
+*.log
+err.log
+err.txt
+_crash.log
+_stdout.log
+
+# Temporary smoke-test artifacts
+root.unmount()
+testpre.js
+test_hello.txt
+simple_cli.ts
+test_import.ts
+test_api.ts
+test_ink.ts
+
+# Build output
+dist/
+coverage/
