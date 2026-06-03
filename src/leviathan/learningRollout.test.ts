@@ -1,0 +1,95 @@
+import { describe, expect, test } from 'bun:test'
+
+import {
+  OPTIONAL_ROLLOUT_FIELDS,
+  POLAR_ONLY_ROLLOUT_FIELDS,
+  ROLLOUT_SCHEMA_VERSION,
+  createEmptyRolloutBundle,
+} from '../learning/rolloutSchema.js'
+import { redactText, redactValue } from '../learning/redaction.js'
+
+describe('Leviathan HL/Polar rollout schema', () => {
+  test('creates a v1 rollout bundle with required fields and no fake trainer fields', () => {
+    const bundle = createEmptyRolloutBundle({
+      runId: 'run_001',
+      sessionId: 'session_001',
+      taskId: 'task_001',
+      source: 'internal',
+      split: 'train',
+      timestamp: '2026-06-03T00:00:00.000Z',
+      harnessVersion: 'git:abc123',
+      heuristicBundleVersion: 'hb:initial',
+      policyVersion: 'mimo-v2.5',
+      userInstruction: 'fix the failing test',
+      repo: 'leviathan',
+      baseCommit: 'abc123',
+      cwdAlias: '$WORKDIR',
+    })
+
+    expect(ROLLOUT_SCHEMA_VERSION).toBe('leviathan.rollout.v1')
+    expect(bundle.schema_version).toBe(ROLLOUT_SCHEMA_VERSION)
+    expect(bundle.run).toEqual({
+      run_id: 'run_001',
+      session_id: 'session_001',
+      task_id: 'task_001',
+      source: 'internal',
+      split: 'train',
+      timestamp: '2026-06-03T00:00:00.000Z',
+      harness_version: 'git:abc123',
+      heuristic_bundle_version: 'hb:initial',
+      policy_version: 'mimo-v2.5',
+    })
+    expect(bundle.task).toEqual({
+      user_instruction: 'fix the failing test',
+      repo: 'leviathan',
+      base_commit: 'abc123',
+      cwd_alias: '$WORKDIR',
+    })
+    expect(bundle.messages).toEqual([])
+    expect(bundle.tool_events).toEqual([])
+    expect(bundle.code_changes.diff).toBe('')
+    expect(bundle.evaluation.test_commands).toEqual([])
+    expect(bundle.failure.taxonomy).toEqual([])
+    expect(bundle.security.export_allowed).toBe(false)
+
+    expect(OPTIONAL_ROLLOUT_FIELDS).toContain('response_logprobs')
+    expect(POLAR_ONLY_ROLLOUT_FIELDS).toContain('completion_session_id')
+    expect('prompt_token_ids' in bundle).toBe(false)
+    expect('response_logprobs' in bundle).toBe(false)
+    expect('polar' in bundle).toBe(false)
+  })
+
+  test('redacts credentials, authorization headers, and local filesystem paths', () => {
+    const text =
+      'Authorization: Bearer tp-c1lsw1yiqks5p2odvaupv644beu51f8fptlat59bup0ttsem in D:\\hl-agent4\\HL-agent3 and /home/yini/private'
+
+    const redacted = redactText(text)
+
+    expect(redacted).not.toContain('tp-c1lsw1yiqks5p2odvaupv644beu51f8fptlat59bup0ttsem')
+    expect(redacted).not.toContain('D:\\hl-agent4')
+    expect(redacted).not.toContain('/home/yini')
+    expect(redacted).toContain('[REDACTED_BEARER_TOKEN]')
+    expect(redacted).toContain('$WORKDIR')
+    expect(redacted).toContain('$HOME_ALIAS')
+  })
+
+  test('redacts nested values while preserving structure', () => {
+    const redacted = redactValue({
+      headers: {
+        Authorization: 'Bearer sk-1234567890abcdefghijklmnopqrstuv',
+        xCustom: 'safe',
+      },
+      cwd: 'C:\\Users\\yini\\project',
+      nested: ['ANTHROPIC_AUTH_TOKEN=tp-c1abcdefghijklmnopqrstuvwxyz012345'],
+    })
+
+    expect(redacted).toEqual({
+      headers: {
+        Authorization: '[REDACTED_AUTH_HEADER]',
+        xCustom: 'safe',
+      },
+      cwd: '$HOME_ALIAS\\project',
+      nested: ['ANTHROPIC_AUTH_TOKEN=[REDACTED_SECRET]'],
+    })
+  })
+})
