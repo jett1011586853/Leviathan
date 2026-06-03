@@ -23,6 +23,7 @@ import type { HeuristicTrainingResult } from '../learning/heuristicTrainer.js'
 import type { PromotionEvidence } from '../learning/promotionGate.js'
 import type { PolarHarnessTrainingResult } from '../learning/polarHarnessTrainer.js'
 import type { PolarHarnessPromotionEvidence } from '../learning/polarHarnessPromotion.js'
+import type { PromotionEvidenceSnapshot } from '../learning/promotionEvidenceFiles.js'
 
 function allReadyEvidence(): TrainingReadinessEvidence {
   return Object.fromEntries(
@@ -166,6 +167,25 @@ function polarPromotionEvidence(): PolarHarnessPromotionEvidence {
   }
 }
 
+function promotionEvidenceSnapshot(): PromotionEvidenceSnapshot {
+  return {
+    replay_results: [{ passed: true }],
+    held_out_results: [{ passed: true }],
+    security_scan: { passed: true },
+    complexity_budget: {
+      passed: true,
+      token_turn_cost_regression_pct: 0.04,
+    },
+    target_failure_slice: {
+      before_success_rate: 0.5,
+      after_success_rate: 0.7,
+      min_delta: 0.05,
+    },
+    regressions: { p0_p1_count: 0 },
+    polar_spike: { passed: true },
+  }
+}
+
 async function withTempDir<T>(fn: (dir: string) => Promise<T> | T): Promise<T> {
   const dir = mkdtempSync(join(tmpdir(), 'leviathan-learning-command-'))
   try {
@@ -274,6 +294,19 @@ describe('Leviathan learning command', () => {
       output_path: 'polar-promotion.json',
       training_path: 'polar.json',
       evidence_path: 'evidence.json',
+    })
+  })
+
+  test('parses promotion evidence generation arguments', () => {
+    expect(
+      parseLearningCommandArgs(
+        'promotion-evidence --snapshot eval.json --heuristic-out heuristic-evidence.json --polar-out polar-evidence.json',
+      ),
+    ).toEqual({
+      action: 'promotion-evidence',
+      snapshot_path: 'eval.json',
+      heuristic_output_path: 'heuristic-evidence.json',
+      polar_output_path: 'polar-evidence.json',
     })
   })
 
@@ -500,6 +533,32 @@ describe('Leviathan learning command', () => {
       ])
       expect(doneMessage).toContain('Leviathan Polar promotion report ready')
       expect(doneMessage).toContain(outputPath)
+    })
+  })
+
+  test('writes promotion evidence files through the slash command', async () => {
+    await withTempDir(async dir => {
+      const snapshotPath = join(dir, 'promotion-snapshot.json')
+      const heuristicPath = join(dir, 'heuristic-evidence.json')
+      const polarPath = join(dir, 'polar-evidence.json')
+      writeFileSync(snapshotPath, JSON.stringify(promotionEvidenceSnapshot()), 'utf8')
+      let doneMessage = ''
+
+      await call(
+        message => {
+          doneMessage = message ?? ''
+        },
+        {} as never,
+        `promotion-evidence --snapshot ${snapshotPath} --heuristic-out ${heuristicPath} --polar-out ${polarPath}`,
+      )
+
+      const heuristicEvidence = JSON.parse(readFileSync(heuristicPath, 'utf8'))
+      const polarEvidence = JSON.parse(readFileSync(polarPath, 'utf8'))
+      expect(heuristicEvidence.target_failure_slice_improved).toBe(true)
+      expect(polarEvidence.polar_spike_passed).toBe(true)
+      expect(doneMessage).toContain('Leviathan promotion evidence written')
+      expect(doneMessage).toContain(heuristicPath)
+      expect(doneMessage).toContain(polarPath)
     })
   })
 })
