@@ -10,6 +10,10 @@ import {
   ROLLOUT_SCHEMA_VERSION,
   type LeviathanRolloutBundle,
 } from './rolloutSchema.js'
+import {
+  evaluatePolarProxySpike,
+  type PolarProxySpikeObservation,
+} from './polarProxySpike.js'
 import type { TrainingReadinessEvidence } from './trainingReadiness.js'
 
 export type ProviderScope =
@@ -29,7 +33,8 @@ export type BuildTrainingReadinessEvidenceInput = {
   provider_scope: ProviderScope
   benchmark_splits_isolated?: boolean
   benchmark_records?: BenchmarkTaskRecord[]
-  polar_proxy_spike_cases_passed: boolean
+  polar_proxy_spike_cases_passed?: boolean
+  polar_spike_observations?: PolarProxySpikeObservation[]
   sparse_outcome_reward_defined: boolean
   rollback_and_incident_plan_ready: boolean
 }
@@ -80,6 +85,10 @@ export function buildTrainingReadinessEvidence(
     input.benchmark_records !== undefined
       ? summarizeBenchmarkSources(input.benchmark_records)
       : null
+  const polarSpikeResult =
+    input.polar_spike_observations !== undefined
+      ? evaluatePolarProxySpike(input.polar_spike_observations)
+      : null
 
   return {
     concept_boundaries_fixed: true,
@@ -99,7 +108,8 @@ export function buildTrainingReadinessEvidence(
     updater_candidate_only_enforced: true,
     benchmark_splits_isolated:
       benchmarkGovernance?.isolated ?? input.benchmark_splits_isolated ?? false,
-    polar_proxy_spike_cases_passed: input.polar_proxy_spike_cases_passed,
+    polar_proxy_spike_cases_passed:
+      polarSpikeResult?.passed ?? input.polar_proxy_spike_cases_passed ?? false,
     provider_scope_locked_direct_anthropic:
       input.provider_scope === 'anthropic-compatible-direct',
     sparse_outcome_reward_defined: input.sparse_outcome_reward_defined,

@@ -7,6 +7,7 @@ import {
 import { buildTrainingReadinessEvidence } from '../learning/trainingReadinessEvidence.js'
 import { createEmptyRolloutBundle } from '../learning/rolloutSchema.js'
 import type { BenchmarkTaskRecord } from '../learning/benchmarkGovernance.js'
+import type { PolarProxySpikeObservation } from '../learning/polarProxySpike.js'
 
 function readinessRollout(id: string, taxonomy: string[]) {
   const bundle = createEmptyRolloutBundle({
@@ -45,6 +46,28 @@ function benchmarkRecord(
     public_visibility: 'private',
     allow_policy_training: true,
     allow_global_memory: true,
+    ...overrides,
+  }
+}
+
+function polarObservation(
+  case_id: PolarProxySpikeObservation['case_id'],
+  overrides: Partial<PolarProxySpikeObservation> = {},
+): PolarProxySpikeObservation {
+  return {
+    case_id,
+    captured_requests_count: 1,
+    leviathan_model_requests_count: 1,
+    request_response_pairs_complete: true,
+    run_session_binding_complete: true,
+    final_outcome_recorded: true,
+    streaming_complete: true,
+    tool_use_complete: true,
+    trajectory_completeness: true,
+    replay_fidelity: true,
+    reward_binding_success: true,
+    causal_chain_model_tool_diff_complete: true,
+    test_artifacts_complete: true,
     ...overrides,
   }
 }
@@ -228,5 +251,63 @@ describe('Leviathan training readiness checklist', () => {
 
     expect(evidence.benchmark_splits_isolated).toBe(false)
     expect(evidence.result_reporting_split_by_source).toBe(true)
+  })
+
+  test('derives Polar readiness from all three spike case observations', () => {
+    const evidence = buildTrainingReadinessEvidence({
+      rollout_bundles: [readinessRollout('1', ['tool_choice_failure.bad_args'])],
+      replay_results: [
+        {
+          status: 'completed',
+          blockers: [],
+          compare_passed: true,
+        },
+      ],
+      provider_scope: 'anthropic-compatible-direct',
+      benchmark_records: [
+        benchmarkRecord('train_1'),
+        benchmarkRecord('secret_1', {
+          split: 'secret',
+          source: 'secret',
+          allow_policy_training: false,
+          allow_global_memory: false,
+        }),
+      ],
+      polar_spike_observations: [
+        polarObservation('case_a_no_tool'),
+        polarObservation('case_b_file_read_write'),
+        polarObservation('case_c_test_execution'),
+      ],
+      sparse_outcome_reward_defined: false,
+      rollback_and_incident_plan_ready: false,
+    })
+
+    expect(evidence.polar_proxy_spike_cases_passed).toBe(true)
+  })
+
+  test('keeps Polar readiness false when a spike case fails', () => {
+    const evidence = buildTrainingReadinessEvidence({
+      rollout_bundles: [readinessRollout('1', ['tool_choice_failure.bad_args'])],
+      replay_results: [
+        {
+          status: 'completed',
+          blockers: [],
+          compare_passed: true,
+        },
+      ],
+      provider_scope: 'anthropic-compatible-direct',
+      benchmark_records: [],
+      polar_spike_observations: [
+        polarObservation('case_a_no_tool', {
+          captured_requests_count: 0,
+        }),
+        polarObservation('case_b_file_read_write'),
+        polarObservation('case_c_test_execution'),
+      ],
+      sparse_outcome_reward_defined: false,
+      rollback_and_incident_plan_ready: false,
+    })
+
+    expect(evidence.polar_proxy_spike_cases_passed).toBe(false)
   })
 })
