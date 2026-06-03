@@ -17,6 +17,7 @@ import {
   TRAINING_READINESS_CHECKS,
   type TrainingReadinessEvidence,
 } from '../learning/trainingReadiness.js'
+import { createEmptyRolloutBundle } from '../learning/rolloutSchema.js'
 
 function allReadyEvidence(): TrainingReadinessEvidence {
   return Object.fromEntries(
@@ -38,6 +39,26 @@ function readyLaunchConfig(): unknown {
     git_commit: 'abc123',
     rollback_checkpoint_tag: 'checkpoint/hl-polar-readiness-foundation-v1.0',
   }
+}
+
+function rolloutBundle(): unknown {
+  const bundle = createEmptyRolloutBundle({
+    runId: 'run_collect_1',
+    sessionId: 'session_collect_1',
+    taskId: 'task_collect_1',
+    source: 'internal',
+    split: 'shadow',
+    timestamp: '2026-06-03T00:00:00.000Z',
+    harnessVersion: 'git:abc123',
+    heuristicBundleVersion: 'hb:initial',
+    policyVersion: 'mimo-v2.5',
+    userInstruction: 'collect evidence through slash command',
+    repo: 'leviathan',
+    baseCommit: 'abc123',
+    cwdAlias: '$WORKDIR',
+  })
+  bundle.failure.taxonomy = ['tool_choice_failure.bad_args']
+  return bundle
 }
 
 async function withTempDir<T>(fn: (dir: string) => Promise<T> | T): Promise<T> {
@@ -74,6 +95,24 @@ describe('Leviathan learning command', () => {
       output_path: 'launch.json',
       provider_model_id: 'mimo-v2.5',
       git_commit: 'abc123',
+    })
+  })
+
+  test('parses evidence collection arguments', () => {
+    expect(
+      parseLearningCommandArgs(
+        'collect --out launch.json --model mimo-v2.5 --git-commit abc123 --rollout rollout-a.json --rollout rollout-b.json --replay replay.json',
+      ),
+    ).toEqual({
+      action: 'collect',
+      output_path: 'launch.json',
+      provider_model_id: 'mimo-v2.5',
+      provider_scope: 'anthropic-compatible-direct',
+      git_commit: 'abc123',
+      cwd_alias: '$WORKDIR',
+      rollback_checkpoint_tag: 'checkpoint/hl-polar-readiness-foundation-v1.0',
+      rollout_bundle_paths: ['rollout-a.json', 'rollout-b.json'],
+      replay_results_path: 'replay.json',
     })
   })
 
@@ -149,6 +188,31 @@ describe('Leviathan learning command', () => {
       expect(manifest.status).toBe('blocked')
       expect(manifest.launch).toBe(null)
       expect(startDoneMessage).toContain('Leviathan learning run blocked')
+    })
+  })
+
+  test('collects launch config evidence from rollout files', async () => {
+    await withTempDir(async dir => {
+      const rolloutPath = join(dir, 'rollout.json')
+      const configPath = join(dir, 'launch.json')
+      writeFileSync(rolloutPath, JSON.stringify(rolloutBundle()), 'utf8')
+      let doneMessage = ''
+
+      await call(
+        message => {
+          doneMessage = message ?? ''
+        },
+        {} as never,
+        `collect --out ${configPath} --model mimo-v2.5 --git-commit abc123 --rollout ${rolloutPath}`,
+      )
+
+      const config = JSON.parse(readFileSync(configPath, 'utf8'))
+      expect(config.rollout_bundle_count).toBe(1)
+      expect(config.readiness_evidence.required_fields_landable).toBe(true)
+      expect(config.readiness_evidence.replay_runner_fixed_task_reproducible).toBe(false)
+      expect(config.readiness_evidence.rollback_and_incident_plan_ready).toBe(false)
+      expect(doneMessage).toContain('Leviathan learning evidence collected')
+      expect(doneMessage).toContain(configPath)
     })
   })
 })

@@ -4,6 +4,8 @@ import {
   launchTrainingRunFromConfigFile,
   writeTrainingLaunchConfigFile,
 } from '../../learning/trainingRunFiles.js'
+import { buildTrainingLaunchConfigFromEvidenceFiles } from '../../learning/trainingEvidenceFiles.js'
+import type { ProviderScope } from '../../learning/trainingReadinessEvidence.js'
 
 export type ParsedLearningCommandArgs =
   | {
@@ -20,11 +22,27 @@ export type ParsedLearningCommandArgs =
       git_commit: string
     }
   | {
+      action: 'collect'
+      output_path: string
+      provider_model_id: string
+      provider_scope: ProviderScope
+      git_commit: string
+      cwd_alias: string
+      rollback_checkpoint_tag: string
+      rollout_bundle_paths: string[]
+      replay_results_path?: string
+      benchmark_records_path?: string
+      polar_spike_observations_path?: string
+      reward_design_path?: string
+      baseline_matrix_path?: string
+      rollback_incident_plan_path?: string
+    }
+  | {
       action: 'help'
     }
 
 const USAGE =
-  'Usage: /learning init --out <launch.json> --model <model-id>; /learning start --config <launch.json> --out <manifest.json>'
+  'Usage: /learning init --out <launch.json> --model <model-id>; /learning collect --out <launch.json> --model <model-id> --rollout <rollout.json>; /learning start --config <launch.json> --out <manifest.json>'
 
 function tokenizeArgs(args: string): string[] {
   const tokens: string[] = []
@@ -50,6 +68,23 @@ function readFlag(tokens: string[], names: string[]): string {
   return ''
 }
 
+function readFlags(tokens: string[], names: string[]): string[] {
+  const values: string[] = []
+
+  for (let index = 0; index < tokens.length; index++) {
+    const token = tokens[index] ?? ''
+    for (const name of names) {
+      if (token.startsWith(`${name}=`)) {
+        values.push(token.slice(name.length + 1))
+      } else if (token === name && index + 1 < tokens.length) {
+        values.push(tokens[index + 1] ?? '')
+      }
+    }
+  }
+
+  return values.filter(value => value.trim().length > 0)
+}
+
 export function parseLearningCommandArgs(
   args: string,
 ): ParsedLearningCommandArgs {
@@ -64,6 +99,36 @@ export function parseLearningCommandArgs(
       output_path,
       provider_model_id,
       git_commit: readFlag(tokens, ['--git-commit']) || 'unknown',
+    }
+  }
+
+  if (tokens[0] === 'collect') {
+    const output_path = readFlag(tokens, ['--out', '--output'])
+    const provider_model_id = readFlag(tokens, ['--model'])
+    const rollout_bundle_paths = readFlags(tokens, ['--rollout'])
+    if (!output_path || !provider_model_id || rollout_bundle_paths.length === 0) {
+      return { action: 'help' }
+    }
+
+    return {
+      action: 'collect',
+      output_path,
+      provider_model_id,
+      provider_scope:
+        (readFlag(tokens, ['--provider-scope']) as ProviderScope) ||
+        'anthropic-compatible-direct',
+      git_commit: readFlag(tokens, ['--git-commit']) || 'unknown',
+      cwd_alias: readFlag(tokens, ['--cwd-alias']) || '$WORKDIR',
+      rollback_checkpoint_tag:
+        readFlag(tokens, ['--checkpoint']) ||
+        'checkpoint/hl-polar-readiness-foundation-v1.0',
+      rollout_bundle_paths,
+      replay_results_path: readFlag(tokens, ['--replay']) || undefined,
+      benchmark_records_path: readFlag(tokens, ['--benchmarks']) || undefined,
+      polar_spike_observations_path: readFlag(tokens, ['--polar']) || undefined,
+      reward_design_path: readFlag(tokens, ['--reward']) || undefined,
+      baseline_matrix_path: readFlag(tokens, ['--baseline']) || undefined,
+      rollback_incident_plan_path: readFlag(tokens, ['--rollback']) || undefined,
     }
   }
 
@@ -106,6 +171,28 @@ export async function call(
       }),
     )
     onDone(`Leviathan learning config initialized: ${parsed.output_path}`)
+    return null
+  }
+
+  if (parsed.action === 'collect') {
+    writeTrainingLaunchConfigFile(
+      parsed.output_path,
+      buildTrainingLaunchConfigFromEvidenceFiles({
+        provider_model_id: parsed.provider_model_id,
+        provider_scope: parsed.provider_scope,
+        git_commit: parsed.git_commit,
+        cwd_alias: parsed.cwd_alias,
+        rollback_checkpoint_tag: parsed.rollback_checkpoint_tag,
+        rollout_bundle_paths: parsed.rollout_bundle_paths,
+        replay_results_path: parsed.replay_results_path,
+        benchmark_records_path: parsed.benchmark_records_path,
+        polar_spike_observations_path: parsed.polar_spike_observations_path,
+        reward_design_path: parsed.reward_design_path,
+        baseline_matrix_path: parsed.baseline_matrix_path,
+        rollback_incident_plan_path: parsed.rollback_incident_plan_path,
+      }),
+    )
+    onDone(`Leviathan learning evidence collected: ${parsed.output_path}`)
     return null
   }
 
