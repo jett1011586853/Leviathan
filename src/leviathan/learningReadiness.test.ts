@@ -13,6 +13,7 @@ import type {
   BaselineExperimentArmId,
   PolicyTrainability,
 } from '../learning/baselineMatrix.js'
+import type { RollbackIncidentPlan } from '../learning/rollbackIncidentPlan.js'
 
 function readinessRollout(id: string, taxonomy: string[]) {
   const bundle = createEmptyRolloutBundle({
@@ -73,6 +74,38 @@ function polarObservation(
     reward_binding_success: true,
     causal_chain_model_tool_diff_complete: true,
     test_artifacts_complete: true,
+    ...overrides,
+  }
+}
+
+function rollbackIncidentPlan(
+  overrides: Partial<RollbackIncidentPlan> = {},
+): RollbackIncidentPlan {
+  return {
+    permanent_checkpoint_tag: 'checkpoint/pre-hl-polar-training-v1.0',
+    rollback_commands: [
+      'git switch main',
+      'git reset --hard checkpoint/pre-hl-polar-training-v1.0',
+    ],
+    feature_flags: [
+      'hl.rollout_export.enabled',
+      'hl.promotion_gate.enabled',
+      'polar.proxy_spike.enabled',
+    ],
+    incident_owner: 'Leviathan maintainer',
+    incident_channels: ['local-runbook', 'github-issue'],
+    severity_routes: {
+      p0: 'Stop training, disable all HL/Polar flags, rotate exposed secrets, restore checkpoint.',
+      p1: 'Pause candidate promotion, run replay suite, rollback affected feature flag.',
+      p2: 'File issue, keep shadow mode, review next maintenance window.',
+    },
+    covers: {
+      secret_leak: true,
+      benchmark_leak: true,
+      reward_hacking: true,
+      data_corruption: true,
+      regression_spike: true,
+    },
     ...overrides,
   }
 }
@@ -379,5 +412,32 @@ describe('Leviathan training readiness checklist', () => {
 
     expect(evidence.sparse_outcome_reward_defined).toBe(false)
     expect(evidence.baseline_matrix_fixed).toBe(false)
+  })
+
+  test('derives rollback readiness from an explicit incident plan', () => {
+    const evidence = buildTrainingReadinessEvidence({
+      rollout_bundles: [readinessRollout('1', ['tool_choice_failure.bad_args'])],
+      replay_results: [],
+      provider_scope: 'anthropic-compatible-direct',
+      benchmark_records: [],
+      polar_spike_observations: [],
+      reward_design: {
+        mode: 'sparse_outcome',
+        reward_range: [0, 1],
+        uses_trace_shaping: false,
+        broadcasts_session_reward_to_requests: false,
+      } satisfies RewardDesign,
+      baseline_matrix: {
+        policy_trainability: 'closed_api' satisfies PolicyTrainability,
+        enabled_arms: [
+          'baseline',
+          'hl_only',
+        ] satisfies BaselineExperimentArmId[],
+      },
+      rollback_and_incident_plan_ready: false,
+      rollback_incident_plan: rollbackIncidentPlan(),
+    })
+
+    expect(evidence.rollback_and_incident_plan_ready).toBe(true)
   })
 })

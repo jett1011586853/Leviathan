@@ -22,6 +22,10 @@ import {
   validateBaselineMatrix,
   type BaselineMatrixInput,
 } from './baselineMatrix.js'
+import {
+  validateRollbackIncidentPlan,
+  type RollbackIncidentPlan,
+} from './rollbackIncidentPlan.js'
 import type { TrainingReadinessEvidence } from './trainingReadiness.js'
 
 export type ProviderScope =
@@ -47,6 +51,7 @@ export type BuildTrainingReadinessEvidenceInput = {
   reward_design?: RewardDesign
   baseline_matrix?: BaselineMatrixInput
   rollback_and_incident_plan_ready: boolean
+  rollback_incident_plan?: RollbackIncidentPlan
 }
 
 function hasText(value: unknown): value is string {
@@ -107,6 +112,10 @@ export function buildTrainingReadinessEvidence(
     input.baseline_matrix !== undefined
       ? validateBaselineMatrix(input.baseline_matrix)
       : null
+  const rollbackIncidentPlanResult =
+    input.rollback_incident_plan !== undefined
+      ? validateRollbackIncidentPlan(input.rollback_incident_plan)
+      : null
 
   return {
     concept_boundaries_fixed: true,
@@ -138,6 +147,8 @@ export function buildTrainingReadinessEvidence(
         ? true
         : sourceSummary.internal + sourceSummary.public + sourceSummary.private_secret >
           0,
-    rollback_and_incident_plan_ready: input.rollback_and_incident_plan_ready,
+    rollback_and_incident_plan_ready:
+      rollbackIncidentPlanResult?.valid ??
+      input.rollback_and_incident_plan_ready,
   }
 }
