@@ -1,12 +1,35 @@
 import { join } from 'path';
+import { randomUUID } from 'crypto';
 import React from 'react';
 import { ExportDialog } from '../../components/ExportDialog.js';
 import type { ToolUseContext } from '../../Tool.js';
 import type { LocalJSXCommandOnDone } from '../../types/command.js';
 import type { Message } from '../../types/message.js';
+import { buildConversationRolloutBundle } from '../../learning/conversationRollout.js';
 import { getCwd } from '../../utils/cwd.js';
 import { renderMessagesToPlainText } from '../../utils/exportRenderer.js';
-import { writeFileSync_DEPRECATED } from '../../utils/slowOperations.js';
+import { jsonStringify, writeFileSync_DEPRECATED } from '../../utils/slowOperations.js';
+
+type ExportMode = 'conversation' | 'rollout';
+
+export type ParsedExportArgs = {
+  mode: ExportMode;
+  filename: string;
+};
+
+export type RolloutExportOverrides = {
+  runId?: string;
+  sessionId?: string;
+  taskId?: string;
+  timestamp?: string;
+  harnessVersion?: string;
+  heuristicBundleVersion?: string;
+  policyVersion?: string;
+  repo?: string;
+  baseCommit?: string;
+  cwdAlias?: string;
+};
+
 function formatTimestamp(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -16,6 +39,60 @@ function formatTimestamp(date: Date): string {
   const seconds = String(date.getSeconds()).padStart(2, '0');
   return `${year}-${month}-${day}-${hours}${minutes}${seconds}`;
 }
+export function parseExportArgs(args: string): ParsedExportArgs {
+  const trimmed = args.trim();
+  if (trimmed === '--rollout') {
+    return { mode: 'rollout', filename: '' };
+  }
+  if (trimmed.startsWith('--rollout=')) {
+    return {
+      mode: 'rollout',
+      filename: trimmed.slice('--rollout='.length).trim(),
+    };
+  }
+  if (trimmed.startsWith('--rollout ')) {
+    return {
+      mode: 'rollout',
+      filename: trimmed.slice('--rollout '.length).trim(),
+    };
+  }
+  return { mode: 'conversation', filename: trimmed };
+}
+
+export async function buildRolloutExportContent(
+  context: Pick<ToolUseContext, 'messages' | 'options'>,
+  overrides: RolloutExportOverrides = {},
+): Promise<string> {
+  const sessionId = overrides.sessionId ?? randomUUID();
+  const bundle = buildConversationRolloutBundle({
+    messages: context.messages,
+    runId: overrides.runId ?? randomUUID(),
+    sessionId,
+    taskId: overrides.taskId ?? `task:${sessionId}`,
+    source: 'internal',
+    split: 'shadow',
+    timestamp: overrides.timestamp ?? new Date().toISOString(),
+    harnessVersion:
+      overrides.harnessVersion ??
+      process.env.LEVIATHAN_CODE_VERSION ??
+      'unknown',
+    heuristicBundleVersion:
+      overrides.heuristicBundleVersion ??
+      process.env.LEVIATHAN_HEURISTIC_BUNDLE_VERSION ??
+      'hb:unversioned',
+    policyVersion:
+      overrides.policyVersion ?? context.options.mainLoopModel ?? 'unknown',
+    repo: overrides.repo ?? 'local',
+    baseCommit:
+      overrides.baseCommit ??
+      process.env.LEVIATHAN_ROLLOUT_BASE_COMMIT ??
+      'unknown',
+    cwdAlias: overrides.cwdAlias ?? '$WORKDIR',
+  });
+
+  return jsonStringify(bundle, null, 2);
+}
+
 export function extractFirstPrompt(messages: Message[]): string {
   const firstUserMessage = messages.find(msg => msg.type === 'user');
   if (!firstUserMessage || firstUserMessage.type !== 'user') {
@@ -51,23 +128,28 @@ async function exportWithReactRenderer(context: ToolUseContext): Promise<string>
   return renderMessagesToPlainText(context.messages, tools);
 }
 export async function call(onDone: LocalJSXCommandOnDone, context: ToolUseContext, args: string): Promise<React.ReactNode> {
+  const parsedArgs = parseExportArgs(args);
   // Render the conversation content
-  const content = await exportWithReactRenderer(context);
+  const content =
+    parsedArgs.mode === 'rollout'
+      ? await buildRolloutExportContent(context)
+      : await exportWithReactRenderer(context);
 
   // If args are provided, write directly to file and skip dialog
-  const filename = args.trim();
+  const filename = parsedArgs.filename;
   if (filename) {
-    const finalFilename = filename.endsWith('.txt') ? filename : filename.replace(/\.[^.]+$/, '') + '.txt';
+    const extension = parsedArgs.mode === 'rollout' ? '.json' : '.txt';
+    const finalFilename = filename.endsWith(extension) ? filename : filename.replace(/\.[^.]+$/, '') + extension;
     const filepath = join(getCwd(), finalFilename);
     try {
       writeFileSync_DEPRECATED(filepath, content, {
         encoding: 'utf-8',
         flush: true
       });
-      onDone(`Conversation exported to: ${filepath}`);
+      onDone(`${parsedArgs.mode === 'rollout' ? 'Rollout bundle' : 'Conversation'} exported to: ${filepath}`);
       return null;
     } catch (error) {
-      onDone(`Failed to export conversation: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      onDone(`Failed to export ${parsedArgs.mode === 'rollout' ? 'rollout bundle' : 'conversation'}: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return null;
     }
   }
@@ -76,7 +158,9 @@ export async function call(onDone: LocalJSXCommandOnDone, context: ToolUseContex
   const firstPrompt = extractFirstPrompt(context.messages);
   const timestamp = formatTimestamp(new Date());
   let defaultFilename: string;
-  if (firstPrompt) {
+  if (parsedArgs.mode === 'rollout') {
+    defaultFilename = `rollout-${timestamp}.json`;
+  } else if (firstPrompt) {
     const sanitized = sanitizeFilename(firstPrompt);
     defaultFilename = sanitized ? `${timestamp}-${sanitized}.txt` : `conversation-${timestamp}.txt`;
   } else {

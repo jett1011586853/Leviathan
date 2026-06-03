@@ -6,6 +6,10 @@ import {
   ROLLOUT_SCHEMA_VERSION,
   createEmptyRolloutBundle,
 } from '../learning/rolloutSchema.js'
+import {
+  buildRolloutExportContent,
+  parseExportArgs,
+} from '../commands/export/export.js'
 import { buildConversationRolloutBundle } from '../learning/conversationRollout.js'
 import { redactText, redactValue } from '../learning/redaction.js'
 import type { Message } from '../types/message.js'
@@ -193,5 +197,59 @@ describe('Leviathan HL/Polar rollout schema', () => {
     ])
     expect(bundle.security.export_allowed).toBe(false)
     expect('response_logprobs' in bundle).toBe(false)
+  })
+
+  test('parses rollout export mode without changing normal export filenames', () => {
+    expect(parseExportArgs('--rollout training-run.json')).toEqual({
+      mode: 'rollout',
+      filename: 'training-run.json',
+    })
+    expect(parseExportArgs('conversation-name')).toEqual({
+      mode: 'conversation',
+      filename: 'conversation-name',
+    })
+  })
+
+  test('builds rollout export JSON from command context', async () => {
+    const messages = [
+      {
+        type: 'user',
+        uuid: '00000000-0000-4000-8000-000000000004',
+        timestamp: '2026-06-03T00:00:00.000Z',
+        message: {
+          id: '00000000-0000-4000-8000-000000000104',
+          role: 'user',
+          content:
+            'Analyze D:\\hl-agent4\\secret with Authorization: Bearer tp-c1abcdefghijklmnopqrstuvwxyz012345',
+        },
+      },
+    ] as unknown as Message[]
+
+    const content = await buildRolloutExportContent(
+      {
+        messages,
+        options: {
+          mainLoopModel: 'mimo-v2.5',
+        },
+      } as never,
+      {
+        runId: 'run_export',
+        sessionId: 'session_export',
+        taskId: 'task_export',
+        timestamp: '2026-06-03T00:00:01.000Z',
+        harnessVersion: 'git:test',
+        heuristicBundleVersion: 'hb:initial',
+        repo: 'leviathan',
+        baseCommit: 'testcommit',
+        cwdAlias: '$WORKDIR',
+      },
+    )
+    const parsed = JSON.parse(content)
+
+    expect(parsed.schema_version).toBe(ROLLOUT_SCHEMA_VERSION)
+    expect(parsed.run.policy_version).toBe('mimo-v2.5')
+    expect(parsed.task.user_instruction).toContain('$WORKDIR')
+    expect(content).not.toContain('tp-c1abcdefghijklmnopqrstuvwxyz012345')
+    expect(content).not.toContain('D:\\hl-agent4')
   })
 })
