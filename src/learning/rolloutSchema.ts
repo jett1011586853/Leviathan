@@ -77,6 +77,14 @@ export type LeviathanRolloutBundle = {
     base_commit: string
     cwd_alias: string
   }
+  runtime: {
+    cwd_alias: string
+    network_policy: 'off' | 'restricted' | 'on'
+    container_image: string
+    timeout_sec: number | null
+    seed: number | null
+    sampling_params: Record<string, unknown>
+  }
   messages: RolloutMessage[]
   tool_events: RolloutToolEvent[]
   code_changes: {
@@ -122,6 +130,14 @@ export function createEmptyRolloutBundle(
       repo: input.repo,
       base_commit: input.baseCommit,
       cwd_alias: input.cwdAlias,
+    },
+    runtime: {
+      cwd_alias: input.cwdAlias,
+      network_policy: 'restricted',
+      container_image: 'unknown',
+      timeout_sec: null,
+      seed: null,
+      sampling_params: {},
     },
     messages: [],
     tool_events: [],
