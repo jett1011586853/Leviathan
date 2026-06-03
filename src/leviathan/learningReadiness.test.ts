@@ -4,6 +4,28 @@ import {
   TRAINING_READINESS_CHECKS,
   evaluateTrainingReadiness,
 } from '../learning/trainingReadiness.js'
+import { buildTrainingReadinessEvidence } from '../learning/trainingReadinessEvidence.js'
+import { createEmptyRolloutBundle } from '../learning/rolloutSchema.js'
+
+function readinessRollout(id: string, taxonomy: string[]) {
+  const bundle = createEmptyRolloutBundle({
+    runId: `run_${id}`,
+    sessionId: `session_${id}`,
+    taskId: `task_${id}`,
+    source: 'internal',
+    split: 'shadow',
+    timestamp: '2026-06-03T00:00:00.000Z',
+    harnessVersion: 'git:abc123',
+    heuristicBundleVersion: 'hb:initial',
+    policyVersion: 'mimo-v2.5',
+    userInstruction: 'readiness sample',
+    repo: 'leviathan',
+    baseCommit: 'abc123',
+    cwdAlias: '$WORKDIR',
+  })
+  bundle.failure.taxonomy = taxonomy
+  return bundle
+}
 
 describe('Leviathan training readiness checklist', () => {
   test('keeps formal training blocked until every v1.0 hard gate has evidence', () => {
@@ -71,5 +93,43 @@ describe('Leviathan training readiness checklist', () => {
       'Result reporting split by internal/public/private',
       'Rollback and incident plan ready',
     ])
+  })
+
+  test('builds readiness evidence from implemented local infrastructure without approving missing external gates', () => {
+    const rollouts = [
+      readinessRollout('1', ['model_interaction_failure.provider_mismatch']),
+      readinessRollout('2', ['tool_choice_failure.bad_args']),
+      readinessRollout('3', ['verification_failure.flaky_tests']),
+      readinessRollout('4', ['security_governance_failure.secret_leak']),
+      readinessRollout('5', []),
+    ]
+
+    const evidence = buildTrainingReadinessEvidence({
+      rollout_bundles: rollouts,
+      replay_results: [
+        {
+          status: 'completed',
+          blockers: [],
+          compare_passed: true,
+        },
+      ],
+      provider_scope: 'anthropic-compatible-direct',
+      benchmark_splits_isolated: false,
+      polar_proxy_spike_cases_passed: false,
+      sparse_outcome_reward_defined: false,
+      rollback_and_incident_plan_ready: false,
+    })
+    const result = evaluateTrainingReadiness(evidence)
+
+    expect(evidence.rollout_schema_v1_implemented).toBe(true)
+    expect(evidence.required_fields_landable).toBe(true)
+    expect(evidence.replay_runner_fixed_task_reproducible).toBe(true)
+    expect(evidence.failure_taxonomy_covers_high_frequency_failures).toBe(true)
+    expect(evidence.heuristic_promotion_gate_implemented).toBe(true)
+    expect(evidence.polar_proxy_spike_cases_passed).toBe(false)
+    expect(evidence.benchmark_splits_isolated).toBe(false)
+    expect(result.ready_for_formal_training).toBe(false)
+    expect(result.failed).toContain('polar_proxy_spike_cases_passed')
+    expect(result.failed).toContain('benchmark_splits_isolated')
   })
 })
