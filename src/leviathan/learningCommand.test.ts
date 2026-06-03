@@ -19,6 +19,8 @@ import {
 } from '../learning/trainingReadiness.js'
 import { createEmptyRolloutBundle } from '../learning/rolloutSchema.js'
 import type { PolarProxySpikeObservation } from '../learning/polarProxySpike.js'
+import type { HeuristicTrainingResult } from '../learning/heuristicTrainer.js'
+import type { PromotionEvidence } from '../learning/promotionGate.js'
 
 function allReadyEvidence(): TrainingReadinessEvidence {
   return Object.fromEntries(
@@ -81,6 +83,44 @@ function polarObservation(
     causal_chain_model_tool_diff_complete: true,
     test_artifacts_complete: true,
     ...overrides,
+  }
+}
+
+function heuristicTrainingResult(): HeuristicTrainingResult {
+  return {
+    schema_version: 'leviathan.heuristic_training.v1',
+    status: 'candidate_only',
+    training_run_id: 'train_1',
+    provider_model_id: 'mimo-v2.5',
+    provider_model_update: 'none',
+    base_heuristic_bundle_version: 'hb:initial',
+    candidate_heuristic_bundle_version: 'hb:candidate/train_1',
+    stable_promotions_allowed: false,
+    trained_failure_classes: ['tool_choice_failure'],
+    candidates: [
+      {
+        id: 'candidate_tool_choice_failure_001',
+        type: 'candidate tool policy',
+        status: 'candidate',
+        source_failure_taxonomy: ['tool_choice_failure.bad_args'],
+        feature_flag: 'hl.candidate.tool_choice_failure_001',
+        rollback_plan:
+          'Disable feature flag hl.candidate.tool_choice_failure_001',
+      },
+    ],
+    blocked_reasons: [],
+  }
+}
+
+function promotionEvidence(): PromotionEvidence {
+  return {
+    replay_passed: true,
+    held_out_passed: true,
+    security_scan_passed: true,
+    complexity_budget_passed: true,
+    target_failure_slice_improved: true,
+    p0_p1_regressions: 0,
+    token_turn_cost_regression_pct: 0.04,
   }
 }
 
@@ -166,6 +206,19 @@ describe('Leviathan learning command', () => {
       provider_model_id: 'mimo-v2.5',
       base_harness_version: 'git:abc123',
       observations_path: 'polar-observations.json',
+    })
+  })
+
+  test('parses candidate promotion report arguments', () => {
+    expect(
+      parseLearningCommandArgs(
+        'promote-candidates --out promotion.json --candidates candidates.json --evidence evidence.json',
+      ),
+    ).toEqual({
+      action: 'promote-candidates',
+      output_path: 'promotion.json',
+      training_path: 'candidates.json',
+      evidence_path: 'evidence.json',
     })
   })
 
@@ -329,6 +382,35 @@ describe('Leviathan learning command', () => {
         'polar_candidate_proxy_bypass_001',
       ])
       expect(doneMessage).toContain('Leviathan Polar harness training completed')
+      expect(doneMessage).toContain(outputPath)
+    })
+  })
+
+  test('writes heuristic promotion reports through the slash command', async () => {
+    await withTempDir(async dir => {
+      const trainingPath = join(dir, 'candidate-heuristics.json')
+      const evidencePath = join(dir, 'promotion-evidence.json')
+      const outputPath = join(dir, 'promotion-report.json')
+      writeFileSync(trainingPath, JSON.stringify(heuristicTrainingResult()), 'utf8')
+      writeFileSync(evidencePath, JSON.stringify(promotionEvidence()), 'utf8')
+      let doneMessage = ''
+
+      await call(
+        message => {
+          doneMessage = message ?? ''
+        },
+        {} as never,
+        `promote-candidates --out ${outputPath} --candidates ${trainingPath} --evidence ${evidencePath}`,
+      )
+
+      const report = JSON.parse(readFileSync(outputPath, 'utf8'))
+      expect(report.status).toBe('ready_for_stable_promotion')
+      expect(report.provider_model_update).toBe('none')
+      expect(report.stable_promotions_allowed).toBe(true)
+      expect(report.decisions.map((decision: { candidate_id: string }) => decision.candidate_id)).toEqual([
+        'candidate_tool_choice_failure_001',
+      ])
+      expect(doneMessage).toContain('Leviathan heuristic promotion report ready')
       expect(doneMessage).toContain(outputPath)
     })
   })
