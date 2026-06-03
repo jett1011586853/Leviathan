@@ -14,6 +14,14 @@ import {
   evaluatePolarProxySpike,
   type PolarProxySpikeObservation,
 } from './polarProxySpike.js'
+import {
+  validateRewardDesign,
+  type RewardDesign,
+} from './rewardDesign.js'
+import {
+  validateBaselineMatrix,
+  type BaselineMatrixInput,
+} from './baselineMatrix.js'
 import type { TrainingReadinessEvidence } from './trainingReadiness.js'
 
 export type ProviderScope =
@@ -35,7 +43,9 @@ export type BuildTrainingReadinessEvidenceInput = {
   benchmark_records?: BenchmarkTaskRecord[]
   polar_proxy_spike_cases_passed?: boolean
   polar_spike_observations?: PolarProxySpikeObservation[]
-  sparse_outcome_reward_defined: boolean
+  sparse_outcome_reward_defined?: boolean
+  reward_design?: RewardDesign
+  baseline_matrix?: BaselineMatrixInput
   rollback_and_incident_plan_ready: boolean
 }
 
@@ -89,6 +99,14 @@ export function buildTrainingReadinessEvidence(
     input.polar_spike_observations !== undefined
       ? evaluatePolarProxySpike(input.polar_spike_observations)
       : null
+  const rewardDesignResult =
+    input.reward_design !== undefined
+      ? validateRewardDesign(input.reward_design)
+      : null
+  const baselineMatrixResult =
+    input.baseline_matrix !== undefined
+      ? validateBaselineMatrix(input.baseline_matrix)
+      : null
 
   return {
     concept_boundaries_fixed: true,
@@ -112,8 +130,9 @@ export function buildTrainingReadinessEvidence(
       polarSpikeResult?.passed ?? input.polar_proxy_spike_cases_passed ?? false,
     provider_scope_locked_direct_anthropic:
       input.provider_scope === 'anthropic-compatible-direct',
-    sparse_outcome_reward_defined: input.sparse_outcome_reward_defined,
-    baseline_matrix_fixed: true,
+    sparse_outcome_reward_defined:
+      rewardDesignResult?.valid ?? input.sparse_outcome_reward_defined ?? false,
+    baseline_matrix_fixed: baselineMatrixResult?.valid ?? true,
     result_reporting_split_by_source:
       sourceSummary === null
         ? true

@@ -8,6 +8,11 @@ import { buildTrainingReadinessEvidence } from '../learning/trainingReadinessEvi
 import { createEmptyRolloutBundle } from '../learning/rolloutSchema.js'
 import type { BenchmarkTaskRecord } from '../learning/benchmarkGovernance.js'
 import type { PolarProxySpikeObservation } from '../learning/polarProxySpike.js'
+import type { RewardDesign } from '../learning/rewardDesign.js'
+import type {
+  BaselineExperimentArmId,
+  PolicyTrainability,
+} from '../learning/baselineMatrix.js'
 
 function readinessRollout(id: string, taxonomy: string[]) {
   const bundle = createEmptyRolloutBundle({
@@ -309,5 +314,70 @@ describe('Leviathan training readiness checklist', () => {
     })
 
     expect(evidence.polar_proxy_spike_cases_passed).toBe(false)
+  })
+
+  test('derives reward and baseline readiness from explicit designs', () => {
+    const evidence = buildTrainingReadinessEvidence({
+      rollout_bundles: [readinessRollout('1', ['tool_choice_failure.bad_args'])],
+      replay_results: [
+        {
+          status: 'completed',
+          blockers: [],
+          compare_passed: true,
+        },
+      ],
+      provider_scope: 'anthropic-compatible-direct',
+      benchmark_records: [],
+      polar_spike_observations: [
+        polarObservation('case_a_no_tool'),
+        polarObservation('case_b_file_read_write'),
+        polarObservation('case_c_test_execution'),
+      ],
+      reward_design: {
+        mode: 'sparse_outcome',
+        reward_range: [0, 1],
+        uses_trace_shaping: false,
+        broadcasts_session_reward_to_requests: false,
+      } satisfies RewardDesign,
+      baseline_matrix: {
+        policy_trainability: 'closed_api' satisfies PolicyTrainability,
+        enabled_arms: [
+          'baseline',
+          'hl_only',
+        ] satisfies BaselineExperimentArmId[],
+      },
+      rollback_and_incident_plan_ready: false,
+    })
+
+    expect(evidence.sparse_outcome_reward_defined).toBe(true)
+    expect(evidence.baseline_matrix_fixed).toBe(true)
+  })
+
+  test('rejects dense reward and invalid baseline matrix in readiness evidence', () => {
+    const evidence = buildTrainingReadinessEvidence({
+      rollout_bundles: [readinessRollout('1', ['tool_choice_failure.bad_args'])],
+      replay_results: [],
+      provider_scope: 'anthropic-compatible-direct',
+      benchmark_records: [],
+      polar_spike_observations: [],
+      reward_design: {
+        mode: 'dense_shaping',
+        reward_range: [-1, 1],
+        uses_trace_shaping: true,
+        broadcasts_session_reward_to_requests: true,
+      } satisfies RewardDesign,
+      baseline_matrix: {
+        policy_trainability: 'closed_api' satisfies PolicyTrainability,
+        enabled_arms: [
+          'baseline',
+          'hl_only',
+          'polar_only',
+        ] satisfies BaselineExperimentArmId[],
+      },
+      rollback_and_incident_plan_ready: false,
+    })
+
+    expect(evidence.sparse_outcome_reward_defined).toBe(false)
+    expect(evidence.baseline_matrix_fixed).toBe(false)
   })
 })
