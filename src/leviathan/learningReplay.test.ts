@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test'
 
 import { compareReplayArtifacts } from '../learning/replayCompare.js'
 import { deriveReplayPlan } from '../learning/replayPlan.js'
+import { executeReplayRun } from '../learning/replayRunner.js'
 import { createEmptyRolloutBundle } from '../learning/rolloutSchema.js'
 
 function createReplayableBundle() {
@@ -138,5 +139,47 @@ describe('Leviathan replay plan scaffold', () => {
     ])
     expect(result.scores.tool_trace).toBe(0)
     expect(result.scores.tests).toBe(0)
+  })
+
+  test('does not execute replay when the plan has deterministic blockers', async () => {
+    const golden = createReplayableBundle()
+    golden.task.base_commit = ''
+    let executed = false
+
+    const result = await executeReplayRun(golden, async () => {
+      executed = true
+      return createReplayableBundle()
+    })
+
+    expect(executed).toBe(false)
+    expect(result.status).toBe('blocked')
+    expect(result.blockers).toContain('task.base_commit')
+  })
+
+  test('executes replay runner and returns fidelity comparison', async () => {
+    const golden = createReplayableBundle()
+    golden.tool_events = [
+      {
+        tool_use_id: 'tool_1',
+        tool_name: 'Read',
+        input_redacted: {},
+        success: true,
+        result_summary: 'ok',
+      },
+    ]
+    golden.evaluation.exit_codes = [0]
+    golden.evaluation.test_outputs = ['PASS']
+    golden.evaluation.final_outcome = 'resolved'
+    golden.failure.taxonomy = ['verification_failure']
+
+    const result = await executeReplayRun(golden, async plan => {
+      expect(plan.ready).toBe(true)
+      return structuredClone(golden)
+    })
+
+    expect(result.status).toBe('completed')
+    expect(result.blockers).toEqual([])
+    expect(result.compare.passed).toBe(true)
+    expect(result.replay.run.source).toBe('replay')
   })
 })
