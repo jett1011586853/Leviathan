@@ -1,5 +1,9 @@
 import type { LocalJSXCommandOnDone } from '../../types/command.js'
-import { launchTrainingRunFromConfigFile } from '../../learning/trainingRunFiles.js'
+import {
+  createDefaultTrainingLaunchConfig,
+  launchTrainingRunFromConfigFile,
+  writeTrainingLaunchConfigFile,
+} from '../../learning/trainingRunFiles.js'
 
 export type ParsedLearningCommandArgs =
   | {
@@ -10,11 +14,17 @@ export type ParsedLearningCommandArgs =
       created_at?: string
     }
   | {
+      action: 'init'
+      output_path: string
+      provider_model_id: string
+      git_commit: string
+    }
+  | {
       action: 'help'
     }
 
 const USAGE =
-  'Usage: /learning start --config <launch.json> --out <manifest.json>'
+  'Usage: /learning init --out <launch.json> --model <model-id>; /learning start --config <launch.json> --out <manifest.json>'
 
 function tokenizeArgs(args: string): string[] {
   const tokens: string[] = []
@@ -44,6 +54,19 @@ export function parseLearningCommandArgs(
   args: string,
 ): ParsedLearningCommandArgs {
   const tokens = tokenizeArgs(args.trim())
+  if (tokens[0] === 'init') {
+    const output_path = readFlag(tokens, ['--out', '--output'])
+    const provider_model_id = readFlag(tokens, ['--model'])
+    if (!output_path || !provider_model_id) return { action: 'help' }
+
+    return {
+      action: 'init',
+      output_path,
+      provider_model_id,
+      git_commit: readFlag(tokens, ['--git-commit']) || 'unknown',
+    }
+  }
+
   if (tokens[0] !== 'start') return { action: 'help' }
 
   const config_path = readFlag(tokens, ['--config'])
@@ -71,6 +94,18 @@ export async function call(
   const parsed = parseLearningCommandArgs(args)
   if (parsed.action === 'help') {
     onDone(USAGE)
+    return null
+  }
+
+  if (parsed.action === 'init') {
+    writeTrainingLaunchConfigFile(
+      parsed.output_path,
+      createDefaultTrainingLaunchConfig({
+        provider_model_id: parsed.provider_model_id,
+        git_commit: parsed.git_commit,
+      }),
+    )
+    onDone(`Leviathan learning config initialized: ${parsed.output_path}`)
     return null
   }
 

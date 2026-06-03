@@ -64,6 +64,19 @@ describe('Leviathan learning command', () => {
     })
   })
 
+  test('parses launch config initialization arguments', () => {
+    expect(
+      parseLearningCommandArgs(
+        'init --out launch.json --model mimo-v2.5 --git-commit abc123',
+      ),
+    ).toEqual({
+      action: 'init',
+      output_path: 'launch.json',
+      provider_model_id: 'mimo-v2.5',
+      git_commit: 'abc123',
+    })
+  })
+
   test('writes a manifest from the slash command entrypoint', async () => {
     await withTempDir(async dir => {
       const configPath = join(dir, 'launch.json')
@@ -95,6 +108,47 @@ describe('Leviathan learning command', () => {
       type: 'local-jsx',
       name: 'learning',
       description: 'Start or audit Leviathan HL + Polar harness learning',
+    })
+  })
+
+  test('initializes a safe blocked launch config before evidence is collected', async () => {
+    await withTempDir(async dir => {
+      const configPath = join(dir, 'launch.json')
+      const manifestPath = join(dir, 'manifest.json')
+      let initDoneMessage = ''
+      let startDoneMessage = ''
+
+      await call(
+        message => {
+          initDoneMessage = message ?? ''
+        },
+        {} as never,
+        `init --out ${configPath} --model mimo-v2.5 --git-commit abc123`,
+      )
+
+      const config = JSON.parse(readFileSync(configPath, 'utf8'))
+      expect(config.provider_model_id).toBe('mimo-v2.5')
+      expect(config.baseline_matrix.enabled_arms).toEqual([
+        'baseline',
+        'hl_only',
+        'polar_only',
+        'hl_polar',
+      ])
+      expect(Object.values(config.readiness_evidence).every(Boolean)).toBe(false)
+      expect(initDoneMessage).toContain('Leviathan learning config initialized')
+
+      await call(
+        message => {
+          startDoneMessage = message ?? ''
+        },
+        {} as never,
+        `start --config ${configPath} --out ${manifestPath} --run-id train_blocked --created-at 2026-06-03T12:00:00.000Z`,
+      )
+
+      const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
+      expect(manifest.status).toBe('blocked')
+      expect(manifest.launch).toBe(null)
+      expect(startDoneMessage).toContain('Leviathan learning run blocked')
     })
   })
 })

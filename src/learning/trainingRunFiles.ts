@@ -1,4 +1,5 @@
-import { readFileSync } from 'node:fs'
+import { mkdirSync, readFileSync } from 'node:fs'
+import { dirname } from 'node:path'
 
 import {
   evaluateTrainingLaunch,
@@ -9,7 +10,10 @@ import {
   type TrainingRunManifest,
 } from './trainingRunManifest.js'
 import type { BaselineMatrixInput, PolicyTrainability } from './baselineMatrix.js'
-import type { TrainingReadinessEvidence } from './trainingReadiness.js'
+import {
+  TRAINING_READINESS_CHECKS,
+  type TrainingReadinessEvidence,
+} from './trainingReadiness.js'
 import {
   jsonParse,
   jsonStringify,
@@ -34,9 +38,54 @@ export type LaunchTrainingRunFromConfigFileInput = {
   created_at: string
 }
 
+export type DefaultTrainingLaunchConfigInput = {
+  provider_model_id: string
+  git_commit: string
+  cwd_alias?: string
+  rollback_checkpoint_tag?: string
+  rollout_bundle_count?: number
+}
+
 export type LaunchTrainingRunFromConfigFileResult = {
   output_path: string
   manifest: TrainingRunManifest
+}
+
+function emptyReadinessEvidence(): TrainingReadinessEvidence {
+  return Object.fromEntries(
+    TRAINING_READINESS_CHECKS.map(check => [check.id, false]),
+  ) as TrainingReadinessEvidence
+}
+
+export function createDefaultTrainingLaunchConfig(
+  input: DefaultTrainingLaunchConfigInput,
+): TrainingLaunchConfigFile {
+  return {
+    provider_model_id: input.provider_model_id,
+    policy_trainability: 'closed_api',
+    readiness_evidence: emptyReadinessEvidence(),
+    baseline_matrix: {
+      policy_trainability: 'closed_api',
+      enabled_arms: ['baseline', 'hl_only', 'polar_only', 'hl_polar'],
+    },
+    rollout_bundle_count: input.rollout_bundle_count ?? 0,
+    cwd_alias: input.cwd_alias ?? '$WORKDIR',
+    git_commit: input.git_commit,
+    rollback_checkpoint_tag:
+      input.rollback_checkpoint_tag ??
+      'checkpoint/hl-polar-readiness-foundation-v1.0',
+  }
+}
+
+export function writeTrainingLaunchConfigFile(
+  path: string,
+  config: TrainingLaunchConfigFile,
+): void {
+  mkdirSync(dirname(path), { recursive: true })
+  writeFileSync_DEPRECATED(path, jsonStringify(config, null, 2), {
+    encoding: 'utf-8',
+    flush: true,
+  })
 }
 
 function readTrainingLaunchConfig(path: string): TrainingLaunchConfigFile {
@@ -70,6 +119,7 @@ export function launchTrainingRunFromConfigFile(
     launch_decision,
   })
 
+  mkdirSync(dirname(input.output_path), { recursive: true })
   writeFileSync_DEPRECATED(input.output_path, jsonStringify(manifest, null, 2), {
     encoding: 'utf-8',
     flush: true,
