@@ -18,6 +18,7 @@ import {
   type TrainingReadinessEvidence,
 } from '../learning/trainingReadiness.js'
 import { createEmptyRolloutBundle } from '../learning/rolloutSchema.js'
+import type { PolarProxySpikeObservation } from '../learning/polarProxySpike.js'
 
 function allReadyEvidence(): TrainingReadinessEvidence {
   return Object.fromEntries(
@@ -59,6 +60,28 @@ function rolloutBundle(): unknown {
   })
   bundle.failure.taxonomy = ['tool_choice_failure.bad_args']
   return bundle
+}
+
+function polarObservation(
+  case_id: PolarProxySpikeObservation['case_id'],
+  overrides: Partial<PolarProxySpikeObservation> = {},
+): PolarProxySpikeObservation {
+  return {
+    case_id,
+    captured_requests_count: 1,
+    leviathan_model_requests_count: 1,
+    request_response_pairs_complete: true,
+    run_session_binding_complete: true,
+    final_outcome_recorded: true,
+    streaming_complete: true,
+    tool_use_complete: true,
+    trajectory_completeness: true,
+    replay_fidelity: true,
+    reward_binding_success: true,
+    causal_chain_model_tool_diff_complete: true,
+    test_artifacts_complete: true,
+    ...overrides,
+  }
 }
 
 async function withTempDir<T>(fn: (dir: string) => Promise<T> | T): Promise<T> {
@@ -128,6 +151,21 @@ describe('Leviathan learning command', () => {
       provider_model_id: 'mimo-v2.5',
       base_heuristic_bundle_version: 'hb:initial',
       rollout_bundle_paths: ['rollout-a.json', 'rollout-b.json'],
+    })
+  })
+
+  test('parses Polar harness training arguments', () => {
+    expect(
+      parseLearningCommandArgs(
+        'train-polar --out polar.json --run-id train_1 --model mimo-v2.5 --base-harness git:abc123 --polar polar-observations.json',
+      ),
+    ).toEqual({
+      action: 'train-polar',
+      output_path: 'polar.json',
+      training_run_id: 'train_1',
+      provider_model_id: 'mimo-v2.5',
+      base_harness_version: 'git:abc123',
+      observations_path: 'polar-observations.json',
     })
   })
 
@@ -254,6 +292,43 @@ describe('Leviathan learning command', () => {
         'candidate_tool_choice_failure_001',
       ])
       expect(doneMessage).toContain('Leviathan candidate heuristic training completed')
+      expect(doneMessage).toContain(outputPath)
+    })
+  })
+
+  test('trains Polar harness candidates from observation files through the slash command', async () => {
+    await withTempDir(async dir => {
+      const observationsPath = join(dir, 'polar-observations.json')
+      const outputPath = join(dir, 'polar-candidates.json')
+      writeFileSync(
+        observationsPath,
+        JSON.stringify([
+          polarObservation('case_a_no_tool', {
+            captured_requests_count: 0,
+          }),
+          polarObservation('case_b_file_read_write'),
+          polarObservation('case_c_test_execution'),
+        ]),
+        'utf8',
+      )
+      let doneMessage = ''
+
+      await call(
+        message => {
+          doneMessage = message ?? ''
+        },
+        {} as never,
+        `train-polar --out ${outputPath} --run-id train_1 --model mimo-v2.5 --base-harness git:abc123 --polar ${observationsPath}`,
+      )
+
+      const training = JSON.parse(readFileSync(outputPath, 'utf8'))
+      expect(training.status).toBe('candidate_only')
+      expect(training.provider_model_update).toBe('none')
+      expect(training.stable_promotions_allowed).toBe(false)
+      expect(training.updates.map((update: { id: string }) => update.id)).toEqual([
+        'polar_candidate_proxy_bypass_001',
+      ])
+      expect(doneMessage).toContain('Leviathan Polar harness training completed')
       expect(doneMessage).toContain(outputPath)
     })
   })

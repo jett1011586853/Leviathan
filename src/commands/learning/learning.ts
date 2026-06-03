@@ -7,6 +7,7 @@ import {
 import { buildTrainingLaunchConfigFromEvidenceFiles } from '../../learning/trainingEvidenceFiles.js'
 import type { ProviderScope } from '../../learning/trainingReadinessEvidence.js'
 import { trainHeuristicCandidatesFromFiles } from '../../learning/heuristicTrainingFiles.js'
+import { trainPolarHarnessCandidatesFromFiles } from '../../learning/polarHarnessTrainingFiles.js'
 
 export type ParsedLearningCommandArgs =
   | {
@@ -47,11 +48,19 @@ export type ParsedLearningCommandArgs =
       rollout_bundle_paths: string[]
     }
   | {
+      action: 'train-polar'
+      output_path: string
+      training_run_id: string
+      provider_model_id: string
+      base_harness_version: string
+      observations_path: string
+    }
+  | {
       action: 'help'
     }
 
 const USAGE =
-  'Usage: /learning init --out <launch.json> --model <model-id>; /learning collect --out <launch.json> --model <model-id> --rollout <rollout.json>; /learning start --config <launch.json> --out <manifest.json>; /learning train-candidates --out <candidates.json> --run-id <run> --model <model-id> --rollout <rollout.json>'
+  'Usage: /learning init --out <launch.json> --model <model-id>; /learning collect --out <launch.json> --model <model-id> --rollout <rollout.json>; /learning start --config <launch.json> --out <manifest.json>; /learning train-candidates --out <candidates.json> --run-id <run> --model <model-id> --rollout <rollout.json>; /learning train-polar --out <polar.json> --run-id <run> --model <model-id> --polar <observations.json>'
 
 function tokenizeArgs(args: string): string[] {
   const tokens: string[] = []
@@ -166,6 +175,30 @@ export function parseLearningCommandArgs(
     }
   }
 
+  if (tokens[0] === 'train-polar') {
+    const output_path = readFlag(tokens, ['--out', '--output'])
+    const training_run_id = readFlag(tokens, ['--run-id'])
+    const provider_model_id = readFlag(tokens, ['--model'])
+    const observations_path = readFlag(tokens, ['--polar'])
+    if (
+      !output_path ||
+      !training_run_id ||
+      !provider_model_id ||
+      !observations_path
+    ) {
+      return { action: 'help' }
+    }
+
+    return {
+      action: 'train-polar',
+      output_path,
+      training_run_id,
+      provider_model_id,
+      base_harness_version: readFlag(tokens, ['--base-harness']) || 'unknown',
+      observations_path,
+    }
+  }
+
   if (tokens[0] !== 'start') return { action: 'help' }
 
   const config_path = readFlag(tokens, ['--config'])
@@ -246,6 +279,26 @@ export async function call(
     }
     onDone(
       `Leviathan candidate heuristic training blocked: ${result.training.blocked_reasons.join(
+        ', ',
+      )}. Output: ${result.output_path}`,
+    )
+    return null
+  }
+
+  if (parsed.action === 'train-polar') {
+    const result = trainPolarHarnessCandidatesFromFiles({
+      training_run_id: parsed.training_run_id,
+      provider_model_id: parsed.provider_model_id,
+      base_harness_version: parsed.base_harness_version,
+      observations_path: parsed.observations_path,
+      output_path: parsed.output_path,
+    })
+    if (result.training.status === 'candidate_only') {
+      onDone(`Leviathan Polar harness training completed: ${result.output_path}`)
+      return null
+    }
+    onDone(
+      `Leviathan Polar harness training blocked: ${result.training.blocked_reasons.join(
         ', ',
       )}. Output: ${result.output_path}`,
     )
