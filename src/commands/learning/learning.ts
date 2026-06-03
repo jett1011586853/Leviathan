@@ -9,6 +9,7 @@ import type { ProviderScope } from '../../learning/trainingReadinessEvidence.js'
 import { trainHeuristicCandidatesFromFiles } from '../../learning/heuristicTrainingFiles.js'
 import { trainPolarHarnessCandidatesFromFiles } from '../../learning/polarHarnessTrainingFiles.js'
 import { writeHeuristicPromotionReportFromFiles } from '../../learning/promotionFiles.js'
+import { writePolarHarnessPromotionReportFromFiles } from '../../learning/polarHarnessPromotionFiles.js'
 
 export type ParsedLearningCommandArgs =
   | {
@@ -63,11 +64,17 @@ export type ParsedLearningCommandArgs =
       evidence_path: string
     }
   | {
+      action: 'promote-polar'
+      output_path: string
+      training_path: string
+      evidence_path: string
+    }
+  | {
       action: 'help'
     }
 
 const USAGE =
-  'Usage: /learning init --out <launch.json> --model <model-id>; /learning collect --out <launch.json> --model <model-id> --rollout <rollout.json>; /learning start --config <launch.json> --out <manifest.json>; /learning train-candidates --out <candidates.json> --run-id <run> --model <model-id> --rollout <rollout.json>; /learning train-polar --out <polar.json> --run-id <run> --model <model-id> --polar <observations.json>; /learning promote-candidates --out <promotion.json> --candidates <candidates.json> --evidence <evidence.json>'
+  'Usage: /learning init --out <launch.json> --model <model-id>; /learning collect --out <launch.json> --model <model-id> --rollout <rollout.json>; /learning start --config <launch.json> --out <manifest.json>; /learning train-candidates --out <candidates.json> --run-id <run> --model <model-id> --rollout <rollout.json>; /learning train-polar --out <polar.json> --run-id <run> --model <model-id> --polar <observations.json>; /learning promote-candidates --out <promotion.json> --candidates <candidates.json> --evidence <evidence.json>; /learning promote-polar --out <promotion.json> --polar-candidates <polar.json> --evidence <evidence.json>'
 
 function tokenizeArgs(args: string): string[] {
   const tokens: string[] = []
@@ -222,6 +229,22 @@ export function parseLearningCommandArgs(
     }
   }
 
+  if (tokens[0] === 'promote-polar') {
+    const output_path = readFlag(tokens, ['--out', '--output'])
+    const training_path = readFlag(tokens, ['--polar-candidates', '--training'])
+    const evidence_path = readFlag(tokens, ['--evidence'])
+    if (!output_path || !training_path || !evidence_path) {
+      return { action: 'help' }
+    }
+
+    return {
+      action: 'promote-polar',
+      output_path,
+      training_path,
+      evidence_path,
+    }
+  }
+
   if (tokens[0] !== 'start') return { action: 'help' }
 
   const config_path = readFlag(tokens, ['--config'])
@@ -340,6 +363,24 @@ export async function call(
     }
     onDone(
       `Leviathan heuristic promotion report ${result.report.status}: ${result.report.blocked_reasons.join(
+        ', ',
+      )}. Output: ${result.output_path}`,
+    )
+    return null
+  }
+
+  if (parsed.action === 'promote-polar') {
+    const result = writePolarHarnessPromotionReportFromFiles({
+      training_path: parsed.training_path,
+      evidence_path: parsed.evidence_path,
+      output_path: parsed.output_path,
+    })
+    if (result.report.status === 'ready_for_stable_promotion') {
+      onDone(`Leviathan Polar promotion report ready: ${result.output_path}`)
+      return null
+    }
+    onDone(
+      `Leviathan Polar promotion report ${result.report.status}: ${result.report.blocked_reasons.join(
         ', ',
       )}. Output: ${result.output_path}`,
     )

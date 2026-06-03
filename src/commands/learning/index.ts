@@ -6,7 +6,7 @@ const learning = {
   aliases: ['train'],
   description: 'Start or audit Leviathan HL + Polar harness learning',
   argumentHint:
-    'init|collect|start|train-candidates|train-polar|promote-candidates --out <file>',
+    'init|collect|start|train-candidates|train-polar|promote-candidates|promote-polar --out <file>',
   load: () => import('./learning.js'),
 } satisfies Command
 
