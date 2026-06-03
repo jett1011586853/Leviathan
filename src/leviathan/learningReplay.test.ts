@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
+import { compareReplayArtifacts } from '../learning/replayCompare.js'
 import { deriveReplayPlan } from '../learning/replayPlan.js'
 import { createEmptyRolloutBundle } from '../learning/rolloutSchema.js'
 
@@ -54,5 +55,88 @@ describe('Leviathan replay plan scaffold', () => {
     expect(plan.ready).toBe(false)
     expect(plan.blockers).toContain('task.base_commit')
     expect(plan.blockers).toContain('runtime.network_policy')
+  })
+
+  test('compares replay artifacts using normalized diff and exact outcome gates', () => {
+    const golden = createReplayableBundle()
+    golden.tool_events = [
+      {
+        tool_use_id: 'tool_1',
+        tool_name: 'Read',
+        input_redacted: { file: 'src/a.ts' },
+        success: true,
+        result_summary: 'ok',
+      },
+    ]
+    golden.code_changes.diff = 'diff --git a/a.ts b/a.ts\n+ const answer = 42\n'
+    golden.evaluation.exit_codes = [0]
+    golden.evaluation.test_outputs = ['PASS']
+    golden.evaluation.final_outcome = 'resolved'
+    golden.failure.taxonomy = ['code_modification_failure.patch_quality']
+
+    const replay = createReplayableBundle()
+    replay.tool_events = structuredClone(golden.tool_events)
+    replay.code_changes.diff =
+      'diff --git a/a.ts b/a.ts\n+\tconst   answer = 42  \n'
+    replay.evaluation.exit_codes = [0]
+    replay.evaluation.test_outputs = ['PASS']
+    replay.evaluation.final_outcome = 'resolved'
+    replay.failure.taxonomy = ['code_modification_failure.other_detail']
+
+    const result = compareReplayArtifacts(golden, replay)
+
+    expect(result.passed).toBe(true)
+    expect(result.mismatches).toEqual([])
+    expect(result.scores).toEqual({
+      tool_trace: 1,
+      patch: 1,
+      tests: 1,
+      failure_taxonomy: 1,
+      final_outcome: 1,
+    })
+  })
+
+  test('reports replay artifact mismatches with actionable fields', () => {
+    const golden = createReplayableBundle()
+    golden.tool_events = [
+      {
+        tool_use_id: 'tool_1',
+        tool_name: 'Read',
+        input_redacted: {},
+        success: true,
+        result_summary: 'ok',
+      },
+    ]
+    golden.evaluation.exit_codes = [0]
+    golden.evaluation.test_outputs = ['PASS']
+    golden.evaluation.final_outcome = 'resolved'
+    golden.failure.taxonomy = ['verification_failure']
+
+    const replay = createReplayableBundle()
+    replay.tool_events = [
+      {
+        tool_use_id: 'tool_2',
+        tool_name: 'Bash',
+        input_redacted: {},
+        success: false,
+        result_summary: 'failed',
+      },
+    ]
+    replay.evaluation.exit_codes = [1]
+    replay.evaluation.test_outputs = ['FAIL']
+    replay.evaluation.final_outcome = 'unresolved'
+    replay.failure.taxonomy = ['tool_choice_failure']
+
+    const result = compareReplayArtifacts(golden, replay)
+
+    expect(result.passed).toBe(false)
+    expect(result.mismatches).toEqual([
+      'tool_trace',
+      'tests',
+      'failure_taxonomy',
+      'final_outcome',
+    ])
+    expect(result.scores.tool_trace).toBe(0)
+    expect(result.scores.tests).toBe(0)
   })
 })
