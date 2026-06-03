@@ -6,6 +6,7 @@ import {
 } from '../learning/trainingReadiness.js'
 import { buildTrainingReadinessEvidence } from '../learning/trainingReadinessEvidence.js'
 import { createEmptyRolloutBundle } from '../learning/rolloutSchema.js'
+import type { BenchmarkTaskRecord } from '../learning/benchmarkGovernance.js'
 
 function readinessRollout(id: string, taxonomy: string[]) {
   const bundle = createEmptyRolloutBundle({
@@ -25,6 +26,27 @@ function readinessRollout(id: string, taxonomy: string[]) {
   })
   bundle.failure.taxonomy = taxonomy
   return bundle
+}
+
+function benchmarkRecord(
+  id: string,
+  overrides: Partial<BenchmarkTaskRecord> = {},
+): BenchmarkTaskRecord {
+  return {
+    id,
+    source: 'internal',
+    split: 'train',
+    repo: 'leviathan',
+    base_commit: `commit_${id}`,
+    issue_id: `issue_${id}`,
+    benchmark_instance_id: '',
+    problem_statement_hash: `problem_${id}`,
+    normalized_diff_hash: `diff_${id}`,
+    public_visibility: 'private',
+    allow_policy_training: true,
+    allow_global_memory: true,
+    ...overrides,
+  }
 }
 
 describe('Leviathan training readiness checklist', () => {
@@ -131,5 +153,80 @@ describe('Leviathan training readiness checklist', () => {
     expect(result.ready_for_formal_training).toBe(false)
     expect(result.failed).toContain('polar_proxy_spike_cases_passed')
     expect(result.failed).toContain('benchmark_splits_isolated')
+  })
+
+  test('derives benchmark readiness from split governance records', () => {
+    const evidence = buildTrainingReadinessEvidence({
+      rollout_bundles: [
+        readinessRollout('1', ['tool_choice_failure.bad_args']),
+        readinessRollout('2', ['verification_failure.flaky_tests']),
+        readinessRollout('3', ['security_governance_failure.secret_leak']),
+        readinessRollout('4', ['model_interaction_failure.provider_mismatch']),
+      ],
+      replay_results: [
+        {
+          status: 'completed',
+          blockers: [],
+          compare_passed: true,
+        },
+      ],
+      provider_scope: 'anthropic-compatible-direct',
+      benchmark_records: [
+        benchmarkRecord('train_1'),
+        benchmarkRecord('dev_1', {
+          split: 'dev',
+          allow_policy_training: false,
+        }),
+        benchmarkRecord('public_1', {
+          split: 'test',
+          source: 'swe-bench-live',
+          public_visibility: 'public',
+          allow_policy_training: false,
+          allow_global_memory: false,
+        }),
+        benchmarkRecord('secret_1', {
+          split: 'secret',
+          source: 'secret',
+          public_visibility: 'private',
+          allow_policy_training: false,
+          allow_global_memory: false,
+        }),
+      ],
+      polar_proxy_spike_cases_passed: false,
+      sparse_outcome_reward_defined: false,
+      rollback_and_incident_plan_ready: false,
+    })
+
+    expect(evidence.benchmark_splits_isolated).toBe(true)
+    expect(evidence.result_reporting_split_by_source).toBe(true)
+  })
+
+  test('keeps benchmark readiness false when split governance detects leakage', () => {
+    const evidence = buildTrainingReadinessEvidence({
+      rollout_bundles: [readinessRollout('1', ['tool_choice_failure.bad_args'])],
+      replay_results: [
+        {
+          status: 'completed',
+          blockers: [],
+          compare_passed: true,
+        },
+      ],
+      provider_scope: 'anthropic-compatible-direct',
+      benchmark_records: [
+        benchmarkRecord('leaky_eval', {
+          split: 'test',
+          source: 'swe-bench-verified',
+          public_visibility: 'public',
+          allow_policy_training: true,
+          allow_global_memory: true,
+        }),
+      ],
+      polar_proxy_spike_cases_passed: false,
+      sparse_outcome_reward_defined: false,
+      rollback_and_incident_plan_ready: false,
+    })
+
+    expect(evidence.benchmark_splits_isolated).toBe(false)
+    expect(evidence.result_reporting_split_by_source).toBe(true)
   })
 })

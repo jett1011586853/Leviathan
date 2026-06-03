@@ -2,6 +2,11 @@ import {
   measureFailureTaxonomyCoverage,
 } from './failureTaxonomy.js'
 import {
+  summarizeBenchmarkSources,
+  validateBenchmarkSplits,
+  type BenchmarkTaskRecord,
+} from './benchmarkGovernance.js'
+import {
   ROLLOUT_SCHEMA_VERSION,
   type LeviathanRolloutBundle,
 } from './rolloutSchema.js'
@@ -22,7 +27,8 @@ export type BuildTrainingReadinessEvidenceInput = {
   rollout_bundles: LeviathanRolloutBundle[]
   replay_results: ReplayReadinessEvidence[]
   provider_scope: ProviderScope
-  benchmark_splits_isolated: boolean
+  benchmark_splits_isolated?: boolean
+  benchmark_records?: BenchmarkTaskRecord[]
   polar_proxy_spike_cases_passed: boolean
   sparse_outcome_reward_defined: boolean
   rollback_and_incident_plan_ready: boolean
@@ -66,6 +72,14 @@ export function buildTrainingReadinessEvidence(
   input: BuildTrainingReadinessEvidenceInput,
 ): TrainingReadinessEvidence {
   const taxonomyCoverage = measureFailureTaxonomyCoverage(input.rollout_bundles)
+  const benchmarkGovernance =
+    input.benchmark_records !== undefined
+      ? validateBenchmarkSplits(input.benchmark_records)
+      : null
+  const sourceSummary =
+    input.benchmark_records !== undefined
+      ? summarizeBenchmarkSources(input.benchmark_records)
+      : null
 
   return {
     concept_boundaries_fixed: true,
@@ -83,13 +97,18 @@ export function buildTrainingReadinessEvidence(
       taxonomyCoverage.ready_at_80_percent,
     heuristic_promotion_gate_implemented: true,
     updater_candidate_only_enforced: true,
-    benchmark_splits_isolated: input.benchmark_splits_isolated,
+    benchmark_splits_isolated:
+      benchmarkGovernance?.isolated ?? input.benchmark_splits_isolated ?? false,
     polar_proxy_spike_cases_passed: input.polar_proxy_spike_cases_passed,
     provider_scope_locked_direct_anthropic:
       input.provider_scope === 'anthropic-compatible-direct',
     sparse_outcome_reward_defined: input.sparse_outcome_reward_defined,
     baseline_matrix_fixed: true,
-    result_reporting_split_by_source: true,
+    result_reporting_split_by_source:
+      sourceSummary === null
+        ? true
+        : sourceSummary.internal + sourceSummary.public + sourceSummary.private_secret >
+          0,
     rollback_and_incident_plan_ready: input.rollback_and_incident_plan_ready,
   }
 }
