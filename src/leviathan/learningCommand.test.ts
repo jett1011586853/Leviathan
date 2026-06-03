@@ -116,6 +116,21 @@ describe('Leviathan learning command', () => {
     })
   })
 
+  test('parses candidate heuristic training arguments', () => {
+    expect(
+      parseLearningCommandArgs(
+        'train-candidates --out candidates.json --run-id train_1 --model mimo-v2.5 --base-bundle hb:initial --rollout rollout-a.json --rollout rollout-b.json',
+      ),
+    ).toEqual({
+      action: 'train-candidates',
+      output_path: 'candidates.json',
+      training_run_id: 'train_1',
+      provider_model_id: 'mimo-v2.5',
+      base_heuristic_bundle_version: 'hb:initial',
+      rollout_bundle_paths: ['rollout-a.json', 'rollout-b.json'],
+    })
+  })
+
   test('writes a manifest from the slash command entrypoint', async () => {
     await withTempDir(async dir => {
       const configPath = join(dir, 'launch.json')
@@ -213,6 +228,33 @@ describe('Leviathan learning command', () => {
       expect(config.readiness_evidence.rollback_and_incident_plan_ready).toBe(false)
       expect(doneMessage).toContain('Leviathan learning evidence collected')
       expect(doneMessage).toContain(configPath)
+    })
+  })
+
+  test('trains candidate heuristics from rollout files through the slash command', async () => {
+    await withTempDir(async dir => {
+      const rolloutPath = join(dir, 'rollout.json')
+      const outputPath = join(dir, 'candidate-heuristics.json')
+      writeFileSync(rolloutPath, JSON.stringify(rolloutBundle()), 'utf8')
+      let doneMessage = ''
+
+      await call(
+        message => {
+          doneMessage = message ?? ''
+        },
+        {} as never,
+        `train-candidates --out ${outputPath} --run-id train_1 --model mimo-v2.5 --base-bundle hb:initial --rollout ${rolloutPath}`,
+      )
+
+      const training = JSON.parse(readFileSync(outputPath, 'utf8'))
+      expect(training.status).toBe('candidate_only')
+      expect(training.provider_model_update).toBe('none')
+      expect(training.stable_promotions_allowed).toBe(false)
+      expect(training.candidates.map((candidate: { id: string }) => candidate.id)).toEqual([
+        'candidate_tool_choice_failure_001',
+      ])
+      expect(doneMessage).toContain('Leviathan candidate heuristic training completed')
+      expect(doneMessage).toContain(outputPath)
     })
   })
 })

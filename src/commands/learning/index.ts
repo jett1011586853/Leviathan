@@ -5,7 +5,8 @@ const learning = {
   name: 'learning',
   aliases: ['train'],
   description: 'Start or audit Leviathan HL + Polar harness learning',
-  argumentHint: 'init|collect|start --config <launch.json> --out <manifest.json>',
+  argumentHint:
+    'init|collect|start|train-candidates --out <file> --rollout <rollout.json>',
   load: () => import('./learning.js'),
 } satisfies Command
 

@@ -6,6 +6,7 @@ import {
 } from '../../learning/trainingRunFiles.js'
 import { buildTrainingLaunchConfigFromEvidenceFiles } from '../../learning/trainingEvidenceFiles.js'
 import type { ProviderScope } from '../../learning/trainingReadinessEvidence.js'
+import { trainHeuristicCandidatesFromFiles } from '../../learning/heuristicTrainingFiles.js'
 
 export type ParsedLearningCommandArgs =
   | {
@@ -38,11 +39,19 @@ export type ParsedLearningCommandArgs =
       rollback_incident_plan_path?: string
     }
   | {
+      action: 'train-candidates'
+      output_path: string
+      training_run_id: string
+      provider_model_id: string
+      base_heuristic_bundle_version: string
+      rollout_bundle_paths: string[]
+    }
+  | {
       action: 'help'
     }
 
 const USAGE =
-  'Usage: /learning init --out <launch.json> --model <model-id>; /learning collect --out <launch.json> --model <model-id> --rollout <rollout.json>; /learning start --config <launch.json> --out <manifest.json>'
+  'Usage: /learning init --out <launch.json> --model <model-id>; /learning collect --out <launch.json> --model <model-id> --rollout <rollout.json>; /learning start --config <launch.json> --out <manifest.json>; /learning train-candidates --out <candidates.json> --run-id <run> --model <model-id> --rollout <rollout.json>'
 
 function tokenizeArgs(args: string): string[] {
   const tokens: string[] = []
@@ -132,6 +141,31 @@ export function parseLearningCommandArgs(
     }
   }
 
+  if (tokens[0] === 'train-candidates') {
+    const output_path = readFlag(tokens, ['--out', '--output'])
+    const training_run_id = readFlag(tokens, ['--run-id'])
+    const provider_model_id = readFlag(tokens, ['--model'])
+    const rollout_bundle_paths = readFlags(tokens, ['--rollout'])
+    if (
+      !output_path ||
+      !training_run_id ||
+      !provider_model_id ||
+      rollout_bundle_paths.length === 0
+    ) {
+      return { action: 'help' }
+    }
+
+    return {
+      action: 'train-candidates',
+      output_path,
+      training_run_id,
+      provider_model_id,
+      base_heuristic_bundle_version:
+        readFlag(tokens, ['--base-bundle']) || 'hb:initial',
+      rollout_bundle_paths,
+    }
+  }
+
   if (tokens[0] !== 'start') return { action: 'help' }
 
   const config_path = readFlag(tokens, ['--config'])
@@ -193,6 +227,28 @@ export async function call(
       }),
     )
     onDone(`Leviathan learning evidence collected: ${parsed.output_path}`)
+    return null
+  }
+
+  if (parsed.action === 'train-candidates') {
+    const result = trainHeuristicCandidatesFromFiles({
+      training_run_id: parsed.training_run_id,
+      provider_model_id: parsed.provider_model_id,
+      base_heuristic_bundle_version: parsed.base_heuristic_bundle_version,
+      rollout_bundle_paths: parsed.rollout_bundle_paths,
+      output_path: parsed.output_path,
+    })
+    if (result.training.status === 'candidate_only') {
+      onDone(
+        `Leviathan candidate heuristic training completed: ${result.output_path}`,
+      )
+      return null
+    }
+    onDone(
+      `Leviathan candidate heuristic training blocked: ${result.training.blocked_reasons.join(
+        ', ',
+      )}. Output: ${result.output_path}`,
+    )
     return null
   }
 
