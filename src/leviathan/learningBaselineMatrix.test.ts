@@ -12,29 +12,33 @@ describe('Leviathan baseline experiment matrix', () => {
         id: 'baseline',
         harness: 'original',
         heuristics: 'original',
-        policy: 'original',
+        policy: 'provider_model',
+        training_target: 'none',
         requires_trainable_policy: false,
       },
       {
         id: 'hl_only',
         harness: 'leviathan',
         heuristics: 'upgraded',
-        policy: 'original',
+        policy: 'provider_model',
+        training_target: 'hl_harness',
         requires_trainable_policy: false,
       },
       {
         id: 'polar_only',
         harness: 'leviathan_black_box',
         heuristics: 'original',
-        policy: 'polar_trained',
-        requires_trainable_policy: true,
+        policy: 'provider_model',
+        training_target: 'polar_harness',
+        requires_trainable_policy: false,
       },
       {
         id: 'hl_polar',
         harness: 'leviathan_with_heuristics',
         heuristics: 'upgraded',
-        policy: 'polar_trained',
-        requires_trainable_policy: true,
+        policy: 'provider_model',
+        training_target: 'hl_polar_harness',
+        requires_trainable_policy: false,
       },
     ])
   })
@@ -67,34 +71,34 @@ describe('Leviathan baseline experiment matrix', () => {
     })
   })
 
-  test('blocks Polar parameter-training arms for closed API policies', () => {
+  test('allows closed API experiments because Polar is harness-side training', () => {
     expect(
       validateBaselineMatrix({
         policy_trainability: 'closed_api',
         enabled_arms: ['baseline', 'hl_only', 'polar_only', 'hl_polar'],
       }),
     ).toEqual({
-      valid: false,
+      valid: true,
       missing_arms: [],
-      invalid_arms: ['polar_only', 'hl_polar'],
+      invalid_arms: [],
       warnings: [
-        'Closed API policies can use Polar instrumentation/evaluation, not parameter-training arms.',
+        'Closed API policy matrix keeps the provider model fixed and trains only harness-side assets.',
       ],
     })
   })
 
-  test('allows closed API experiments when only baseline and HL-only arms are enabled', () => {
+  test('rejects closed API experiments that omit Polar harness arms', () => {
     expect(
       validateBaselineMatrix({
         policy_trainability: 'closed_api',
         enabled_arms: ['baseline', 'hl_only'],
       }),
     ).toEqual({
-      valid: true,
-      missing_arms: [],
+      valid: false,
+      missing_arms: ['polar_only', 'hl_polar'],
       invalid_arms: [],
       warnings: [
-        'Closed API policy matrix omits Polar training arms by design.',
+        'Closed API policy matrix keeps the provider model fixed and trains only harness-side assets.',
       ],
     })
   })

@@ -377,6 +377,8 @@ describe('Leviathan training readiness checklist', () => {
         enabled_arms: [
           'baseline',
           'hl_only',
+          'polar_only',
+          'hl_polar',
         ] satisfies BaselineExperimentArmId[],
       },
       rollback_and_incident_plan_ready: false,
@@ -432,6 +434,8 @@ describe('Leviathan training readiness checklist', () => {
         enabled_arms: [
           'baseline',
           'hl_only',
+          'polar_only',
+          'hl_polar',
         ] satisfies BaselineExperimentArmId[],
       },
       rollback_and_incident_plan_ready: false,

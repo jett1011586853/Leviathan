@@ -5,6 +5,11 @@ export type BaselineExperimentArmId =
   | 'hl_polar'
 
 export type PolicyTrainability = 'trainable' | 'closed_api'
+export type HarnessTrainingTarget =
+  | 'none'
+  | 'hl_harness'
+  | 'polar_harness'
+  | 'hl_polar_harness'
 
 export type BaselineExperimentArm = {
   id: BaselineExperimentArmId
@@ -14,7 +19,8 @@ export type BaselineExperimentArm = {
     | 'leviathan_black_box'
     | 'leviathan_with_heuristics'
   heuristics: 'original' | 'upgraded'
-  policy: 'original' | 'polar_trained'
+  policy: 'provider_model'
+  training_target: HarnessTrainingTarget
   requires_trainable_policy: boolean
 }
 
@@ -35,29 +41,33 @@ export const BASELINE_EXPERIMENT_ARMS: BaselineExperimentArm[] = [
     id: 'baseline',
     harness: 'original',
     heuristics: 'original',
-    policy: 'original',
+    policy: 'provider_model',
+    training_target: 'none',
     requires_trainable_policy: false,
   },
   {
     id: 'hl_only',
     harness: 'leviathan',
     heuristics: 'upgraded',
-    policy: 'original',
+    policy: 'provider_model',
+    training_target: 'hl_harness',
     requires_trainable_policy: false,
   },
   {
     id: 'polar_only',
     harness: 'leviathan_black_box',
     heuristics: 'original',
-    policy: 'polar_trained',
-    requires_trainable_policy: true,
+    policy: 'provider_model',
+    training_target: 'polar_harness',
+    requires_trainable_policy: false,
   },
   {
     id: 'hl_polar',
     harness: 'leviathan_with_heuristics',
     heuristics: 'upgraded',
-    policy: 'polar_trained',
-    requires_trainable_policy: true,
+    policy: 'provider_model',
+    training_target: 'hl_polar_harness',
+    requires_trainable_policy: false,
   },
 ]
 
@@ -66,11 +76,6 @@ const REQUIRED_TRAINABLE_ARMS: BaselineExperimentArmId[] = [
   'hl_only',
   'polar_only',
   'hl_polar',
-]
-
-const REQUIRED_CLOSED_API_ARMS: BaselineExperimentArmId[] = [
-  'baseline',
-  'hl_only',
 ]
 
 function armById(id: BaselineExperimentArmId): BaselineExperimentArm {
@@ -82,10 +87,7 @@ function armById(id: BaselineExperimentArmId): BaselineExperimentArm {
 export function validateBaselineMatrix(
   input: BaselineMatrixInput,
 ): BaselineMatrixValidation {
-  const required =
-    input.policy_trainability === 'trainable'
-      ? REQUIRED_TRAINABLE_ARMS
-      : REQUIRED_CLOSED_API_ARMS
+  const required = REQUIRED_TRAINABLE_ARMS
   const missing_arms = required.filter(arm => !input.enabled_arms.includes(arm))
   const invalid_arms =
     input.policy_trainability === 'closed_api'
@@ -93,12 +95,10 @@ export function validateBaselineMatrix(
       : []
   const warnings: string[] = []
 
-  if (input.policy_trainability === 'closed_api' && invalid_arms.length > 0) {
+  if (input.policy_trainability === 'closed_api') {
     warnings.push(
-      'Closed API policies can use Polar instrumentation/evaluation, not parameter-training arms.',
+      'Closed API policy matrix keeps the provider model fixed and trains only harness-side assets.',
     )
-  } else if (input.policy_trainability === 'closed_api') {
-    warnings.push('Closed API policy matrix omits Polar training arms by design.')
   }
 
   return {
