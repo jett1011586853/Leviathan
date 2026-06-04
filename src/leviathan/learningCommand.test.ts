@@ -74,7 +74,7 @@ function resolvedHeldOutRolloutBundle(): unknown {
     sessionId: 'session_held_out_1',
     taskId: 'task_held_out_1',
     source: 'internal',
-    split: 'held_out',
+    split: 'test',
     timestamp: '2026-06-03T00:00:00.000Z',
     harnessVersion: 'git:abc123',
     heuristicBundleVersion: 'hb:candidate/train_1',
@@ -422,6 +422,31 @@ describe('Leviathan learning command', () => {
       run_dir: 'runs/train_shadow_001',
       output_path: 'runs/train_shadow_001/collection.json',
       created_at: '2026-06-04T13:00:00.000Z',
+    })
+  })
+
+  test('parses shadow rollout intake arguments', () => {
+    expect(
+      parseLearningCommandArgs(
+        'intake-shadow-rollout --run-dir runs/train_shadow_001 --input exported.json --out intake.json --split train --taxonomy tool_choice_failure.bad_args --outcome unresolved --resolved-label false --root-cause "bad tool args" --test-cmd "bun test" --test-output "schema mismatch" --exit-code 1 --changed-file src/commands/learning/learning.ts --export-allowed true --contains-private-code false',
+      ),
+    ).toEqual({
+      action: 'intake-shadow-rollout',
+      run_dir: 'runs/train_shadow_001',
+      input_path: 'exported.json',
+      output_path: 'intake.json',
+      split: 'train',
+      taxonomy: ['tool_choice_failure.bad_args'],
+      root_cause_summary: 'bad tool args',
+      final_outcome: 'unresolved',
+      resolved_label: false,
+      test_commands: ['bun test'],
+      test_outputs: ['schema mismatch'],
+      exit_codes: [1],
+      changed_files: ['src/commands/learning/learning.ts'],
+      diff: undefined,
+      export_allowed: true,
+      contains_private_code: false,
     })
   })
 
@@ -938,6 +963,45 @@ describe('Leviathan learning command', () => {
       expect(status.ready_for_pipeline).toBe(true)
       expect(doneMessage).toContain('Leviathan shadow collection ready')
       expect(doneMessage).toContain(collectionPath)
+    })
+  })
+
+  test('intakes exported rollout into a shadow run through the slash command', async () => {
+    await withTempDir(async dir => {
+      const outputDir = join(dir, 'train_shadow_001')
+      const inputPath = join(dir, 'exported-rollout.json')
+      const reportPath = join(outputDir, 'intake-report.json')
+      let doneMessage = ''
+
+      await call(
+        () => {},
+        {} as never,
+        `start-shadow --out-dir ${outputDir} --run-id train_shadow_001 --model mimo-v2.5 --git-commit edab200 --checkpoint permanent-leviathan-current-2026-06-04 --target-rollouts 50 --created-at 2026-06-04T12:00:00.000Z`,
+      )
+      writeFileSync(inputPath, JSON.stringify(rolloutBundle()), 'utf8')
+
+      await call(
+        message => {
+          doneMessage = message ?? ''
+        },
+        {} as never,
+        `intake-shadow-rollout --run-dir ${outputDir} --input ${inputPath} --out ${reportPath} --split train --taxonomy tool_choice_failure.bad_args --outcome unresolved --resolved-label false --root-cause "bad tool args" --test-cmd "bun test" --test-output "schema mismatch" --exit-code 1 --changed-file src/commands/learning/learning.ts --export-allowed true --contains-private-code false`,
+      )
+
+      const report = JSON.parse(readFileSync(reportPath, 'utf8'))
+      const status = JSON.parse(
+        readFileSync(join(outputDir, 'shadow-status.json'), 'utf8'),
+      )
+      expect(report.schema_version).toBe('leviathan.shadow_rollout_intake.v1')
+      expect(report.provider_model_update).toBe('none')
+      expect(report.raw_path).toContain(join('rollouts', 'raw'))
+      expect(report.annotated_path).toContain(
+        join('rollouts', 'annotated', 'train'),
+      )
+      expect(status.rollout_counts.raw).toBe(1)
+      expect(status.rollout_counts.annotated.train).toBe(1)
+      expect(doneMessage).toContain('Leviathan shadow rollout intaked')
+      expect(doneMessage).toContain(reportPath)
     })
   })
 
