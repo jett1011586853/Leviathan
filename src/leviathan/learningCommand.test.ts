@@ -450,6 +450,20 @@ describe('Leviathan learning command', () => {
     })
   })
 
+  test('parses shadow evidence intake arguments', () => {
+    expect(
+      parseLearningCommandArgs(
+        'intake-shadow-evidence --run-dir runs/train_shadow_001 --kind replay-results --input replay.json --out evidence-intake.json',
+      ),
+    ).toEqual({
+      action: 'intake-shadow-evidence',
+      run_dir: 'runs/train_shadow_001',
+      kind: 'replay-results',
+      input_path: 'replay.json',
+      output_path: 'evidence-intake.json',
+    })
+  })
+
   test('parses evidence collection arguments', () => {
     expect(
       parseLearningCommandArgs(
@@ -1001,6 +1015,47 @@ describe('Leviathan learning command', () => {
       expect(status.rollout_counts.raw).toBe(1)
       expect(status.rollout_counts.annotated.train).toBe(1)
       expect(doneMessage).toContain('Leviathan shadow rollout intaked')
+      expect(doneMessage).toContain(reportPath)
+    })
+  })
+
+  test('intakes evidence into a shadow run through the slash command', async () => {
+    await withTempDir(async dir => {
+      const outputDir = join(dir, 'train_shadow_001')
+      const inputPath = join(dir, 'replay-results.json')
+      const reportPath = join(outputDir, 'evidence-intake-report.json')
+      let doneMessage = ''
+
+      await call(
+        () => {},
+        {} as never,
+        `start-shadow --out-dir ${outputDir} --run-id train_shadow_001 --model mimo-v2.5 --git-commit 3bac081 --checkpoint permanent-leviathan-current-2026-06-04 --target-rollouts 50 --created-at 2026-06-04T12:00:00.000Z`,
+      )
+      writeFileSync(
+        inputPath,
+        JSON.stringify([{ status: 'completed', blockers: [], compare_passed: true }]),
+        'utf8',
+      )
+
+      await call(
+        message => {
+          doneMessage = message ?? ''
+        },
+        {} as never,
+        `intake-shadow-evidence --run-dir ${outputDir} --kind replay-results --input ${inputPath} --out ${reportPath}`,
+      )
+
+      const report = JSON.parse(readFileSync(reportPath, 'utf8'))
+      const status = JSON.parse(
+        readFileSync(join(outputDir, 'shadow-status.json'), 'utf8'),
+      )
+      expect(report.schema_version).toBe('leviathan.shadow_evidence_intake.v1')
+      expect(report.provider_model_update).toBe('none')
+      expect(report.evidence_path).toBe(
+        join(outputDir, 'evidence', 'replay-results.json'),
+      )
+      expect(status.evidence.present_files).toContain('replay-results.json')
+      expect(doneMessage).toContain('Leviathan shadow evidence intaked')
       expect(doneMessage).toContain(reportPath)
     })
   })

@@ -29,6 +29,11 @@ import {
   writeShadowRolloutIntakeReportFile,
   type ShadowRolloutIntakeSplit,
 } from '../../learning/shadowLearningRolloutIntakeFiles.js'
+import {
+  isShadowEvidenceKind,
+  writeShadowEvidenceIntakeReportFile,
+  type ShadowEvidenceKind,
+} from '../../learning/shadowLearningEvidenceIntakeFiles.js'
 import type { LeviathanRolloutBundle } from '../../learning/rolloutSchema.js'
 
 export type ParsedLearningCommandArgs =
@@ -84,6 +89,13 @@ export type ParsedLearningCommandArgs =
       diff?: string
       export_allowed?: boolean
       contains_private_code?: boolean
+    }
+  | {
+      action: 'intake-shadow-evidence'
+      run_dir: string
+      kind: ShadowEvidenceKind
+      input_path: string
+      output_path?: string
     }
   | {
       action: 'collect'
@@ -197,7 +209,7 @@ export type ParsedLearningCommandArgs =
     }
 
 const USAGE =
-  'Usage: /learning init --out <launch.json> --model <model-id>; /learning start-shadow --out-dir <dir> --run-id <run> --model <model-id>; /learning status-shadow --run-dir <dir> --out <status.json>; /learning intake-shadow-rollout --run-dir <dir> --input <rollout.json> --split <train|dev|held_out> --taxonomy <failure.code>; /learning collect-shadow --run-dir <dir> --out <collection.json>; /learning collect --out <launch.json> --model <model-id> --rollout <rollout.json>; /learning start --config <launch.json> --out <manifest.json>; /learning annotate-rollout --input <raw-rollout.json> --out <train-rollout.json> --taxonomy <failure.code> --outcome <resolved|unresolved|unknown>; /learning train-candidates --out <candidates.json> --run-id <run> --model <model-id> --rollout <rollout.json>; /learning train-polar --out <polar.json> --run-id <run> --model <model-id> --polar <observations.json>; /learning evaluation-snapshot --out <snapshot.json> --replay <replay.json> --held-out <rollout.json> --security <scan.json> --complexity <budget.json> --target-slice <slice.json> --regressions <regressions.json> --polar <observations.json>; /learning promotion-evidence --snapshot <eval.json> --heuristic-out <evidence.json> --polar-out <evidence.json>; /learning promote-candidates --out <promotion.json> --candidates <candidates.json> --evidence <evidence.json>; /learning promote-polar --out <promotion.json> --polar-candidates <polar.json> --evidence <evidence.json>; /learning run-pipeline --out-dir <dir> --run-id <run> --model <model-id> --rollout <rollout.json> --held-out <rollout.json> --polar-training <observations.json> --polar-eval <observations.json> --replay <replay.json> --security <scan.json> --complexity <budget.json> --target-slice <slice.json> --regressions <regressions.json>; /learning activate-bundle --bundle <learning-bundle.json> --state <active-learning.json>; /learning rollback-bundle --state <active-learning.json>'
+  'Usage: /learning init --out <launch.json> --model <model-id>; /learning start-shadow --out-dir <dir> --run-id <run> --model <model-id>; /learning status-shadow --run-dir <dir> --out <status.json>; /learning intake-shadow-rollout --run-dir <dir> --input <rollout.json> --split <train|dev|held_out> --taxonomy <failure.code>; /learning intake-shadow-evidence --run-dir <dir> --kind <replay-results|failure-taxonomy|benchmark-splits|polar-spike-observations|reward-design|rollback-incident-plan> --input <evidence.json>; /learning collect-shadow --run-dir <dir> --out <collection.json>; /learning collect --out <launch.json> --model <model-id> --rollout <rollout.json>; /learning start --config <launch.json> --out <manifest.json>; /learning annotate-rollout --input <raw-rollout.json> --out <train-rollout.json> --taxonomy <failure.code> --outcome <resolved|unresolved|unknown>; /learning train-candidates --out <candidates.json> --run-id <run> --model <model-id> --rollout <rollout.json>; /learning train-polar --out <polar.json> --run-id <run> --model <model-id> --polar <observations.json>; /learning evaluation-snapshot --out <snapshot.json> --replay <replay.json> --held-out <rollout.json> --security <scan.json> --complexity <budget.json> --target-slice <slice.json> --regressions <regressions.json> --polar <observations.json>; /learning promotion-evidence --snapshot <eval.json> --heuristic-out <evidence.json> --polar-out <evidence.json>; /learning promote-candidates --out <promotion.json> --candidates <candidates.json> --evidence <evidence.json>; /learning promote-polar --out <promotion.json> --polar-candidates <polar.json> --evidence <evidence.json>; /learning run-pipeline --out-dir <dir> --run-id <run> --model <model-id> --rollout <rollout.json> --held-out <rollout.json> --polar-training <observations.json> --polar-eval <observations.json> --replay <replay.json> --security <scan.json> --complexity <budget.json> --target-slice <slice.json> --regressions <regressions.json>; /learning activate-bundle --bundle <learning-bundle.json> --state <active-learning.json>; /learning rollback-bundle --state <active-learning.json>'
 
 function tokenizeArgs(args: string): string[] {
   const tokens: string[] = []
@@ -414,6 +426,23 @@ export function parseLearningCommandArgs(
       contains_private_code: readBooleanFlag(tokens, [
         '--contains-private-code',
       ]),
+    }
+  }
+
+  if (tokens[0] === 'intake-shadow-evidence') {
+    const run_dir = readFlag(tokens, ['--run-dir'])
+    const kind = readFlag(tokens, ['--kind'])
+    const input_path = readFlag(tokens, ['--input', '--in'])
+    if (!run_dir || !isShadowEvidenceKind(kind) || !input_path) {
+      return { action: 'help' }
+    }
+
+    return {
+      action: 'intake-shadow-evidence',
+      run_dir,
+      kind,
+      input_path,
+      output_path: readFlag(tokens, ['--out', '--output']) || undefined,
     }
   }
 
@@ -818,6 +847,19 @@ export async function call(
     })
     onDone(
       `Leviathan shadow rollout intaked: ${result.output_path}\nRaw: ${result.report.raw_path}\nAnnotated: ${result.report.annotated_path ?? 'none'}\nStatus: ${result.report.status_path}`,
+    )
+    return null
+  }
+
+  if (parsed.action === 'intake-shadow-evidence') {
+    const result = writeShadowEvidenceIntakeReportFile({
+      run_dir: parsed.run_dir,
+      input_path: parsed.input_path,
+      kind: parsed.kind,
+      output_path: parsed.output_path,
+    })
+    onDone(
+      `Leviathan shadow evidence intaked: ${result.output_path}\nEvidence: ${result.report.evidence_path}\nStatus: ${result.report.status_path}`,
     )
     return null
   }
