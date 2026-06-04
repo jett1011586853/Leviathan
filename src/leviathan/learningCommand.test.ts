@@ -412,6 +412,18 @@ describe('Leviathan learning command', () => {
     })
   })
 
+  test('parses shadow rollout task queue planning arguments', () => {
+    expect(
+      parseLearningCommandArgs(
+        'plan-shadow-rollouts --run-dir runs/train_shadow_001 --out runs/train_shadow_001/task-queue.json',
+      ),
+    ).toEqual({
+      action: 'plan-shadow-rollouts',
+      run_dir: 'runs/train_shadow_001',
+      output_path: 'runs/train_shadow_001/task-queue.json',
+    })
+  })
+
   test('parses shadow learning collection arguments', () => {
     expect(
       parseLearningCommandArgs(
@@ -827,6 +839,39 @@ describe('Leviathan learning command', () => {
       expect(statusDoneMessage).toContain('Leviathan shadow learning status')
       expect(statusDoneMessage).toContain('ready_for_pipeline=false')
       expect(statusDoneMessage).toContain(statusPath)
+    })
+  })
+
+  test('plans a real rollout task queue through the slash command', async () => {
+    await withTempDir(async dir => {
+      const outputDir = join(dir, 'train_shadow_001')
+      const queuePath = join(outputDir, 'task-queue.json')
+      let doneMessage = ''
+
+      await call(
+        () => {},
+        {} as never,
+        `start-shadow --out-dir ${outputDir} --run-id train_shadow_001 --model mimo-v2.5 --git-commit 3c2c341 --checkpoint permanent-leviathan-current-2026-06-04 --target-rollouts 50 --created-at 2026-06-04T12:00:00.000Z`,
+      )
+
+      await call(
+        message => {
+          doneMessage = message ?? ''
+        },
+        {} as never,
+        `plan-shadow-rollouts --run-dir ${outputDir} --out ${queuePath}`,
+      )
+
+      const queue = JSON.parse(readFileSync(queuePath, 'utf8'))
+      expect(queue.schema_version).toBe('leviathan.shadow_task_queue.v1')
+      expect(queue.provider_model_update).toBe('none')
+      expect(queue.tasks).toHaveLength(50)
+      expect(queue.split_counts).toEqual({ train: 30, dev: 10, held_out: 10 })
+      expect(queue.tasks[0].intake_command).toContain(
+        '/learning intake-shadow-rollout',
+      )
+      expect(doneMessage).toContain('Leviathan shadow rollout task queue')
+      expect(doneMessage).toContain(queuePath)
     })
   })
 
