@@ -19,6 +19,7 @@ import {
   rollbackLearningActivationFile,
 } from '../../learning/learningActivationFiles.js'
 import { ACTIVE_LEARNING_STATE_PATH_ENV } from '../../learning/activeLearningContext.js'
+import { initializeShadowLearningRun } from '../../learning/shadowLearningRunFiles.js'
 import type { LeviathanRolloutBundle } from '../../learning/rolloutSchema.js'
 
 export type ParsedLearningCommandArgs =
@@ -34,6 +35,17 @@ export type ParsedLearningCommandArgs =
       output_path: string
       provider_model_id: string
       git_commit: string
+    }
+  | {
+      action: 'start-shadow'
+      output_dir: string
+      run_id: string
+      provider_model_id: string
+      git_commit: string
+      rollback_checkpoint_tag: string
+      target_rollout_count: number
+      created_at?: string
+      cwd_alias: string
     }
   | {
       action: 'collect'
@@ -147,7 +159,7 @@ export type ParsedLearningCommandArgs =
     }
 
 const USAGE =
-  'Usage: /learning init --out <launch.json> --model <model-id>; /learning collect --out <launch.json> --model <model-id> --rollout <rollout.json>; /learning start --config <launch.json> --out <manifest.json>; /learning annotate-rollout --input <raw-rollout.json> --out <train-rollout.json> --taxonomy <failure.code> --outcome <resolved|unresolved|unknown>; /learning train-candidates --out <candidates.json> --run-id <run> --model <model-id> --rollout <rollout.json>; /learning train-polar --out <polar.json> --run-id <run> --model <model-id> --polar <observations.json>; /learning evaluation-snapshot --out <snapshot.json> --replay <replay.json> --held-out <rollout.json> --security <scan.json> --complexity <budget.json> --target-slice <slice.json> --regressions <regressions.json> --polar <observations.json>; /learning promotion-evidence --snapshot <eval.json> --heuristic-out <evidence.json> --polar-out <evidence.json>; /learning promote-candidates --out <promotion.json> --candidates <candidates.json> --evidence <evidence.json>; /learning promote-polar --out <promotion.json> --polar-candidates <polar.json> --evidence <evidence.json>; /learning run-pipeline --out-dir <dir> --run-id <run> --model <model-id> --rollout <rollout.json> --held-out <rollout.json> --polar-training <observations.json> --polar-eval <observations.json> --replay <replay.json> --security <scan.json> --complexity <budget.json> --target-slice <slice.json> --regressions <regressions.json>; /learning activate-bundle --bundle <learning-bundle.json> --state <active-learning.json>; /learning rollback-bundle --state <active-learning.json>'
+  'Usage: /learning init --out <launch.json> --model <model-id>; /learning start-shadow --out-dir <dir> --run-id <run> --model <model-id>; /learning collect --out <launch.json> --model <model-id> --rollout <rollout.json>; /learning start --config <launch.json> --out <manifest.json>; /learning annotate-rollout --input <raw-rollout.json> --out <train-rollout.json> --taxonomy <failure.code> --outcome <resolved|unresolved|unknown>; /learning train-candidates --out <candidates.json> --run-id <run> --model <model-id> --rollout <rollout.json>; /learning train-polar --out <polar.json> --run-id <run> --model <model-id> --polar <observations.json>; /learning evaluation-snapshot --out <snapshot.json> --replay <replay.json> --held-out <rollout.json> --security <scan.json> --complexity <budget.json> --target-slice <slice.json> --regressions <regressions.json> --polar <observations.json>; /learning promotion-evidence --snapshot <eval.json> --heuristic-out <evidence.json> --polar-out <evidence.json>; /learning promote-candidates --out <promotion.json> --candidates <candidates.json> --evidence <evidence.json>; /learning promote-polar --out <promotion.json> --polar-candidates <polar.json> --evidence <evidence.json>; /learning run-pipeline --out-dir <dir> --run-id <run> --model <model-id> --rollout <rollout.json> --held-out <rollout.json> --polar-training <observations.json> --polar-eval <observations.json> --replay <replay.json> --security <scan.json> --complexity <budget.json> --target-slice <slice.json> --regressions <regressions.json>; /learning activate-bundle --bundle <learning-bundle.json> --state <active-learning.json>; /learning rollback-bundle --state <active-learning.json>'
 
 function tokenizeArgs(args: string): string[] {
   const tokens: string[] = []
@@ -232,6 +244,14 @@ function readOptionalNumberFlags(
   return values.length > 0 ? values : undefined
 }
 
+function readOptionalNumberFlag(
+  tokens: string[],
+  names: string[],
+): number | undefined {
+  const value = Number(readFlag(tokens, names))
+  return Number.isFinite(value) && value > 0 ? value : undefined
+}
+
 function readOutcomeFlag(
   tokens: string[],
 ): 'unknown' | 'resolved' | 'unresolved' | undefined {
@@ -271,6 +291,28 @@ export function parseLearningCommandArgs(
       output_path,
       provider_model_id,
       git_commit: readFlag(tokens, ['--git-commit']) || 'unknown',
+    }
+  }
+
+  if (tokens[0] === 'start-shadow') {
+    const output_dir = readFlag(tokens, ['--out-dir', '--output-dir'])
+    const run_id = readFlag(tokens, ['--run-id'])
+    const provider_model_id = readFlag(tokens, ['--model'])
+    if (!output_dir || !run_id || !provider_model_id) return { action: 'help' }
+
+    return {
+      action: 'start-shadow',
+      output_dir,
+      run_id,
+      provider_model_id,
+      git_commit: readFlag(tokens, ['--git-commit']) || 'unknown',
+      rollback_checkpoint_tag:
+        readFlag(tokens, ['--checkpoint']) ||
+        'permanent-leviathan-current-2026-06-04',
+      target_rollout_count:
+        readOptionalNumberFlag(tokens, ['--target-rollouts']) ?? 50,
+      created_at: readFlag(tokens, ['--created-at']) || undefined,
+      cwd_alias: readFlag(tokens, ['--cwd-alias']) || '$WORKDIR',
     }
   }
 
@@ -587,6 +629,23 @@ export async function call(
       }),
     )
     onDone(`Leviathan learning config initialized: ${parsed.output_path}`)
+    return null
+  }
+
+  if (parsed.action === 'start-shadow') {
+    const result = initializeShadowLearningRun({
+      output_dir: parsed.output_dir,
+      run_id: parsed.run_id,
+      provider_model_id: parsed.provider_model_id,
+      created_at: parsed.created_at ?? new Date().toISOString(),
+      git_commit: parsed.git_commit,
+      rollback_checkpoint_tag: parsed.rollback_checkpoint_tag,
+      cwd_alias: parsed.cwd_alias,
+      target_rollout_count: parsed.target_rollout_count,
+    })
+    onDone(
+      `Leviathan shadow learning run initialized: ${result.paths.output_dir}\nRaw rollouts: ${result.paths.raw_rollouts_dir}\nAnnotated train/dev/held-out: ${result.paths.annotated_train_dir}; ${result.paths.annotated_dev_dir}; ${result.paths.annotated_held_out_dir}\nFormal launch manifest is currently ${result.formal_manifest.status}; collect evidence before running promotion.`,
+    )
     return null
   }
 

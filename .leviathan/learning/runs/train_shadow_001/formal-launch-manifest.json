@@ -1,0 +1,30 @@
+{
+  "schema_version": "leviathan.training_run.v1",
+  "run_id": "train_shadow_001",
+  "created_at": "2026-06-04T12:00:00.000Z",
+  "cwd_alias": "$WORKDIR",
+  "git_commit": "7546f5e",
+  "rollback_checkpoint_tag": "permanent-leviathan-current-2026-06-04",
+  "status": "blocked",
+  "launch": null,
+  "blocked": {
+    "failed_checks": [
+      "required_fields_landable",
+      "replay_runner_fixed_task_reproducible",
+      "failure_taxonomy_covers_high_frequency_failures",
+      "benchmark_splits_isolated",
+      "polar_proxy_spike_cases_passed",
+      "sparse_outcome_reward_defined",
+      "rollback_and_incident_plan_ready"
+    ],
+    "reasons": [
+      "readiness.required_fields_landable",
+      "readiness.replay_runner_fixed_task_reproducible",
+      "readiness.failure_taxonomy_covers_high_frequency_failures",
+      "readiness.benchmark_splits_isolated",
+      "readiness.polar_proxy_spike_cases_passed",
+      "readiness.sparse_outcome_reward_defined",
+      "readiness.rollback_and_incident_plan_ready"
+    ]
+  }
+}

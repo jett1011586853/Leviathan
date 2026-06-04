@@ -299,6 +299,24 @@ describe('Leviathan learning command', () => {
     })
   })
 
+  test('parses shadow learning run initialization arguments', () => {
+    expect(
+      parseLearningCommandArgs(
+        'start-shadow --out-dir runs/train_shadow_001 --run-id train_shadow_001 --model mimo-v2.5 --git-commit 7546f5e --checkpoint permanent-leviathan-current-2026-06-04 --target-rollouts 50',
+      ),
+    ).toEqual({
+      action: 'start-shadow',
+      output_dir: 'runs/train_shadow_001',
+      run_id: 'train_shadow_001',
+      provider_model_id: 'mimo-v2.5',
+      git_commit: '7546f5e',
+      rollback_checkpoint_tag: 'permanent-leviathan-current-2026-06-04',
+      target_rollout_count: 50,
+      created_at: undefined,
+      cwd_alias: '$WORKDIR',
+    })
+  })
+
   test('parses evidence collection arguments', () => {
     expect(
       parseLearningCommandArgs(
@@ -576,6 +594,33 @@ describe('Leviathan learning command', () => {
       expect(manifest.status).toBe('blocked')
       expect(manifest.launch).toBe(null)
       expect(startDoneMessage).toContain('Leviathan learning run blocked')
+    })
+  })
+
+  test('initializes a shadow learning run through the slash command', async () => {
+    await withTempDir(async dir => {
+      const outputDir = join(dir, 'train_shadow_001')
+      let doneMessage = ''
+
+      await call(
+        message => {
+          doneMessage = message ?? ''
+        },
+        {} as never,
+        `start-shadow --out-dir ${outputDir} --run-id train_shadow_001 --model mimo-v2.5 --git-commit 7546f5e --checkpoint permanent-leviathan-current-2026-06-04 --target-rollouts 50 --created-at 2026-06-04T12:00:00.000Z`,
+      )
+
+      const shadowManifest = JSON.parse(
+        readFileSync(join(outputDir, 'shadow-learning-run.json'), 'utf8'),
+      )
+      const formalManifest = JSON.parse(
+        readFileSync(join(outputDir, 'formal-launch-manifest.json'), 'utf8'),
+      )
+      expect(shadowManifest.status).toBe('collecting_rollouts')
+      expect(shadowManifest.provider_model_update).toBe('none')
+      expect(formalManifest.status).toBe('blocked')
+      expect(doneMessage).toContain('Leviathan shadow learning run initialized')
+      expect(doneMessage).toContain(outputDir)
     })
   })
 

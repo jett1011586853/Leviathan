@@ -1,0 +1,38 @@
+{
+  "schema_version": "leviathan.shadow_learning_run.v1",
+  "status": "collecting_rollouts",
+  "run_id": "train_shadow_001",
+  "created_at": "2026-06-04T12:00:00.000Z",
+  "provider_model_id": "mimo-v2.5",
+  "provider_model_update": "none",
+  "git_commit": "7546f5e",
+  "cwd_alias": "$WORKDIR",
+  "rollback_checkpoint_tag": "permanent-leviathan-current-2026-06-04",
+  "target_rollout_count": 50,
+  "minimum_trainable_rollouts": 20,
+  "split_plan": {
+    "train": 30,
+    "dev": 10,
+    "held_out": 10
+  },
+  "artifacts": {
+    "output_dir": ".leviathan/learning/runs/train_shadow_001",
+    "launch_config": ".leviathan\\learning\\runs\\train_shadow_001\\launch.json",
+    "formal_manifest": ".leviathan\\learning\\runs\\train_shadow_001\\formal-launch-manifest.json",
+    "shadow_manifest": ".leviathan\\learning\\runs\\train_shadow_001\\shadow-learning-run.json",
+    "raw_rollouts_dir": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\raw",
+    "annotated_train_dir": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\annotated\\train",
+    "annotated_dev_dir": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\annotated\\dev",
+    "annotated_held_out_dir": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\annotated\\held_out",
+    "evidence_dir": ".leviathan\\learning\\runs\\train_shadow_001\\evidence",
+    "pipeline_dir": ".leviathan\\learning\\runs\\train_shadow_001\\pipeline",
+    "active_state_path": ".leviathan\\learning\\runs\\train_shadow_001\\active-learning.json"
+  },
+  "next_actions": [
+    "Collect and export redacted rollout bundles into rollouts/raw.",
+    "Annotate trainable samples into rollouts/annotated/train, rollouts/annotated/dev, and rollouts/annotated/held_out.",
+    "Add replay, security, complexity, target-slice, regression, reward, baseline, rollback, and Polar spike evidence into evidence.",
+    "Run /learning run-pipeline only after train/dev/held-out evidence is present.",
+    "Activate learning-bundle.json only after promotion gates produce a ready learning bundle."
+  ]
+}
