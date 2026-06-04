@@ -145,12 +145,24 @@ describe('Leviathan learning pipeline files', () => {
       expect(result.manifest.artifacts.polar_training).toBe(
         join(outputDir, 'polar-candidates.json'),
       )
+      expect(result.manifest.artifacts.learning_bundle).toBe(
+        join(outputDir, 'learning-bundle.json'),
+      )
       expect(result.manifest.reports.heuristic_promotion_status).toBe(
         'ready_for_stable_promotion',
       )
       expect(result.manifest.reports.polar_promotion_status).toBe(
         'ready_for_stable_promotion',
       )
+      expect(result.manifest.reports.learning_bundle_status).toBe(
+        'ready_for_activation',
+      )
+      const bundle = JSON.parse(
+        readFileSync(result.manifest.artifacts.learning_bundle, 'utf8'),
+      )
+      expect(bundle.status).toBe('ready_for_activation')
+      expect(bundle.provider_model_update).toBe('none')
+      expect(bundle.stable_activation_allowed).toBe(true)
       expect(
         JSON.parse(readFileSync(result.manifest.artifacts.manifest, 'utf8')),
       ).toEqual(result.manifest)
@@ -215,6 +227,13 @@ describe('Leviathan learning pipeline files', () => {
       expect(result.manifest.stable_promotion_ready).toBe(false)
       expect(result.manifest.reports.heuristic_promotion_status).toBe('rejected')
       expect(result.manifest.reports.polar_promotion_status).toBe('rejected')
+      expect(result.manifest.reports.learning_bundle_status).toBe('blocked')
+      const bundle = JSON.parse(
+        readFileSync(result.manifest.artifacts.learning_bundle, 'utf8'),
+      )
+      expect(bundle.status).toBe('blocked')
+      expect(bundle.stable_activation_allowed).toBe(false)
+      expect(bundle.blocked_reasons).toContain('heuristic_report.status.rejected')
     })
   })
 })

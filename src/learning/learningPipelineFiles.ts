@@ -23,6 +23,10 @@ import {
   type WriteHeuristicPromotionReportFromFilesResult,
 } from './promotionFiles.js'
 import {
+  writeLearningBundleFromFiles,
+  type WriteLearningBundleFromFilesResult,
+} from './learningBundleFiles.js'
+import {
   jsonStringify,
   writeFileSync_DEPRECATED,
 } from '../utils/slowOperations.js'
@@ -57,6 +61,7 @@ export type LearningPipelineArtifacts = {
   polar_promotion_evidence: string
   heuristic_promotion_report: string
   polar_promotion_report: string
+  learning_bundle: string
   manifest: string
 }
 
@@ -73,6 +78,7 @@ export type LearningPipelineManifest = {
     polar_training_status: TrainPolarHarnessCandidatesFromFilesResult['training']['status']
     heuristic_promotion_status: WriteHeuristicPromotionReportFromFilesResult['report']['status']
     polar_promotion_status: WritePolarHarnessPromotionReportFromFilesResult['report']['status']
+    learning_bundle_status: WriteLearningBundleFromFilesResult['bundle']['status']
   }
 }
 
@@ -83,6 +89,7 @@ export type RunLearningPipelineFromFilesResult = {
   promotion_evidence: WritePromotionEvidenceFromSnapshotFilesResult
   heuristic_promotion: WriteHeuristicPromotionReportFromFilesResult
   polar_promotion: WritePolarHarnessPromotionReportFromFilesResult
+  learning_bundle: WriteLearningBundleFromFilesResult
 }
 
 function artifactPaths(outputDir: string): LearningPipelineArtifacts {
@@ -94,6 +101,7 @@ function artifactPaths(outputDir: string): LearningPipelineArtifacts {
     polar_promotion_evidence: join(outputDir, 'polar-evidence.json'),
     heuristic_promotion_report: join(outputDir, 'heuristic-promotion-report.json'),
     polar_promotion_report: join(outputDir, 'polar-promotion-report.json'),
+    learning_bundle: join(outputDir, 'learning-bundle.json'),
     manifest: join(outputDir, 'learning-pipeline-manifest.json'),
   }
 }
@@ -103,6 +111,7 @@ function pipelineStatus(
   polarTraining: TrainPolarHarnessCandidatesFromFilesResult,
   heuristicPromotion: WriteHeuristicPromotionReportFromFilesResult,
   polarPromotion: WritePolarHarnessPromotionReportFromFilesResult,
+  learningBundle: WriteLearningBundleFromFilesResult,
 ): LearningPipelineStatus {
   if (
     heuristicTraining.training.status === 'blocked' ||
@@ -112,7 +121,8 @@ function pipelineStatus(
   }
 
   return heuristicPromotion.report.status === 'ready_for_stable_promotion' &&
-    polarPromotion.report.status === 'ready_for_stable_promotion'
+    polarPromotion.report.status === 'ready_for_stable_promotion' &&
+    learningBundle.bundle.status === 'ready_for_activation'
     ? 'ready_for_stable_promotion'
     : 'needs_more_evidence'
 }
@@ -179,11 +189,20 @@ export function runLearningPipelineFromFiles(
     output_path: artifacts.polar_promotion_report,
   })
 
+  const learning_bundle = writeLearningBundleFromFiles({
+    heuristic_training_path: artifacts.heuristic_training,
+    heuristic_promotion_report_path: artifacts.heuristic_promotion_report,
+    polar_training_path: artifacts.polar_training,
+    polar_promotion_report_path: artifacts.polar_promotion_report,
+    output_path: artifacts.learning_bundle,
+  })
+
   const status = pipelineStatus(
     heuristic_training,
     polar_training,
     heuristic_promotion,
     polar_promotion,
+    learning_bundle,
   )
   const stable_promotion_ready = status === 'ready_for_stable_promotion'
   const manifest: LearningPipelineManifest = {
@@ -199,6 +218,7 @@ export function runLearningPipelineFromFiles(
       polar_training_status: polar_training.training.status,
       heuristic_promotion_status: heuristic_promotion.report.status,
       polar_promotion_status: polar_promotion.report.status,
+      learning_bundle_status: learning_bundle.bundle.status,
     },
   }
 
@@ -211,5 +231,6 @@ export function runLearningPipelineFromFiles(
     promotion_evidence,
     heuristic_promotion,
     polar_promotion,
+    learning_bundle,
   }
 }
