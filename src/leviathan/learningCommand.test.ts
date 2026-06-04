@@ -113,6 +113,89 @@ function polarObservation(
   }
 }
 
+function rolloutBundleForSplit(
+  index: number,
+  split: 'train' | 'dev' | 'held_out',
+): unknown {
+  const bundle = createEmptyRolloutBundle({
+    runId: `run_${split}_${index}`,
+    sessionId: `session_${split}_${index}`,
+    taskId: `task_${split}_${index}`,
+    source: 'internal',
+    split: split === 'held_out' ? 'test' : split,
+    timestamp: '2026-06-04T12:00:00.000Z',
+    harnessVersion: 'git:7546f5e',
+    heuristicBundleVersion: 'hb:initial',
+    policyVersion: 'mimo-v2.5',
+    userInstruction: `complete shadow ${split} task ${index}`,
+    repo: 'leviathan',
+    baseCommit: '7546f5e',
+    cwdAlias: '$WORKDIR',
+  })
+  bundle.failure.taxonomy = ['tool_choice_failure.bad_args']
+  bundle.failure.root_cause_summary = 'Representative trainable tool choice miss.'
+  bundle.evaluation.final_outcome = 'resolved'
+  bundle.evaluation.resolved_label = true
+  bundle.evaluation.exit_codes = [0]
+  bundle.security.export_allowed = true
+  bundle.security.contains_private_code = false
+  return bundle
+}
+
+function benchmarkRecord(
+  id: string,
+  split: 'train' | 'dev' | 'test' = 'train',
+): unknown {
+  return {
+    id,
+    source: 'internal',
+    split,
+    repo: 'leviathan',
+    base_commit: `commit_${id}`,
+    issue_id: `issue_${id}`,
+    benchmark_instance_id: `benchmark_${id}`,
+    problem_statement_hash: `problem_${id}`,
+    normalized_diff_hash: `diff_${id}`,
+    public_visibility: 'internal',
+    allow_policy_training: split !== 'test',
+    allow_global_memory: split !== 'test',
+  }
+}
+
+function rewardDesign(): unknown {
+  return {
+    mode: 'sparse_outcome',
+    reward_range: [0, 1],
+    uses_trace_shaping: false,
+    broadcasts_session_reward_to_requests: false,
+  }
+}
+
+function rollbackIncidentPlan(): unknown {
+  return {
+    permanent_checkpoint_tag: 'checkpoint/pre-hl-polar-training-v1.0',
+    rollback_commands: [
+      'git reset --hard checkpoint/pre-hl-polar-training-v1.0',
+      'Disable Leviathan learning feature flags',
+    ],
+    feature_flags: ['hl.shadow.collector', 'polar.shadow.collector'],
+    incident_owner: 'leviathan-operator',
+    incident_channels: ['local-runbook'],
+    severity_routes: {
+      p0: 'Rollback immediately and pause activation.',
+      p1: 'Pause promotion and replay failed cases.',
+      p2: 'Log incident and continue shadow collection.',
+    },
+    covers: {
+      secret_leak: true,
+      benchmark_leak: true,
+      reward_hacking: true,
+      data_corruption: true,
+      regression_spike: true,
+    },
+  }
+}
+
 function heuristicTrainingResult(): HeuristicTrainingResult {
   return {
     schema_version: 'leviathan.heuristic_training.v1',
@@ -326,6 +409,19 @@ describe('Leviathan learning command', () => {
       action: 'status-shadow',
       run_dir: 'runs/train_shadow_001',
       output_path: 'runs/train_shadow_001/status.json',
+    })
+  })
+
+  test('parses shadow learning collection arguments', () => {
+    expect(
+      parseLearningCommandArgs(
+        'collect-shadow --run-dir runs/train_shadow_001 --out runs/train_shadow_001/collection.json --created-at 2026-06-04T13:00:00.000Z',
+      ),
+    ).toEqual({
+      action: 'collect-shadow',
+      run_dir: 'runs/train_shadow_001',
+      output_path: 'runs/train_shadow_001/collection.json',
+      created_at: '2026-06-04T13:00:00.000Z',
     })
   })
 
@@ -692,6 +788,156 @@ describe('Leviathan learning command', () => {
       expect(statusDoneMessage).toContain('Leviathan shadow learning status')
       expect(statusDoneMessage).toContain('ready_for_pipeline=false')
       expect(statusDoneMessage).toContain(statusPath)
+    })
+  })
+
+  test('blocks shadow collection until required split and evidence files exist', async () => {
+    await withTempDir(async dir => {
+      const outputDir = join(dir, 'train_shadow_001')
+      const collectionPath = join(outputDir, 'shadow-collection.json')
+      let doneMessage = ''
+
+      await call(
+        () => {},
+        {} as never,
+        `start-shadow --out-dir ${outputDir} --run-id train_shadow_001 --model mimo-v2.5 --git-commit 7546f5e --checkpoint permanent-leviathan-current-2026-06-04 --target-rollouts 20 --created-at 2026-06-04T12:00:00.000Z`,
+      )
+
+      await call(
+        message => {
+          doneMessage = message ?? ''
+        },
+        {} as never,
+        `collect-shadow --run-dir ${outputDir} --out ${collectionPath} --created-at 2026-06-04T13:00:00.000Z`,
+      )
+
+      const collection = JSON.parse(readFileSync(collectionPath, 'utf8'))
+      const status = JSON.parse(
+        readFileSync(join(outputDir, 'shadow-status.json'), 'utf8'),
+      )
+      expect(collection.schema_version).toBe(
+        'leviathan.shadow_learning_collection.v1',
+      )
+      expect(collection.status).toBe('blocked')
+      expect(collection.provider_model_update).toBe('none')
+      expect(collection.blocked_reasons).toContain('raw_rollouts_collected')
+      expect(collection.blocked_reasons).toContain('evidence_files_present')
+      expect(status.ready_for_pipeline).toBe(false)
+      expect(doneMessage).toContain('Leviathan shadow collection blocked')
+      expect(doneMessage).toContain(collectionPath)
+    })
+  })
+
+  test('collects shadow evidence from a complete run directory', async () => {
+    await withTempDir(async dir => {
+      const outputDir = join(dir, 'train_shadow_001')
+      const collectionPath = join(outputDir, 'shadow-collection.json')
+      let doneMessage = ''
+
+      await call(
+        () => {},
+        {} as never,
+        `start-shadow --out-dir ${outputDir} --run-id train_shadow_001 --model mimo-v2.5 --git-commit 7546f5e --checkpoint permanent-leviathan-current-2026-06-04 --target-rollouts 20 --created-at 2026-06-04T12:00:00.000Z`,
+      )
+
+      for (let index = 0; index < 20; index++) {
+        writeFileSync(
+          join(outputDir, 'rollouts', 'raw', `raw-${index}.json`),
+          JSON.stringify(rolloutBundleForSplit(index, 'train')),
+          'utf8',
+        )
+      }
+      for (let index = 0; index < 12; index++) {
+        writeFileSync(
+          join(outputDir, 'rollouts', 'annotated', 'train', `train-${index}.json`),
+          JSON.stringify(rolloutBundleForSplit(index, 'train')),
+          'utf8',
+        )
+      }
+      for (let index = 0; index < 4; index++) {
+        writeFileSync(
+          join(outputDir, 'rollouts', 'annotated', 'dev', `dev-${index}.json`),
+          JSON.stringify(rolloutBundleForSplit(index, 'dev')),
+          'utf8',
+        )
+        writeFileSync(
+          join(
+            outputDir,
+            'rollouts',
+            'annotated',
+            'held_out',
+            `held-${index}.json`,
+          ),
+          JSON.stringify(rolloutBundleForSplit(index, 'held_out')),
+          'utf8',
+        )
+      }
+
+      writeFileSync(
+        join(outputDir, 'evidence', 'replay-results.json'),
+        JSON.stringify([
+          { status: 'completed', blockers: [], compare_passed: true },
+        ]),
+        'utf8',
+      )
+      writeFileSync(
+        join(outputDir, 'evidence', 'failure-taxonomy.json'),
+        JSON.stringify({ covered_classes: ['tool_choice_failure'] }),
+        'utf8',
+      )
+      writeFileSync(
+        join(outputDir, 'evidence', 'benchmark-splits.json'),
+        JSON.stringify([
+          benchmarkRecord('train_1', 'train'),
+          benchmarkRecord('dev_1', 'dev'),
+          benchmarkRecord('test_1', 'test'),
+        ]),
+        'utf8',
+      )
+      writeFileSync(
+        join(outputDir, 'evidence', 'polar-spike-observations.json'),
+        JSON.stringify([
+          polarObservation('case_a_no_tool'),
+          polarObservation('case_b_file_read_write'),
+          polarObservation('case_c_test_execution'),
+        ]),
+        'utf8',
+      )
+      writeFileSync(
+        join(outputDir, 'evidence', 'reward-design.json'),
+        JSON.stringify(rewardDesign()),
+        'utf8',
+      )
+      writeFileSync(
+        join(outputDir, 'evidence', 'rollback-incident-plan.json'),
+        JSON.stringify(rollbackIncidentPlan()),
+        'utf8',
+      )
+
+      await call(
+        message => {
+          doneMessage = message ?? ''
+        },
+        {} as never,
+        `collect-shadow --run-dir ${outputDir} --out ${collectionPath} --created-at 2026-06-04T13:00:00.000Z`,
+      )
+
+      const collection = JSON.parse(readFileSync(collectionPath, 'utf8'))
+      const formalManifest = JSON.parse(
+        readFileSync(join(outputDir, 'formal-launch-manifest.json'), 'utf8'),
+      )
+      const status = JSON.parse(
+        readFileSync(join(outputDir, 'shadow-status.json'), 'utf8'),
+      )
+      expect(collection.status).toBe('collected')
+      expect(collection.provider_model_update).toBe('none')
+      expect(collection.rollout_bundle_paths).toHaveLength(20)
+      expect(collection.training_rollout_paths).toHaveLength(12)
+      expect(collection.held_out_rollout_paths).toHaveLength(4)
+      expect(formalManifest.status).toBe('started')
+      expect(status.ready_for_pipeline).toBe(true)
+      expect(doneMessage).toContain('Leviathan shadow collection ready')
+      expect(doneMessage).toContain(collectionPath)
     })
   })
 

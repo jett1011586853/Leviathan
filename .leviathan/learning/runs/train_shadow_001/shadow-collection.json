@@ -1,0 +1,41 @@
+{
+  "schema_version": "leviathan.shadow_learning_collection.v1",
+  "status": "blocked",
+  "run_id": "train_shadow_001",
+  "created_at": "2026-06-04T13:00:00.000Z",
+  "provider_model_id": "mimo-v2.5",
+  "provider_model_update": "none",
+  "launch_config_path": ".leviathan\\learning\\runs\\train_shadow_001\\launch.json",
+  "formal_manifest_path": ".leviathan\\learning\\runs\\train_shadow_001\\formal-launch-manifest.json",
+  "status_path": ".leviathan\\learning\\runs\\train_shadow_001\\shadow-status.json",
+  "rollout_bundle_paths": [],
+  "training_rollout_paths": [],
+  "development_rollout_paths": [],
+  "held_out_rollout_paths": [],
+  "evidence_paths": {
+    "replay_results": ".leviathan\\learning\\runs\\train_shadow_001\\evidence\\replay-results.json",
+    "failure_taxonomy": ".leviathan\\learning\\runs\\train_shadow_001\\evidence\\failure-taxonomy.json",
+    "benchmark_records": ".leviathan\\learning\\runs\\train_shadow_001\\evidence\\benchmark-splits.json",
+    "polar_spike_observations": ".leviathan\\learning\\runs\\train_shadow_001\\evidence\\polar-spike-observations.json",
+    "reward_design": ".leviathan\\learning\\runs\\train_shadow_001\\evidence\\reward-design.json",
+    "rollback_incident_plan": ".leviathan\\learning\\runs\\train_shadow_001\\evidence\\rollback-incident-plan.json"
+  },
+  "formal_manifest_status": null,
+  "blocked_reasons": [
+    "raw_rollouts_collected",
+    "minimum_trainable_rollouts_ready",
+    "train_split_ready",
+    "dev_split_ready",
+    "held_out_split_ready",
+    "evidence_files_present"
+  ],
+  "next_actions": [
+    "Collect 50 more raw rollout file(s).",
+    "Annotate 30 more file(s) into rollouts/annotated/train.",
+    "Annotate 10 more file(s) into rollouts/annotated/dev.",
+    "Annotate 10 more file(s) into rollouts/annotated/held_out.",
+    "Add required evidence file(s): replay-results.json, failure-taxonomy.json, benchmark-splits.json, polar-spike-observations.json, reward-design.json, rollback-incident-plan.json.",
+    "Resolve formal launch gate(s): required_fields_landable, replay_runner_fixed_task_reproducible, failure_taxonomy_covers_high_frequency_failures, benchmark_splits_isolated, polar_proxy_spike_cases_passed, sparse_outcome_reward_defined, rollback_and_incident_plan_ready.",
+    "Do not run /learning run-pipeline until ready_for_pipeline=true."
+  ]
+}
