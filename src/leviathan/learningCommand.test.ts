@@ -24,6 +24,7 @@ import type { PromotionEvidence } from '../learning/promotionGate.js'
 import type { PolarHarnessTrainingResult } from '../learning/polarHarnessTrainer.js'
 import type { PolarHarnessPromotionEvidence } from '../learning/polarHarnessPromotion.js'
 import type { PromotionEvidenceSnapshot } from '../learning/promotionEvidenceFiles.js'
+import type { LearningBundle } from '../learning/learningBundleFiles.js'
 
 function allReadyEvidence(): TrainingReadinessEvidence {
   return Object.fromEntries(
@@ -206,6 +207,58 @@ function promotionEvidenceSnapshot(): PromotionEvidenceSnapshot {
     },
     regressions: { p0_p1_count: 0 },
     polar_spike: { passed: true },
+  }
+}
+
+function learningBundle(): LearningBundle {
+  return {
+    schema_version: 'leviathan.learning_bundle.v1',
+    status: 'ready_for_activation',
+    training_run_id: 'train_1',
+    provider_model_id: 'mimo-v2.5',
+    provider_model_update: 'none',
+    stable_activation_allowed: true,
+    heuristic_bundle: {
+      version: 'hb:stable/train_1',
+      source_candidate_bundle_version: 'hb:candidate/train_1',
+      candidates: [
+        {
+          id: 'candidate_tool_choice_failure_001',
+          type: 'candidate tool policy',
+          status: 'candidate',
+          source_failure_taxonomy: ['tool_choice_failure.bad_args'],
+          feature_flag: 'hl.candidate.tool_choice_failure_001',
+          rollback_plan:
+            'Disable feature flag hl.candidate.tool_choice_failure_001',
+        },
+      ],
+    },
+    polar_harness: {
+      version: 'polar:stable/train_1',
+      source_candidate_harness_version: 'polar:candidate/train_1',
+      updates: [
+        {
+          id: 'polar_candidate_proxy_bypass_001',
+          status: 'candidate',
+          failure_attribution: 'proxy_bypass',
+          target_harness_asset: 'model_request_capture',
+          source_cases: ['case_a_no_tool'],
+          feature_flag: 'polar.candidate.proxy_bypass_001',
+          rollback_plan: 'Disable feature flag polar.candidate.proxy_bypass_001',
+        },
+      ],
+    },
+    rollback: {
+      feature_flags: [
+        'hl.candidate.tool_choice_failure_001',
+        'polar.candidate.proxy_bypass_001',
+      ],
+      plans: [
+        'Disable feature flag hl.candidate.tool_choice_failure_001',
+        'Disable feature flag polar.candidate.proxy_bypass_001',
+      ],
+    },
+    blocked_reasons: [],
   }
 }
 
@@ -398,6 +451,32 @@ describe('Leviathan learning command', () => {
       changed_files: ['src/commands/learning/learning.ts'],
       export_allowed: true,
       contains_private_code: false,
+    })
+  })
+
+  test('parses learning bundle activation arguments', () => {
+    expect(
+      parseLearningCommandArgs(
+        'activate-bundle --bundle learning-bundle.json --state active-learning.json --activated-at 2026-06-04T12:00:00.000Z --activated-by slash-command',
+      ),
+    ).toEqual({
+      action: 'activate-bundle',
+      bundle_path: 'learning-bundle.json',
+      state_path: 'active-learning.json',
+      activated_at: '2026-06-04T12:00:00.000Z',
+      activated_by: 'slash-command',
+    })
+  })
+
+  test('parses learning bundle rollback arguments', () => {
+    expect(
+      parseLearningCommandArgs(
+        'rollback-bundle --state active-learning.json --rolled-back-at 2026-06-04T13:00:00.000Z',
+      ),
+    ).toEqual({
+      action: 'rollback-bundle',
+      state_path: 'active-learning.json',
+      rolled_back_at: '2026-06-04T13:00:00.000Z',
     })
   })
 
@@ -841,6 +920,82 @@ describe('Leviathan learning command', () => {
       expect(manifest.stable_promotion_ready).toBe(true)
       expect(doneMessage).toContain('Leviathan learning pipeline ready')
       expect(doneMessage).toContain(outputDir)
+    })
+  })
+
+  test('activates a learning bundle through the slash command', async () => {
+    await withTempDir(async dir => {
+      const bundlePath = join(dir, 'learning-bundle.json')
+      const statePath = join(dir, 'active-learning.json')
+      writeFileSync(bundlePath, JSON.stringify(learningBundle()), 'utf8')
+      let doneMessage = ''
+
+      await call(
+        message => {
+          doneMessage = message ?? ''
+        },
+        {} as never,
+        `activate-bundle --bundle ${bundlePath} --state ${statePath} --activated-at 2026-06-04T12:00:00.000Z --activated-by slash-command`,
+      )
+
+      const state = JSON.parse(readFileSync(statePath, 'utf8'))
+      expect(state.status).toBe('active')
+      expect(state.training_run_id).toBe('train_1')
+      expect(state.heuristic_bundle_version).toBe('hb:stable/train_1')
+      expect(state.polar_harness_version).toBe('polar:stable/train_1')
+      expect(doneMessage).toContain('Leviathan learning bundle activated')
+      expect(doneMessage).toContain(statePath)
+    })
+  })
+
+  test('rolls back active learning state through the slash command', async () => {
+    await withTempDir(async dir => {
+      const firstBundlePath = join(dir, 'first-learning-bundle.json')
+      const secondBundlePath = join(dir, 'second-learning-bundle.json')
+      const statePath = join(dir, 'active-learning.json')
+      writeFileSync(firstBundlePath, JSON.stringify(learningBundle()), 'utf8')
+      writeFileSync(
+        secondBundlePath,
+        JSON.stringify({
+          ...learningBundle(),
+          training_run_id: 'train_2',
+          heuristic_bundle: {
+            ...learningBundle().heuristic_bundle,
+            version: 'hb:stable/train_2',
+          },
+          polar_harness: {
+            ...learningBundle().polar_harness,
+            version: 'polar:stable/train_2',
+          },
+        }),
+        'utf8',
+      )
+
+      await call(
+        () => {},
+        {} as never,
+        `activate-bundle --bundle ${firstBundlePath} --state ${statePath} --activated-at 2026-06-04T12:00:00.000Z`,
+      )
+      await call(
+        () => {},
+        {} as never,
+        `activate-bundle --bundle ${secondBundlePath} --state ${statePath} --activated-at 2026-06-04T13:00:00.000Z`,
+      )
+      let doneMessage = ''
+
+      await call(
+        message => {
+          doneMessage = message ?? ''
+        },
+        {} as never,
+        `rollback-bundle --state ${statePath} --rolled-back-at 2026-06-04T14:00:00.000Z`,
+      )
+
+      const state = JSON.parse(readFileSync(statePath, 'utf8'))
+      expect(state.training_run_id).toBe('train_1')
+      expect(state.heuristic_bundle_version).toBe('hb:stable/train_1')
+      expect(doneMessage).toContain('Leviathan learning bundle rolled back')
+      expect(doneMessage).toContain(statePath)
     })
   })
 })

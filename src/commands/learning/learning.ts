@@ -14,6 +14,10 @@ import { writePromotionEvidenceFromSnapshotFiles } from '../../learning/promotio
 import { writeEvaluationSnapshotFromFiles } from '../../learning/evaluationSnapshotFiles.js'
 import { runLearningPipelineFromFiles } from '../../learning/learningPipelineFiles.js'
 import { annotateRolloutFile } from '../../learning/rolloutAnnotationFiles.js'
+import {
+  activateLearningBundleFromFiles,
+  rollbackLearningActivationFile,
+} from '../../learning/learningActivationFiles.js'
 import type { LeviathanRolloutBundle } from '../../learning/rolloutSchema.js'
 
 export type ParsedLearningCommandArgs =
@@ -126,11 +130,23 @@ export type ParsedLearningCommandArgs =
       contains_private_code?: boolean
     }
   | {
+      action: 'activate-bundle'
+      bundle_path: string
+      state_path: string
+      activated_at?: string
+      activated_by: string
+    }
+  | {
+      action: 'rollback-bundle'
+      state_path: string
+      rolled_back_at?: string
+    }
+  | {
       action: 'help'
     }
 
 const USAGE =
-  'Usage: /learning init --out <launch.json> --model <model-id>; /learning collect --out <launch.json> --model <model-id> --rollout <rollout.json>; /learning start --config <launch.json> --out <manifest.json>; /learning annotate-rollout --input <raw-rollout.json> --out <train-rollout.json> --taxonomy <failure.code> --outcome <resolved|unresolved|unknown>; /learning train-candidates --out <candidates.json> --run-id <run> --model <model-id> --rollout <rollout.json>; /learning train-polar --out <polar.json> --run-id <run> --model <model-id> --polar <observations.json>; /learning evaluation-snapshot --out <snapshot.json> --replay <replay.json> --held-out <rollout.json> --security <scan.json> --complexity <budget.json> --target-slice <slice.json> --regressions <regressions.json> --polar <observations.json>; /learning promotion-evidence --snapshot <eval.json> --heuristic-out <evidence.json> --polar-out <evidence.json>; /learning promote-candidates --out <promotion.json> --candidates <candidates.json> --evidence <evidence.json>; /learning promote-polar --out <promotion.json> --polar-candidates <polar.json> --evidence <evidence.json>; /learning run-pipeline --out-dir <dir> --run-id <run> --model <model-id> --rollout <rollout.json> --held-out <rollout.json> --polar-training <observations.json> --polar-eval <observations.json> --replay <replay.json> --security <scan.json> --complexity <budget.json> --target-slice <slice.json> --regressions <regressions.json>'
+  'Usage: /learning init --out <launch.json> --model <model-id>; /learning collect --out <launch.json> --model <model-id> --rollout <rollout.json>; /learning start --config <launch.json> --out <manifest.json>; /learning annotate-rollout --input <raw-rollout.json> --out <train-rollout.json> --taxonomy <failure.code> --outcome <resolved|unresolved|unknown>; /learning train-candidates --out <candidates.json> --run-id <run> --model <model-id> --rollout <rollout.json>; /learning train-polar --out <polar.json> --run-id <run> --model <model-id> --polar <observations.json>; /learning evaluation-snapshot --out <snapshot.json> --replay <replay.json> --held-out <rollout.json> --security <scan.json> --complexity <budget.json> --target-slice <slice.json> --regressions <regressions.json> --polar <observations.json>; /learning promotion-evidence --snapshot <eval.json> --heuristic-out <evidence.json> --polar-out <evidence.json>; /learning promote-candidates --out <promotion.json> --candidates <candidates.json> --evidence <evidence.json>; /learning promote-polar --out <promotion.json> --polar-candidates <polar.json> --evidence <evidence.json>; /learning run-pipeline --out-dir <dir> --run-id <run> --model <model-id> --rollout <rollout.json> --held-out <rollout.json> --polar-training <observations.json> --polar-eval <observations.json> --replay <replay.json> --security <scan.json> --complexity <budget.json> --target-slice <slice.json> --regressions <regressions.json>; /learning activate-bundle --bundle <learning-bundle.json> --state <active-learning.json>; /learning rollback-bundle --state <active-learning.json>'
 
 function tokenizeArgs(args: string): string[] {
   const tokens: string[] = []
@@ -506,6 +522,31 @@ export function parseLearningCommandArgs(
     }
   }
 
+  if (tokens[0] === 'activate-bundle') {
+    const bundle_path = readFlag(tokens, ['--bundle'])
+    const state_path = readFlag(tokens, ['--state'])
+    if (!bundle_path || !state_path) return { action: 'help' }
+
+    return {
+      action: 'activate-bundle',
+      bundle_path,
+      state_path,
+      activated_at: readFlag(tokens, ['--activated-at']) || undefined,
+      activated_by: readFlag(tokens, ['--activated-by']) || 'slash-command',
+    }
+  }
+
+  if (tokens[0] === 'rollback-bundle') {
+    const state_path = readFlag(tokens, ['--state'])
+    if (!state_path) return { action: 'help' }
+
+    return {
+      action: 'rollback-bundle',
+      state_path,
+      rolled_back_at: readFlag(tokens, ['--rolled-back-at']) || undefined,
+    }
+  }
+
   if (tokens[0] !== 'start') return { action: 'help' }
 
   const config_path = readFlag(tokens, ['--config'])
@@ -588,6 +629,42 @@ export async function call(
       contains_private_code: parsed.contains_private_code,
     })
     onDone(`Leviathan rollout annotated: ${result.output_path}`)
+    return null
+  }
+
+  if (parsed.action === 'activate-bundle') {
+    const result = activateLearningBundleFromFiles({
+      bundle_path: parsed.bundle_path,
+      state_path: parsed.state_path,
+      activated_at: parsed.activated_at ?? new Date().toISOString(),
+      activated_by: parsed.activated_by,
+    })
+    if (result.state.status === 'active') {
+      onDone(`Leviathan learning bundle activated: ${result.state_path}`)
+      return null
+    }
+    onDone(
+      `Leviathan learning bundle activation blocked: ${result.state.blocked_reasons.join(
+        ', ',
+      )}. State: ${result.state_path}`,
+    )
+    return null
+  }
+
+  if (parsed.action === 'rollback-bundle') {
+    const result = rollbackLearningActivationFile({
+      state_path: parsed.state_path,
+      rolled_back_at: parsed.rolled_back_at ?? new Date().toISOString(),
+    })
+    if (result.rolled_back_from) {
+      onDone(`Leviathan learning bundle rolled back: ${result.state_path}`)
+      return null
+    }
+    onDone(
+      `Leviathan learning bundle rollback blocked: ${result.state.blocked_reasons.join(
+        ', ',
+      )}. State: ${result.state_path}`,
+    )
     return null
   }
 
