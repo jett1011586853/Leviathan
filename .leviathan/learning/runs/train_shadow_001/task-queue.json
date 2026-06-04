@@ -41,7 +41,7 @@
       "target_asset": "routing",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Model interaction failure. Prefer a task where the observable failure signal is proxy_bypass. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_001.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_001.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_001.json --run-id train_shadow_001 --task-id train_shadow_001_train_001 --split train --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_001.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_train_001.json --split train --taxonomy model_interaction_failure.proxy_bypass"
     },
     {
@@ -53,7 +53,7 @@
       "target_asset": "prompt_policy",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Tool choice failure. Prefer a task where the observable failure signal is bad_args. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_002.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_002.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_002.json --run-id train_shadow_001 --task-id train_shadow_001_train_002 --split train --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_002.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_train_002.json --split train --taxonomy tool_choice_failure.bad_args"
     },
     {
@@ -65,7 +65,7 @@
       "target_asset": "recovery_policy",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Execution environment failure. Prefer a task where the observable failure signal is dependency. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_003.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_003.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_003.json --run-id train_shadow_001 --task-id train_shadow_001_train_003 --split train --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_003.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_train_003.json --split train --taxonomy execution_environment_failure.dependency"
     },
     {
@@ -77,7 +77,7 @@
       "target_asset": "controller_logic",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Code modification failure. Prefer a task where the observable failure signal is merge_conflict. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_004.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_004.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_004.json --run-id train_shadow_001 --task-id train_shadow_001_train_004 --split train --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_004.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_train_004.json --split train --taxonomy code_modification_failure.merge_conflict"
     },
     {
@@ -89,7 +89,7 @@
       "target_asset": "regression_tests",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Verification failure. Prefer a task where the observable failure signal is flaky_tests. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_005.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_005.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_005.json --run-id train_shadow_001 --task-id train_shadow_001_train_005 --split train --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_005.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_train_005.json --split train --taxonomy verification_failure.flaky_tests"
     },
     {
@@ -101,7 +101,7 @@
       "target_asset": "context_compression",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Memory and context failure. Prefer a task where the observable failure signal is compression_loss. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_006.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_006.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_006.json --run-id train_shadow_001 --task-id train_shadow_001_train_006 --split train --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_006.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_train_006.json --split train --taxonomy memory_context_failure.compression_loss"
     },
     {
@@ -113,7 +113,7 @@
       "target_asset": "recovery_rules",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Recovery and control failure. Prefer a task where the observable failure signal is bad_rollback. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_007.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_007.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_007.json --run-id train_shadow_001 --task-id train_shadow_001_train_007 --split train --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_007.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_train_007.json --split train --taxonomy recovery_control_failure.bad_rollback"
     },
     {
@@ -125,7 +125,7 @@
       "target_asset": "security_flags",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Security and governance failure. Prefer a task where the observable failure signal is benchmark_leak. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_008.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_008.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_008.json --run-id train_shadow_001 --task-id train_shadow_001_train_008 --split train --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_008.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_train_008.json --split train --taxonomy security_governance_failure.benchmark_leak"
     },
     {
@@ -137,7 +137,7 @@
       "target_asset": "context_policy",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Model interaction failure. Prefer a task where the observable failure signal is proxy_bypass. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_009.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_009.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_009.json --run-id train_shadow_001 --task-id train_shadow_001_train_009 --split train --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_009.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_train_009.json --split train --taxonomy model_interaction_failure.proxy_bypass"
     },
     {
@@ -149,7 +149,7 @@
       "target_asset": "prompt_policy",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Tool choice failure. Prefer a task where the observable failure signal is bad_args. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_010.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_010.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_010.json --run-id train_shadow_001 --task-id train_shadow_001_train_010 --split train --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_010.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_train_010.json --split train --taxonomy tool_choice_failure.bad_args"
     },
     {
@@ -161,7 +161,7 @@
       "target_asset": "runtime_config",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Execution environment failure. Prefer a task where the observable failure signal is permission_deny. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_011.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_011.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_011.json --run-id train_shadow_001 --task-id train_shadow_001_train_011 --split train --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_011.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_train_011.json --split train --taxonomy execution_environment_failure.permission_deny"
     },
     {
@@ -173,7 +173,7 @@
       "target_asset": "recovery",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Code modification failure. Prefer a task where the observable failure signal is merge_conflict. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_012.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_012.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_012.json --run-id train_shadow_001 --task-id train_shadow_001_train_012 --split train --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_012.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_train_012.json --split train --taxonomy code_modification_failure.merge_conflict"
     },
     {
@@ -185,7 +185,7 @@
       "target_asset": "regression_tests",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Verification failure. Prefer a task where the observable failure signal is test_selection_wrong. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_013.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_013.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_013.json --run-id train_shadow_001 --task-id train_shadow_001_train_013 --split train --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_013.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_train_013.json --split train --taxonomy verification_failure.test_selection_wrong"
     },
     {
@@ -197,7 +197,7 @@
       "target_asset": "context_compression",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Memory and context failure. Prefer a task where the observable failure signal is memory_pollution. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_014.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_014.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_014.json --run-id train_shadow_001 --task-id train_shadow_001_train_014 --split train --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_014.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_train_014.json --split train --taxonomy memory_context_failure.memory_pollution"
     },
     {
@@ -209,7 +209,7 @@
       "target_asset": "recovery_rules",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Recovery and control failure. Prefer a task where the observable failure signal is bad_rollback. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_015.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_015.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_015.json --run-id train_shadow_001 --task-id train_shadow_001_train_015 --split train --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_015.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_train_015.json --split train --taxonomy recovery_control_failure.bad_rollback"
     },
     {
@@ -221,7 +221,7 @@
       "target_asset": "exporter",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Security and governance failure. Prefer a task where the observable failure signal is secret_leak. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_016.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_016.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_016.json --run-id train_shadow_001 --task-id train_shadow_001_train_016 --split train --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_016.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_train_016.json --split train --taxonomy security_governance_failure.secret_leak"
     },
     {
@@ -233,7 +233,7 @@
       "target_asset": "provider_adapter",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Model interaction failure. Prefer a task where the observable failure signal is proxy_bypass. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_017.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_017.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_017.json --run-id train_shadow_001 --task-id train_shadow_001_train_017 --split train --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_017.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_train_017.json --split train --taxonomy model_interaction_failure.proxy_bypass"
     },
     {
@@ -245,7 +245,7 @@
       "target_asset": "prompt_policy",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Tool choice failure. Prefer a task where the observable failure signal is bad_args. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_018.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_018.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_018.json --run-id train_shadow_001 --task-id train_shadow_001_train_018 --split train --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_018.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_train_018.json --split train --taxonomy tool_choice_failure.bad_args"
     },
     {
@@ -257,7 +257,7 @@
       "target_asset": "permission_policy",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Execution environment failure. Prefer a task where the observable failure signal is network. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_019.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_019.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_019.json --run-id train_shadow_001 --task-id train_shadow_001_train_019 --split train --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_019.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_train_019.json --split train --taxonomy execution_environment_failure.network"
     },
     {
@@ -269,7 +269,7 @@
       "target_asset": "edit_strategy",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Code modification failure. Prefer a task where the observable failure signal is merge_conflict. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_020.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_020.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_020.json --run-id train_shadow_001 --task-id train_shadow_001_train_020 --split train --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_020.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_train_020.json --split train --taxonomy code_modification_failure.merge_conflict"
     },
     {
@@ -281,7 +281,7 @@
       "target_asset": "regression_tests",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Verification failure. Prefer a task where the observable failure signal is hidden_regression. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_021.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_021.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_021.json --run-id train_shadow_001 --task-id train_shadow_001_train_021 --split train --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_021.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_train_021.json --split train --taxonomy verification_failure.hidden_regression"
     },
     {
@@ -293,7 +293,7 @@
       "target_asset": "context_compression",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Memory and context failure. Prefer a task where the observable failure signal is stale_memory. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_022.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_022.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_022.json --run-id train_shadow_001 --task-id train_shadow_001_train_022 --split train --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_022.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_train_022.json --split train --taxonomy memory_context_failure.stale_memory"
     },
     {
@@ -305,7 +305,7 @@
       "target_asset": "recovery_rules",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Recovery and control failure. Prefer a task where the observable failure signal is bad_rollback. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_023.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_023.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_023.json --run-id train_shadow_001 --task-id train_shadow_001_train_023 --split train --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_023.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_train_023.json --split train --taxonomy recovery_control_failure.bad_rollback"
     },
     {
@@ -317,7 +317,7 @@
       "target_asset": "benchmark_governance",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Security and governance failure. Prefer a task where the observable failure signal is unsafe_export. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_024.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_024.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_024.json --run-id train_shadow_001 --task-id train_shadow_001_train_024 --split train --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_024.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_train_024.json --split train --taxonomy security_governance_failure.unsafe_export"
     },
     {
@@ -329,7 +329,7 @@
       "target_asset": "routing",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Model interaction failure. Prefer a task where the observable failure signal is proxy_bypass. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_025.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_025.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_025.json --run-id train_shadow_001 --task-id train_shadow_001_train_025 --split train --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_025.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_train_025.json --split train --taxonomy model_interaction_failure.proxy_bypass"
     },
     {
@@ -341,7 +341,7 @@
       "target_asset": "prompt_policy",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Tool choice failure. Prefer a task where the observable failure signal is bad_args. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_026.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_026.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_026.json --run-id train_shadow_001 --task-id train_shadow_001_train_026 --split train --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_026.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_train_026.json --split train --taxonomy tool_choice_failure.bad_args"
     },
     {
@@ -353,7 +353,7 @@
       "target_asset": "recovery_policy",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Execution environment failure. Prefer a task where the observable failure signal is sandbox. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_027.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_027.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_027.json --run-id train_shadow_001 --task-id train_shadow_001_train_027 --split train --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_027.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_train_027.json --split train --taxonomy execution_environment_failure.sandbox"
     },
     {
@@ -365,7 +365,7 @@
       "target_asset": "controller_logic",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Code modification failure. Prefer a task where the observable failure signal is merge_conflict. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_028.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_028.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_028.json --run-id train_shadow_001 --task-id train_shadow_001_train_028 --split train --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_028.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_train_028.json --split train --taxonomy code_modification_failure.merge_conflict"
     },
     {
@@ -377,7 +377,7 @@
       "target_asset": "regression_tests",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Verification failure. Prefer a task where the observable failure signal is flaky_tests. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_029.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_029.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_029.json --run-id train_shadow_001 --task-id train_shadow_001_train_029 --split train --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_029.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_train_029.json --split train --taxonomy verification_failure.flaky_tests"
     },
     {
@@ -389,7 +389,7 @@
       "target_asset": "context_compression",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Memory and context failure. Prefer a task where the observable failure signal is compression_loss. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_030.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_030.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_030.json --run-id train_shadow_001 --task-id train_shadow_001_train_030 --split train --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_train_030.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_train_030.json --split train --taxonomy memory_context_failure.compression_loss"
     },
     {
@@ -401,7 +401,7 @@
       "target_asset": "recovery_rules",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Recovery and control failure. Prefer a task where the observable failure signal is bad_rollback. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_dev_031.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_dev_031.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_dev_031.json --run-id train_shadow_001 --task-id train_shadow_001_dev_031 --split dev --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_dev_031.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_dev_031.json --split dev --taxonomy recovery_control_failure.bad_rollback"
     },
     {
@@ -413,7 +413,7 @@
       "target_asset": "security_flags",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Security and governance failure. Prefer a task where the observable failure signal is benchmark_leak. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_dev_032.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_dev_032.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_dev_032.json --run-id train_shadow_001 --task-id train_shadow_001_dev_032 --split dev --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_dev_032.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_dev_032.json --split dev --taxonomy security_governance_failure.benchmark_leak"
     },
     {
@@ -425,7 +425,7 @@
       "target_asset": "context_policy",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Model interaction failure. Prefer a task where the observable failure signal is proxy_bypass. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_dev_033.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_dev_033.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_dev_033.json --run-id train_shadow_001 --task-id train_shadow_001_dev_033 --split dev --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_dev_033.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_dev_033.json --split dev --taxonomy model_interaction_failure.proxy_bypass"
     },
     {
@@ -437,7 +437,7 @@
       "target_asset": "prompt_policy",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Tool choice failure. Prefer a task where the observable failure signal is bad_args. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_dev_034.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_dev_034.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_dev_034.json --run-id train_shadow_001 --task-id train_shadow_001_dev_034 --split dev --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_dev_034.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_dev_034.json --split dev --taxonomy tool_choice_failure.bad_args"
     },
     {
@@ -449,7 +449,7 @@
       "target_asset": "runtime_config",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Execution environment failure. Prefer a task where the observable failure signal is timeout. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_dev_035.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_dev_035.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_dev_035.json --run-id train_shadow_001 --task-id train_shadow_001_dev_035 --split dev --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_dev_035.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_dev_035.json --split dev --taxonomy execution_environment_failure.timeout"
     },
     {
@@ -461,7 +461,7 @@
       "target_asset": "recovery",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Code modification failure. Prefer a task where the observable failure signal is merge_conflict. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_dev_036.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_dev_036.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_dev_036.json --run-id train_shadow_001 --task-id train_shadow_001_dev_036 --split dev --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_dev_036.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_dev_036.json --split dev --taxonomy code_modification_failure.merge_conflict"
     },
     {
@@ -473,7 +473,7 @@
       "target_asset": "regression_tests",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Verification failure. Prefer a task where the observable failure signal is test_selection_wrong. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_dev_037.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_dev_037.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_dev_037.json --run-id train_shadow_001 --task-id train_shadow_001_dev_037 --split dev --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_dev_037.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_dev_037.json --split dev --taxonomy verification_failure.test_selection_wrong"
     },
     {
@@ -485,7 +485,7 @@
       "target_asset": "context_compression",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Memory and context failure. Prefer a task where the observable failure signal is memory_pollution. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_dev_038.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_dev_038.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_dev_038.json --run-id train_shadow_001 --task-id train_shadow_001_dev_038 --split dev --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_dev_038.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_dev_038.json --split dev --taxonomy memory_context_failure.memory_pollution"
     },
     {
@@ -497,7 +497,7 @@
       "target_asset": "recovery_rules",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Recovery and control failure. Prefer a task where the observable failure signal is bad_rollback. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_dev_039.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_dev_039.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_dev_039.json --run-id train_shadow_001 --task-id train_shadow_001_dev_039 --split dev --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_dev_039.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_dev_039.json --split dev --taxonomy recovery_control_failure.bad_rollback"
     },
     {
@@ -509,7 +509,7 @@
       "target_asset": "exporter",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Security and governance failure. Prefer a task where the observable failure signal is secret_leak. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_dev_040.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_dev_040.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_dev_040.json --run-id train_shadow_001 --task-id train_shadow_001_dev_040 --split dev --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_dev_040.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_dev_040.json --split dev --taxonomy security_governance_failure.secret_leak"
     },
     {
@@ -521,7 +521,7 @@
       "target_asset": "provider_adapter",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Model interaction failure. Prefer a task where the observable failure signal is proxy_bypass. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_held_out_041.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_held_out_041.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_held_out_041.json --run-id train_shadow_001 --task-id train_shadow_001_held_out_041 --split test --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_held_out_041.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_held_out_041.json --split held_out --taxonomy model_interaction_failure.proxy_bypass"
     },
     {
@@ -533,7 +533,7 @@
       "target_asset": "prompt_policy",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Tool choice failure. Prefer a task where the observable failure signal is bad_args. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_held_out_042.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_held_out_042.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_held_out_042.json --run-id train_shadow_001 --task-id train_shadow_001_held_out_042 --split test --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_held_out_042.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_held_out_042.json --split held_out --taxonomy tool_choice_failure.bad_args"
     },
     {
@@ -545,7 +545,7 @@
       "target_asset": "permission_policy",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Execution environment failure. Prefer a task where the observable failure signal is dependency. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_held_out_043.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_held_out_043.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_held_out_043.json --run-id train_shadow_001 --task-id train_shadow_001_held_out_043 --split test --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_held_out_043.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_held_out_043.json --split held_out --taxonomy execution_environment_failure.dependency"
     },
     {
@@ -557,7 +557,7 @@
       "target_asset": "edit_strategy",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Code modification failure. Prefer a task where the observable failure signal is merge_conflict. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_held_out_044.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_held_out_044.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_held_out_044.json --run-id train_shadow_001 --task-id train_shadow_001_held_out_044 --split test --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_held_out_044.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_held_out_044.json --split held_out --taxonomy code_modification_failure.merge_conflict"
     },
     {
@@ -569,7 +569,7 @@
       "target_asset": "regression_tests",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Verification failure. Prefer a task where the observable failure signal is hidden_regression. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_held_out_045.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_held_out_045.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_held_out_045.json --run-id train_shadow_001 --task-id train_shadow_001_held_out_045 --split test --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_held_out_045.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_held_out_045.json --split held_out --taxonomy verification_failure.hidden_regression"
     },
     {
@@ -581,7 +581,7 @@
       "target_asset": "context_compression",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Memory and context failure. Prefer a task where the observable failure signal is stale_memory. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_held_out_046.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_held_out_046.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_held_out_046.json --run-id train_shadow_001 --task-id train_shadow_001_held_out_046 --split test --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_held_out_046.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_held_out_046.json --split held_out --taxonomy memory_context_failure.stale_memory"
     },
     {
@@ -593,7 +593,7 @@
       "target_asset": "recovery_rules",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Recovery and control failure. Prefer a task where the observable failure signal is bad_rollback. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_held_out_047.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_held_out_047.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_held_out_047.json --run-id train_shadow_001 --task-id train_shadow_001_held_out_047 --split test --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_held_out_047.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_held_out_047.json --split held_out --taxonomy recovery_control_failure.bad_rollback"
     },
     {
@@ -605,7 +605,7 @@
       "target_asset": "benchmark_governance",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Security and governance failure. Prefer a task where the observable failure signal is unsafe_export. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_held_out_048.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_held_out_048.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_held_out_048.json --run-id train_shadow_001 --task-id train_shadow_001_held_out_048 --split test --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_held_out_048.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_held_out_048.json --split held_out --taxonomy security_governance_failure.unsafe_export"
     },
     {
@@ -617,7 +617,7 @@
       "target_asset": "routing",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Model interaction failure. Prefer a task where the observable failure signal is proxy_bypass. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_held_out_049.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_held_out_049.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_held_out_049.json --run-id train_shadow_001 --task-id train_shadow_001_held_out_049 --split test --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_held_out_049.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_held_out_049.json --split held_out --taxonomy model_interaction_failure.proxy_bypass"
     },
     {
@@ -629,7 +629,7 @@
       "target_asset": "prompt_policy",
       "collection_instruction": "Run a real Leviathan coding-agent task that can expose Tool choice failure. Prefer a task where the observable failure signal is bad_args. Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data. After the task, export the rollout and intake it with the provided command.",
       "export_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_held_out_050.json",
-      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_held_out_050.json",
+      "export_command": "/export --rollout .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_held_out_050.json --run-id train_shadow_001 --task-id train_shadow_001_held_out_050 --split test --harness-version git:7546f5e --heuristic-bundle hb:unversioned --policy-version mimo-v2.5 --repo leviathan --base-commit 7546f5e --cwd-alias $WORKDIR",
       "intake_command": "/learning intake-shadow-rollout --run-dir .leviathan/learning/runs/train_shadow_001 --input .leviathan\\learning\\runs\\train_shadow_001\\rollouts\\exported\\train_shadow_001_held_out_050.json --out .leviathan\\learning\\runs\\train_shadow_001\\intake\\train_shadow_001_held_out_050.json --split held_out --taxonomy tool_choice_failure.bad_args"
     }
   ],

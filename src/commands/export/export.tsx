@@ -6,6 +6,7 @@ import type { ToolUseContext } from '../../Tool.js';
 import type { LocalJSXCommandOnDone } from '../../types/command.js';
 import type { Message } from '../../types/message.js';
 import { buildConversationRolloutBundle } from '../../learning/conversationRollout.js';
+import type { RolloutSplit } from '../../learning/rolloutSchema.js';
 import { getCwd } from '../../utils/cwd.js';
 import { renderMessagesToPlainText } from '../../utils/exportRenderer.js';
 import { jsonStringify, writeFileSync_DEPRECATED } from '../../utils/slowOperations.js';
@@ -15,6 +16,7 @@ type ExportMode = 'conversation' | 'rollout';
 export type ParsedExportArgs = {
   mode: ExportMode;
   filename: string;
+  overrides: RolloutExportOverrides;
 };
 
 export type RolloutExportOverrides = {
@@ -25,6 +27,7 @@ export type RolloutExportOverrides = {
   harnessVersion?: string;
   heuristicBundleVersion?: string;
   policyVersion?: string;
+  split?: RolloutSplit;
   repo?: string;
   baseCommit?: string;
   cwdAlias?: string;
@@ -40,23 +43,47 @@ function formatTimestamp(date: Date): string {
   return `${year}-${month}-${day}-${hours}${minutes}${seconds}`;
 }
 export function parseExportArgs(args: string): ParsedExportArgs {
-  const trimmed = args.trim();
-  if (trimmed === '--rollout') {
-    return { mode: 'rollout', filename: '' };
+  const tokens = args.trim().split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) {
+    return { mode: 'conversation', filename: '', overrides: {} };
   }
-  if (trimmed.startsWith('--rollout=')) {
+
+  const overrides: RolloutExportOverrides = {};
+  const readFlagValue = (index: number): string => tokens[index + 1] ?? '';
+  const readOverrides = (startIndex: number): void => {
+    for (let i = startIndex; i < tokens.length; i += 1) {
+      const token = tokens[i];
+      if (token === '--run-id') overrides.runId = readFlagValue(i);
+      if (token === '--session-id') overrides.sessionId = readFlagValue(i);
+      if (token === '--task-id') overrides.taskId = readFlagValue(i);
+      if (token === '--harness-version') overrides.harnessVersion = readFlagValue(i);
+      if (token === '--heuristic-bundle') overrides.heuristicBundleVersion = readFlagValue(i);
+      if (token === '--policy-version') overrides.policyVersion = readFlagValue(i);
+      if (token === '--repo') overrides.repo = readFlagValue(i);
+      if (token === '--base-commit') overrides.baseCommit = readFlagValue(i);
+      if (token === '--cwd-alias') overrides.cwdAlias = readFlagValue(i);
+      if (token === '--split') {
+        const split = readFlagValue(i);
+        if (split === 'train' || split === 'dev' || split === 'test' || split === 'shadow') {
+          overrides.split = split;
+        }
+      }
+    }
+  };
+
+  if (tokens[0] === '--rollout') {
+    readOverrides(2);
+    return { mode: 'rollout', filename: tokens[1] ?? '', overrides };
+  }
+  if (tokens[0]?.startsWith('--rollout=')) {
+    readOverrides(1);
     return {
       mode: 'rollout',
-      filename: trimmed.slice('--rollout='.length).trim(),
+      filename: tokens[0].slice('--rollout='.length).trim(),
+      overrides,
     };
   }
-  if (trimmed.startsWith('--rollout ')) {
-    return {
-      mode: 'rollout',
-      filename: trimmed.slice('--rollout '.length).trim(),
-    };
-  }
-  return { mode: 'conversation', filename: trimmed };
+  return { mode: 'conversation', filename: args.trim(), overrides: {} };
 }
 
 export async function buildRolloutExportContent(
@@ -70,7 +97,7 @@ export async function buildRolloutExportContent(
     sessionId,
     taskId: overrides.taskId ?? `task:${sessionId}`,
     source: 'internal',
-    split: 'shadow',
+    split: overrides.split ?? 'shadow',
     timestamp: overrides.timestamp ?? new Date().toISOString(),
     harnessVersion:
       overrides.harnessVersion ??
@@ -132,7 +159,7 @@ export async function call(onDone: LocalJSXCommandOnDone, context: ToolUseContex
   // Render the conversation content
   const content =
     parsedArgs.mode === 'rollout'
-      ? await buildRolloutExportContent(context)
+      ? await buildRolloutExportContent(context, parsedArgs.overrides)
       : await exportWithReactRenderer(context);
 
   // If args are provided, write directly to file and skip dialog

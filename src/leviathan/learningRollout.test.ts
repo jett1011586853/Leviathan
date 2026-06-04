@@ -1,4 +1,7 @@
 import { describe, expect, test } from 'bun:test'
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
 import {
   OPTIONAL_ROLLOUT_FIELDS,
@@ -8,11 +11,22 @@ import {
 } from '../learning/rolloutSchema.js'
 import {
   buildRolloutExportContent,
+  call as exportCall,
   parseExportArgs,
 } from '../commands/export/export.js'
 import { buildConversationRolloutBundle } from '../learning/conversationRollout.js'
 import { redactText, redactValue } from '../learning/redaction.js'
 import type { Message } from '../types/message.js'
+import { runWithCwdOverride } from '../utils/cwd.js'
+
+async function withTempDir<T>(fn: (dir: string) => Promise<T> | T): Promise<T> {
+  const dir = mkdtempSync(join(tmpdir(), 'leviathan-rollout-export-'))
+  try {
+    return await fn(dir)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+}
 
 describe('Leviathan HL/Polar rollout schema', () => {
   test('creates a v1 rollout bundle with required fields and no fake trainer fields', () => {
@@ -203,10 +217,80 @@ describe('Leviathan HL/Polar rollout schema', () => {
     expect(parseExportArgs('--rollout training-run.json')).toEqual({
       mode: 'rollout',
       filename: 'training-run.json',
+      overrides: {},
     })
     expect(parseExportArgs('conversation-name')).toEqual({
       mode: 'conversation',
       filename: 'conversation-name',
+      overrides: {},
+    })
+  })
+
+  test('parses rollout export metadata flags for shadow task provenance', () => {
+    expect(
+      parseExportArgs(
+        '--rollout shadow-rollout.json --run-id train_shadow_001 --task-id train_shadow_001_train_001 --split train --harness-version git:abc123 --heuristic-bundle hb:initial --policy-version mimo-v2.5 --base-commit abc123 --repo leviathan',
+      ),
+    ).toEqual({
+      mode: 'rollout',
+      filename: 'shadow-rollout.json',
+      overrides: {
+        runId: 'train_shadow_001',
+        taskId: 'train_shadow_001_train_001',
+        split: 'train',
+        harnessVersion: 'git:abc123',
+        heuristicBundleVersion: 'hb:initial',
+        policyVersion: 'mimo-v2.5',
+        baseCommit: 'abc123',
+        repo: 'leviathan',
+      },
+    })
+  })
+
+  test('writes rollout export metadata flags into the bundle', async () => {
+    await withTempDir(async dir => {
+      const outputName = 'shadow-rollout.json'
+      let doneMessage = ''
+      const messages = [
+        {
+          type: 'user',
+          uuid: '00000000-0000-4000-8000-000000000204',
+          timestamp: '2026-06-04T00:00:00.000Z',
+          message: {
+            id: '00000000-0000-4000-8000-000000000204',
+            role: 'user',
+            content: 'Run a real Leviathan task for the train split',
+          },
+        },
+      ] as unknown as Message[]
+
+      await runWithCwdOverride(dir, async () => {
+        await exportCall(
+          message => {
+            doneMessage = message ?? ''
+          },
+          {
+            messages,
+            options: {
+              mainLoopModel: 'ignored-default-model',
+            },
+          } as never,
+          '--rollout shadow-rollout.json --run-id train_shadow_001 --task-id train_shadow_001_train_001 --split train --harness-version git:abc123 --heuristic-bundle hb:initial --policy-version mimo-v2.5 --base-commit abc123 --repo leviathan',
+        )
+      })
+
+      const outputPath = join(dir, outputName)
+      expect(existsSync(outputPath)).toBe(true)
+      const exported = JSON.parse(readFileSync(outputPath, 'utf8'))
+      expect(exported.run.run_id).toBe('train_shadow_001')
+      expect(exported.run.task_id).toBe('train_shadow_001_train_001')
+      expect(exported.run.split).toBe('train')
+      expect(exported.run.harness_version).toBe('git:abc123')
+      expect(exported.run.heuristic_bundle_version).toBe('hb:initial')
+      expect(exported.run.policy_version).toBe('mimo-v2.5')
+      expect(exported.task.repo).toBe('leviathan')
+      expect(exported.task.base_commit).toBe('abc123')
+      expect(doneMessage).toContain('Rollout bundle exported')
     })
   })
 

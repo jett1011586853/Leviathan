@@ -52,6 +52,12 @@ describe('Leviathan shadow learning task queue files', () => {
       expect(first?.status).toBe('pending')
       expect(first?.split).toBe('train')
       expect(first?.export_command).toContain('/export --rollout')
+      expect(first?.export_command).toContain('--run-id train_shadow_001')
+      expect(first?.export_command).toContain(
+        '--task-id train_shadow_001_train_001',
+      )
+      expect(first?.export_command).toContain('--split train')
+      expect(first?.export_command).toContain('--policy-version mimo-v2.5')
       expect(first?.intake_command).toContain('/learning intake-shadow-rollout')
       expect(first?.intake_command).toContain('--run-dir')
       expect(first?.taxonomy_hint).toContain('.')
