@@ -375,6 +375,56 @@ describe('Leviathan learning command', () => {
     })
   })
 
+  test('parses rollout annotation arguments', () => {
+    expect(
+      parseLearningCommandArgs(
+        'annotate-rollout --input raw.json --out train.json --split train --taxonomy tool_choice_failure.bad_args --taxonomy verification_failure.flaky_tests --outcome unresolved --resolved-label false --root-cause "bad tool args" --test-cmd "bun test" --test-output "failed assertion" --exit-code 1 --changed-file src/commands/learning/learning.ts --export-allowed true --contains-private-code false',
+      ),
+    ).toEqual({
+      action: 'annotate-rollout',
+      input_path: 'raw.json',
+      output_path: 'train.json',
+      split: 'train',
+      taxonomy: [
+        'tool_choice_failure.bad_args',
+        'verification_failure.flaky_tests',
+      ],
+      root_cause_summary: 'bad tool args',
+      final_outcome: 'unresolved',
+      resolved_label: false,
+      test_commands: ['bun test'],
+      test_outputs: ['failed assertion'],
+      exit_codes: [1],
+      changed_files: ['src/commands/learning/learning.ts'],
+      export_allowed: true,
+      contains_private_code: false,
+    })
+  })
+
+  test('leaves omitted rollout annotation evidence fields unset', () => {
+    expect(
+      parseLearningCommandArgs(
+        'annotate-rollout --input raw.json --out train.json --taxonomy tool_choice_failure.bad_args',
+      ),
+    ).toEqual({
+      action: 'annotate-rollout',
+      input_path: 'raw.json',
+      output_path: 'train.json',
+      split: undefined,
+      taxonomy: ['tool_choice_failure.bad_args'],
+      root_cause_summary: undefined,
+      final_outcome: undefined,
+      resolved_label: undefined,
+      test_commands: undefined,
+      test_outputs: undefined,
+      exit_codes: undefined,
+      changed_files: undefined,
+      diff: undefined,
+      export_allowed: undefined,
+      contains_private_code: undefined,
+    })
+  })
+
   test('writes a manifest from the slash command entrypoint', async () => {
     await withTempDir(async dir => {
       const configPath = join(dir, 'launch.json')
@@ -498,6 +548,35 @@ describe('Leviathan learning command', () => {
         'candidate_tool_choice_failure_001',
       ])
       expect(doneMessage).toContain('Leviathan candidate heuristic training completed')
+      expect(doneMessage).toContain(outputPath)
+    })
+  })
+
+  test('annotates exported rollout files through the slash command', async () => {
+    await withTempDir(async dir => {
+      const inputPath = join(dir, 'raw-rollout.json')
+      const outputPath = join(dir, 'train-rollout.json')
+      writeFileSync(inputPath, JSON.stringify(rolloutBundle()), 'utf8')
+      let doneMessage = ''
+
+      await call(
+        message => {
+          doneMessage = message ?? ''
+        },
+        {} as never,
+        `annotate-rollout --input ${inputPath} --out ${outputPath} --split train --taxonomy tool_choice_failure.bad_args --outcome unresolved --resolved-label false --root-cause "bad tool args" --test-cmd "bun test" --test-output "failed assertion" --exit-code 1 --changed-file src/commands/learning/learning.ts --export-allowed true --contains-private-code false`,
+      )
+
+      const annotated = JSON.parse(readFileSync(outputPath, 'utf8'))
+      expect(annotated.run.split).toBe('train')
+      expect(annotated.failure.taxonomy).toEqual([
+        'tool_choice_failure.bad_args',
+      ])
+      expect(annotated.evaluation.final_outcome).toBe('unresolved')
+      expect(annotated.evaluation.resolved_label).toBe(false)
+      expect(annotated.security.export_allowed).toBe(true)
+      expect(annotated.security.contains_private_code).toBe(false)
+      expect(doneMessage).toContain('Leviathan rollout annotated')
       expect(doneMessage).toContain(outputPath)
     })
   })

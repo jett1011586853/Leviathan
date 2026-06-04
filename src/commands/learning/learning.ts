@@ -13,6 +13,8 @@ import { writePolarHarnessPromotionReportFromFiles } from '../../learning/polarH
 import { writePromotionEvidenceFromSnapshotFiles } from '../../learning/promotionEvidenceFiles.js'
 import { writeEvaluationSnapshotFromFiles } from '../../learning/evaluationSnapshotFiles.js'
 import { runLearningPipelineFromFiles } from '../../learning/learningPipelineFiles.js'
+import { annotateRolloutFile } from '../../learning/rolloutAnnotationFiles.js'
+import type { LeviathanRolloutBundle } from '../../learning/rolloutSchema.js'
 
 export type ParsedLearningCommandArgs =
   | {
@@ -107,11 +109,28 @@ export type ParsedLearningCommandArgs =
       regressions_path: string
     }
   | {
+      action: 'annotate-rollout'
+      input_path: string
+      output_path: string
+      split?: LeviathanRolloutBundle['run']['split']
+      taxonomy: string[]
+      root_cause_summary?: string
+      final_outcome?: 'unknown' | 'resolved' | 'unresolved'
+      resolved_label?: boolean | null
+      test_commands?: string[]
+      test_outputs?: string[]
+      exit_codes?: number[]
+      changed_files?: string[]
+      diff?: string
+      export_allowed?: boolean
+      contains_private_code?: boolean
+    }
+  | {
       action: 'help'
     }
 
 const USAGE =
-  'Usage: /learning init --out <launch.json> --model <model-id>; /learning collect --out <launch.json> --model <model-id> --rollout <rollout.json>; /learning start --config <launch.json> --out <manifest.json>; /learning train-candidates --out <candidates.json> --run-id <run> --model <model-id> --rollout <rollout.json>; /learning train-polar --out <polar.json> --run-id <run> --model <model-id> --polar <observations.json>; /learning evaluation-snapshot --out <snapshot.json> --replay <replay.json> --held-out <rollout.json> --security <scan.json> --complexity <budget.json> --target-slice <slice.json> --regressions <regressions.json> --polar <observations.json>; /learning promotion-evidence --snapshot <eval.json> --heuristic-out <evidence.json> --polar-out <evidence.json>; /learning promote-candidates --out <promotion.json> --candidates <candidates.json> --evidence <evidence.json>; /learning promote-polar --out <promotion.json> --polar-candidates <polar.json> --evidence <evidence.json>; /learning run-pipeline --out-dir <dir> --run-id <run> --model <model-id> --rollout <rollout.json> --held-out <rollout.json> --polar-training <observations.json> --polar-eval <observations.json> --replay <replay.json> --security <scan.json> --complexity <budget.json> --target-slice <slice.json> --regressions <regressions.json>'
+  'Usage: /learning init --out <launch.json> --model <model-id>; /learning collect --out <launch.json> --model <model-id> --rollout <rollout.json>; /learning start --config <launch.json> --out <manifest.json>; /learning annotate-rollout --input <raw-rollout.json> --out <train-rollout.json> --taxonomy <failure.code> --outcome <resolved|unresolved|unknown>; /learning train-candidates --out <candidates.json> --run-id <run> --model <model-id> --rollout <rollout.json>; /learning train-polar --out <polar.json> --run-id <run> --model <model-id> --polar <observations.json>; /learning evaluation-snapshot --out <snapshot.json> --replay <replay.json> --held-out <rollout.json> --security <scan.json> --complexity <budget.json> --target-slice <slice.json> --regressions <regressions.json> --polar <observations.json>; /learning promotion-evidence --snapshot <eval.json> --heuristic-out <evidence.json> --polar-out <evidence.json>; /learning promote-candidates --out <promotion.json> --candidates <candidates.json> --evidence <evidence.json>; /learning promote-polar --out <promotion.json> --polar-candidates <polar.json> --evidence <evidence.json>; /learning run-pipeline --out-dir <dir> --run-id <run> --model <model-id> --rollout <rollout.json> --held-out <rollout.json> --polar-training <observations.json> --polar-eval <observations.json> --replay <replay.json> --security <scan.json> --complexity <budget.json> --target-slice <slice.json> --regressions <regressions.json>'
 
 function tokenizeArgs(args: string): string[] {
   const tokens: string[] = []
@@ -152,6 +171,73 @@ function readFlags(tokens: string[], names: string[]): string[] {
   }
 
   return values.filter(value => value.trim().length > 0)
+}
+
+function readOptionalFlags(
+  tokens: string[],
+  names: string[],
+): string[] | undefined {
+  const values = readFlags(tokens, names)
+  return values.length > 0 ? values : undefined
+}
+
+function readBooleanFlag(
+  tokens: string[],
+  names: string[],
+): boolean | undefined {
+  for (const name of names) {
+    const equalsToken = tokens.find(token => token.startsWith(`${name}=`))
+    if (equalsToken) {
+      return equalsToken.slice(name.length + 1).toLowerCase() === 'true'
+    }
+
+    const index = tokens.indexOf(name)
+    if (index < 0) continue
+    const next = tokens[index + 1]
+    if (!next || next.startsWith('--')) return true
+    return next.toLowerCase() === 'true'
+  }
+
+  return undefined
+}
+
+function readNumberFlags(tokens: string[], names: string[]): number[] {
+  return readFlags(tokens, names)
+    .map(value => Number(value))
+    .filter(value => Number.isFinite(value))
+}
+
+function readOptionalNumberFlags(
+  tokens: string[],
+  names: string[],
+): number[] | undefined {
+  const values = readNumberFlags(tokens, names)
+  return values.length > 0 ? values : undefined
+}
+
+function readOutcomeFlag(
+  tokens: string[],
+): 'unknown' | 'resolved' | 'unresolved' | undefined {
+  const value = readFlag(tokens, ['--outcome', '--final-outcome'])
+  if (value === 'unknown' || value === 'resolved' || value === 'unresolved') {
+    return value
+  }
+  return undefined
+}
+
+function readSplitFlag(
+  tokens: string[],
+): LeviathanRolloutBundle['run']['split'] | undefined {
+  const value = readFlag(tokens, ['--split'])
+  if (
+    value === 'train' ||
+    value === 'dev' ||
+    value === 'test' ||
+    value === 'shadow'
+  ) {
+    return value
+  }
+  return undefined
 }
 
 export function parseLearningCommandArgs(
@@ -388,6 +474,38 @@ export function parseLearningCommandArgs(
     }
   }
 
+  if (tokens[0] === 'annotate-rollout') {
+    const input_path = readFlag(tokens, ['--input', '--in'])
+    const output_path = readFlag(tokens, ['--out', '--output'])
+    const taxonomy = readFlags(tokens, ['--taxonomy'])
+    if (!input_path || !output_path || taxonomy.length === 0) {
+      return { action: 'help' }
+    }
+
+    return {
+      action: 'annotate-rollout',
+      input_path,
+      output_path,
+      split: readSplitFlag(tokens),
+      taxonomy,
+      root_cause_summary: readFlag(tokens, ['--root-cause']) || undefined,
+      final_outcome: readOutcomeFlag(tokens),
+      resolved_label: readBooleanFlag(tokens, ['--resolved-label']),
+      test_commands: readOptionalFlags(tokens, [
+        '--test-cmd',
+        '--test-command',
+      ]),
+      test_outputs: readOptionalFlags(tokens, ['--test-output']),
+      exit_codes: readOptionalNumberFlags(tokens, ['--exit-code']),
+      changed_files: readOptionalFlags(tokens, ['--changed-file']),
+      diff: readFlag(tokens, ['--diff']) || undefined,
+      export_allowed: readBooleanFlag(tokens, ['--export-allowed']),
+      contains_private_code: readBooleanFlag(tokens, [
+        '--contains-private-code',
+      ]),
+    }
+  }
+
   if (tokens[0] !== 'start') return { action: 'help' }
 
   const config_path = readFlag(tokens, ['--config'])
@@ -449,6 +567,27 @@ export async function call(
       }),
     )
     onDone(`Leviathan learning evidence collected: ${parsed.output_path}`)
+    return null
+  }
+
+  if (parsed.action === 'annotate-rollout') {
+    const result = annotateRolloutFile({
+      input_path: parsed.input_path,
+      output_path: parsed.output_path,
+      split: parsed.split,
+      taxonomy: parsed.taxonomy,
+      root_cause_summary: parsed.root_cause_summary,
+      final_outcome: parsed.final_outcome,
+      resolved_label: parsed.resolved_label,
+      test_commands: parsed.test_commands,
+      test_outputs: parsed.test_outputs,
+      exit_codes: parsed.exit_codes,
+      changed_files: parsed.changed_files,
+      diff: parsed.diff,
+      export_allowed: parsed.export_allowed,
+      contains_private_code: parsed.contains_private_code,
+    })
+    onDone(`Leviathan rollout annotated: ${result.output_path}`)
     return null
   }
 
