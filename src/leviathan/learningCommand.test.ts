@@ -67,6 +67,29 @@ function rolloutBundle(): unknown {
   return bundle
 }
 
+function resolvedHeldOutRolloutBundle(): unknown {
+  const bundle = createEmptyRolloutBundle({
+    runId: 'run_held_out_1',
+    sessionId: 'session_held_out_1',
+    taskId: 'task_held_out_1',
+    source: 'internal',
+    split: 'held_out',
+    timestamp: '2026-06-03T00:00:00.000Z',
+    harnessVersion: 'git:abc123',
+    heuristicBundleVersion: 'hb:candidate/train_1',
+    policyVersion: 'mimo-v2.5',
+    userInstruction: 'evaluate held-out pipeline task',
+    repo: 'leviathan',
+    baseCommit: 'abc123',
+    cwdAlias: '$WORKDIR',
+  })
+  bundle.failure.taxonomy = ['tool_choice_failure.bad_args']
+  bundle.evaluation.final_outcome = 'resolved'
+  bundle.evaluation.resolved_label = true
+  bundle.evaluation.exit_codes = [0]
+  return bundle
+}
+
 function polarObservation(
   case_id: PolarProxySpikeObservation['case_id'],
   overrides: Partial<PolarProxySpikeObservation> = {},
@@ -325,6 +348,30 @@ describe('Leviathan learning command', () => {
       target_failure_slice_path: 'target.json',
       regressions_path: 'regressions.json',
       polar_spike_observations_path: 'polar.json',
+    })
+  })
+
+  test('parses full learning pipeline arguments', () => {
+    expect(
+      parseLearningCommandArgs(
+        'run-pipeline --out-dir artifacts --run-id train_1 --model mimo-v2.5 --base-bundle hb:initial --base-harness git:abc123 --rollout train.json --held-out held.json --polar-training polar-train.json --polar-eval polar-eval.json --replay replay.json --security security.json --complexity complexity.json --target-slice target.json --regressions regressions.json',
+      ),
+    ).toEqual({
+      action: 'run-pipeline',
+      output_dir: 'artifacts',
+      training_run_id: 'train_1',
+      provider_model_id: 'mimo-v2.5',
+      base_heuristic_bundle_version: 'hb:initial',
+      base_harness_version: 'git:abc123',
+      rollout_bundle_paths: ['train.json'],
+      held_out_rollout_paths: ['held.json'],
+      polar_training_observations_path: 'polar-train.json',
+      polar_eval_observations_path: 'polar-eval.json',
+      replay_results_path: 'replay.json',
+      security_scan_path: 'security.json',
+      complexity_budget_path: 'complexity.json',
+      target_failure_slice_path: 'target.json',
+      regressions_path: 'regressions.json',
     })
   })
 
@@ -636,6 +683,85 @@ describe('Leviathan learning command', () => {
       expect(snapshot.polar_spike).toEqual({ passed: true })
       expect(doneMessage).toContain('Leviathan evaluation snapshot written')
       expect(doneMessage).toContain(outputPath)
+    })
+  })
+
+  test('runs the full learning pipeline through the slash command', async () => {
+    await withTempDir(async dir => {
+      const rolloutPath = join(dir, 'training-rollout.json')
+      const heldOutPath = join(dir, 'held-out-rollout.json')
+      const polarTrainingPath = join(dir, 'polar-training.json')
+      const polarEvalPath = join(dir, 'polar-eval.json')
+      const replayPath = join(dir, 'replay.json')
+      const securityPath = join(dir, 'security.json')
+      const complexityPath = join(dir, 'complexity.json')
+      const targetSlicePath = join(dir, 'target-slice.json')
+      const regressionsPath = join(dir, 'regressions.json')
+      const outputDir = join(dir, 'artifacts')
+      writeFileSync(rolloutPath, JSON.stringify(rolloutBundle()), 'utf8')
+      writeFileSync(
+        heldOutPath,
+        JSON.stringify(resolvedHeldOutRolloutBundle()),
+        'utf8',
+      )
+      writeFileSync(
+        polarTrainingPath,
+        JSON.stringify([
+          polarObservation('case_a_no_tool', {
+            captured_requests_count: 0,
+          }),
+          polarObservation('case_b_file_read_write'),
+          polarObservation('case_c_test_execution'),
+        ]),
+        'utf8',
+      )
+      writeFileSync(
+        polarEvalPath,
+        JSON.stringify([
+          polarObservation('case_a_no_tool'),
+          polarObservation('case_b_file_read_write'),
+          polarObservation('case_c_test_execution'),
+        ]),
+        'utf8',
+      )
+      writeFileSync(replayPath, JSON.stringify([{ passed: true }]), 'utf8')
+      writeFileSync(securityPath, JSON.stringify({ passed: true }), 'utf8')
+      writeFileSync(
+        complexityPath,
+        JSON.stringify({
+          passed: true,
+          token_turn_cost_regression_pct: 0.04,
+        }),
+        'utf8',
+      )
+      writeFileSync(
+        targetSlicePath,
+        JSON.stringify({
+          before_success_rate: 0.5,
+          after_success_rate: 0.7,
+          min_delta: 0.05,
+        }),
+        'utf8',
+      )
+      writeFileSync(regressionsPath, JSON.stringify({ p0_p1_count: 0 }), 'utf8')
+      let doneMessage = ''
+
+      await call(
+        message => {
+          doneMessage = message ?? ''
+        },
+        {} as never,
+        `run-pipeline --out-dir ${outputDir} --run-id train_1 --model mimo-v2.5 --base-bundle hb:initial --base-harness git:abc123 --rollout ${rolloutPath} --held-out ${heldOutPath} --polar-training ${polarTrainingPath} --polar-eval ${polarEvalPath} --replay ${replayPath} --security ${securityPath} --complexity ${complexityPath} --target-slice ${targetSlicePath} --regressions ${regressionsPath}`,
+      )
+
+      const manifest = JSON.parse(
+        readFileSync(join(outputDir, 'learning-pipeline-manifest.json'), 'utf8'),
+      )
+      expect(manifest.status).toBe('ready_for_stable_promotion')
+      expect(manifest.provider_model_update).toBe('none')
+      expect(manifest.stable_promotion_ready).toBe(true)
+      expect(doneMessage).toContain('Leviathan learning pipeline ready')
+      expect(doneMessage).toContain(outputDir)
     })
   })
 })

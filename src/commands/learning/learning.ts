@@ -12,6 +12,7 @@ import { writeHeuristicPromotionReportFromFiles } from '../../learning/promotion
 import { writePolarHarnessPromotionReportFromFiles } from '../../learning/polarHarnessPromotionFiles.js'
 import { writePromotionEvidenceFromSnapshotFiles } from '../../learning/promotionEvidenceFiles.js'
 import { writeEvaluationSnapshotFromFiles } from '../../learning/evaluationSnapshotFiles.js'
+import { runLearningPipelineFromFiles } from '../../learning/learningPipelineFiles.js'
 
 export type ParsedLearningCommandArgs =
   | {
@@ -89,11 +90,28 @@ export type ParsedLearningCommandArgs =
       polar_spike_observations_path: string
     }
   | {
+      action: 'run-pipeline'
+      output_dir: string
+      training_run_id: string
+      provider_model_id: string
+      base_heuristic_bundle_version: string
+      base_harness_version: string
+      rollout_bundle_paths: string[]
+      held_out_rollout_paths: string[]
+      polar_training_observations_path: string
+      polar_eval_observations_path: string
+      replay_results_path: string
+      security_scan_path: string
+      complexity_budget_path: string
+      target_failure_slice_path: string
+      regressions_path: string
+    }
+  | {
       action: 'help'
     }
 
 const USAGE =
-  'Usage: /learning init --out <launch.json> --model <model-id>; /learning collect --out <launch.json> --model <model-id> --rollout <rollout.json>; /learning start --config <launch.json> --out <manifest.json>; /learning train-candidates --out <candidates.json> --run-id <run> --model <model-id> --rollout <rollout.json>; /learning train-polar --out <polar.json> --run-id <run> --model <model-id> --polar <observations.json>; /learning evaluation-snapshot --out <snapshot.json> --replay <replay.json> --held-out <rollout.json> --security <scan.json> --complexity <budget.json> --target-slice <slice.json> --regressions <regressions.json> --polar <observations.json>; /learning promotion-evidence --snapshot <eval.json> --heuristic-out <evidence.json> --polar-out <evidence.json>; /learning promote-candidates --out <promotion.json> --candidates <candidates.json> --evidence <evidence.json>; /learning promote-polar --out <promotion.json> --polar-candidates <polar.json> --evidence <evidence.json>'
+  'Usage: /learning init --out <launch.json> --model <model-id>; /learning collect --out <launch.json> --model <model-id> --rollout <rollout.json>; /learning start --config <launch.json> --out <manifest.json>; /learning train-candidates --out <candidates.json> --run-id <run> --model <model-id> --rollout <rollout.json>; /learning train-polar --out <polar.json> --run-id <run> --model <model-id> --polar <observations.json>; /learning evaluation-snapshot --out <snapshot.json> --replay <replay.json> --held-out <rollout.json> --security <scan.json> --complexity <budget.json> --target-slice <slice.json> --regressions <regressions.json> --polar <observations.json>; /learning promotion-evidence --snapshot <eval.json> --heuristic-out <evidence.json> --polar-out <evidence.json>; /learning promote-candidates --out <promotion.json> --candidates <candidates.json> --evidence <evidence.json>; /learning promote-polar --out <promotion.json> --polar-candidates <polar.json> --evidence <evidence.json>; /learning run-pipeline --out-dir <dir> --run-id <run> --model <model-id> --rollout <rollout.json> --held-out <rollout.json> --polar-training <observations.json> --polar-eval <observations.json> --replay <replay.json> --security <scan.json> --complexity <budget.json> --target-slice <slice.json> --regressions <regressions.json>'
 
 function tokenizeArgs(args: string): string[] {
   const tokens: string[] = []
@@ -318,6 +336,58 @@ export function parseLearningCommandArgs(
     }
   }
 
+  if (tokens[0] === 'run-pipeline') {
+    const output_dir = readFlag(tokens, ['--out-dir', '--output-dir'])
+    const training_run_id = readFlag(tokens, ['--run-id'])
+    const provider_model_id = readFlag(tokens, ['--model'])
+    const rollout_bundle_paths = readFlags(tokens, ['--rollout'])
+    const held_out_rollout_paths = readFlags(tokens, ['--held-out'])
+    const polar_training_observations_path = readFlag(tokens, [
+      '--polar-training',
+    ])
+    const polar_eval_observations_path = readFlag(tokens, ['--polar-eval'])
+    const replay_results_path = readFlag(tokens, ['--replay'])
+    const security_scan_path = readFlag(tokens, ['--security'])
+    const complexity_budget_path = readFlag(tokens, ['--complexity'])
+    const target_failure_slice_path = readFlag(tokens, ['--target-slice'])
+    const regressions_path = readFlag(tokens, ['--regressions'])
+    if (
+      !output_dir ||
+      !training_run_id ||
+      !provider_model_id ||
+      rollout_bundle_paths.length === 0 ||
+      held_out_rollout_paths.length === 0 ||
+      !polar_training_observations_path ||
+      !polar_eval_observations_path ||
+      !replay_results_path ||
+      !security_scan_path ||
+      !complexity_budget_path ||
+      !target_failure_slice_path ||
+      !regressions_path
+    ) {
+      return { action: 'help' }
+    }
+
+    return {
+      action: 'run-pipeline',
+      output_dir,
+      training_run_id,
+      provider_model_id,
+      base_heuristic_bundle_version:
+        readFlag(tokens, ['--base-bundle']) || 'hb:initial',
+      base_harness_version: readFlag(tokens, ['--base-harness']) || 'unknown',
+      rollout_bundle_paths,
+      held_out_rollout_paths,
+      polar_training_observations_path,
+      polar_eval_observations_path,
+      replay_results_path,
+      security_scan_path,
+      complexity_budget_path,
+      target_failure_slice_path,
+      regressions_path,
+    }
+  }
+
   if (tokens[0] !== 'start') return { action: 'help' }
 
   const config_path = readFlag(tokens, ['--config'])
@@ -484,6 +554,33 @@ export async function call(
       polar_spike_observations_path: parsed.polar_spike_observations_path,
     })
     onDone(`Leviathan evaluation snapshot written: ${result.output_path}`)
+    return null
+  }
+
+  if (parsed.action === 'run-pipeline') {
+    const result = runLearningPipelineFromFiles({
+      output_dir: parsed.output_dir,
+      training_run_id: parsed.training_run_id,
+      provider_model_id: parsed.provider_model_id,
+      base_heuristic_bundle_version: parsed.base_heuristic_bundle_version,
+      base_harness_version: parsed.base_harness_version,
+      rollout_bundle_paths: parsed.rollout_bundle_paths,
+      held_out_rollout_paths: parsed.held_out_rollout_paths,
+      polar_training_observations_path: parsed.polar_training_observations_path,
+      polar_eval_observations_path: parsed.polar_eval_observations_path,
+      replay_results_path: parsed.replay_results_path,
+      security_scan_path: parsed.security_scan_path,
+      complexity_budget_path: parsed.complexity_budget_path,
+      target_failure_slice_path: parsed.target_failure_slice_path,
+      regressions_path: parsed.regressions_path,
+    })
+    if (result.manifest.status === 'ready_for_stable_promotion') {
+      onDone(`Leviathan learning pipeline ready: ${parsed.output_dir}`)
+      return null
+    }
+    onDone(
+      `Leviathan learning pipeline ${result.manifest.status}: ${parsed.output_dir}`,
+    )
     return null
   }
 
