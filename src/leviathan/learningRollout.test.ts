@@ -67,11 +67,11 @@ describe('Leviathan HL/Polar rollout schema', () => {
 
   test('redacts credentials, authorization headers, and local filesystem paths', () => {
     const text =
-      'Authorization: Bearer tp-c1lsw1yiqks5p2odvaupv644beu51f8fptlat59bup0ttsem in D:\\hl-agent4\\HL-agent3 and /home/yini/private'
+      'Authorization: Bearer local-redaction-token in D:\\hl-agent4\\HL-agent3 and /home/yini/private'
 
     const redacted = redactText(text)
 
-    expect(redacted).not.toContain('tp-c1lsw1yiqks5p2odvaupv644beu51f8fptlat59bup0ttsem')
+    expect(redacted).not.toContain('local-redaction-token')
     expect(redacted).not.toContain('D:\\hl-agent4')
     expect(redacted).not.toContain('/home/yini')
     expect(redacted).toContain('[REDACTED_BEARER_TOKEN]')
@@ -82,11 +82,11 @@ describe('Leviathan HL/Polar rollout schema', () => {
   test('redacts nested values while preserving structure', () => {
     const redacted = redactValue({
       headers: {
-        Authorization: 'Bearer sk-1234567890abcdefghijklmnopqrstuv',
+        Authorization: 'Bearer local-redaction-token',
         xCustom: 'safe',
       },
       cwd: 'C:\\Users\\yini\\project',
-      nested: ['ANTHROPIC_AUTH_TOKEN=tp-c1abcdefghijklmnopqrstuvwxyz012345'],
+      nested: ['ANTHROPIC_AUTH_TOKEN=local-redaction-token'],
     })
 
     expect(redacted).toEqual({
@@ -132,7 +132,7 @@ describe('Leviathan HL/Polar rollout schema', () => {
               name: 'Bash',
               input: {
                 command:
-                  'echo ANTHROPIC_AUTH_TOKEN=tp-c1abcdefghijklmnopqrstuvwxyz012345',
+                  'echo ANTHROPIC_AUTH_TOKEN=local-redaction-token',
               },
             },
           ],
@@ -182,7 +182,7 @@ describe('Leviathan HL/Polar rollout schema', () => {
       request_id: 'req_001',
     })
     expect(JSON.stringify(bundle.messages)).not.toContain(
-      'tp-c1abcdefghijklmnopqrstuvwxyz012345',
+      'local-redaction-token',
     )
     expect(bundle.tool_events).toEqual([
       {
@@ -220,7 +220,7 @@ describe('Leviathan HL/Polar rollout schema', () => {
           id: '00000000-0000-4000-8000-000000000104',
           role: 'user',
           content:
-            'Analyze D:\\hl-agent4\\secret with Authorization: Bearer tp-c1abcdefghijklmnopqrstuvwxyz012345',
+            'Analyze D:\\hl-agent4\\secret with Authorization: Bearer local-redaction-token',
         },
       },
     ] as unknown as Message[]
@@ -249,7 +249,7 @@ describe('Leviathan HL/Polar rollout schema', () => {
     expect(parsed.schema_version).toBe(ROLLOUT_SCHEMA_VERSION)
     expect(parsed.run.policy_version).toBe('mimo-v2.5')
     expect(parsed.task.user_instruction).toContain('$WORKDIR')
-    expect(content).not.toContain('tp-c1abcdefghijklmnopqrstuvwxyz012345')
+    expect(content).not.toContain('local-redaction-token')
     expect(content).not.toContain('D:\\hl-agent4')
   })
 })
