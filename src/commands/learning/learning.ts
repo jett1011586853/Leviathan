@@ -35,7 +35,11 @@ import {
   type ShadowEvidenceKind,
 } from '../../learning/shadowLearningEvidenceIntakeFiles.js'
 import { writeShadowLearningTaskQueueFile } from '../../learning/shadowLearningTaskQueueFiles.js'
-import type { LeviathanRolloutBundle } from '../../learning/rolloutSchema.js'
+import { writeTranscriptRolloutFile } from '../../learning/transcriptRolloutFiles.js'
+import type {
+  LeviathanRolloutBundle,
+  RolloutSplit,
+} from '../../learning/rolloutSchema.js'
 
 export type ParsedLearningCommandArgs =
   | {
@@ -71,6 +75,20 @@ export type ParsedLearningCommandArgs =
       action: 'plan-shadow-rollouts'
       run_dir: string
       output_path?: string
+    }
+  | {
+      action: 'export-transcript-rollout'
+      transcript_path: string
+      output_path: string
+      run_id: string
+      task_id: string
+      split: RolloutSplit
+      provider_model_id: string
+      harness_version: string
+      heuristic_bundle_version: string
+      repo: string
+      base_commit: string
+      cwd_alias?: string
     }
   | {
       action: 'collect-shadow'
@@ -215,7 +233,7 @@ export type ParsedLearningCommandArgs =
     }
 
 const USAGE =
-  'Usage: /learning init --out <launch.json> --model <model-id>; /learning start-shadow --out-dir <dir> --run-id <run> --model <model-id>; /learning status-shadow --run-dir <dir> --out <status.json>; /learning plan-shadow-rollouts --run-dir <dir> --out <task-queue.json>; /learning intake-shadow-rollout --run-dir <dir> --input <rollout.json> --split <train|dev|held_out> --taxonomy <failure.code>; /learning intake-shadow-evidence --run-dir <dir> --kind <replay-results|failure-taxonomy|benchmark-splits|polar-spike-observations|reward-design|rollback-incident-plan> --input <evidence.json>; /learning collect-shadow --run-dir <dir> --out <collection.json>; /learning collect --out <launch.json> --model <model-id> --rollout <rollout.json>; /learning start --config <launch.json> --out <manifest.json>; /learning annotate-rollout --input <raw-rollout.json> --out <train-rollout.json> --taxonomy <failure.code> --outcome <resolved|unresolved|unknown>; /learning train-candidates --out <candidates.json> --run-id <run> --model <model-id> --rollout <rollout.json>; /learning train-polar --out <polar.json> --run-id <run> --model <model-id> --polar <observations.json>; /learning evaluation-snapshot --out <snapshot.json> --replay <replay.json> --held-out <rollout.json> --security <scan.json> --complexity <budget.json> --target-slice <slice.json> --regressions <regressions.json> --polar <observations.json>; /learning promotion-evidence --snapshot <eval.json> --heuristic-out <evidence.json> --polar-out <evidence.json>; /learning promote-candidates --out <promotion.json> --candidates <candidates.json> --evidence <evidence.json>; /learning promote-polar --out <promotion.json> --polar-candidates <polar.json> --evidence <evidence.json>; /learning run-pipeline --out-dir <dir> --run-id <run> --model <model-id> --rollout <rollout.json> --held-out <rollout.json> --polar-training <observations.json> --polar-eval <observations.json> --replay <replay.json> --security <scan.json> --complexity <budget.json> --target-slice <slice.json> --regressions <regressions.json>; /learning activate-bundle --bundle <learning-bundle.json> --state <active-learning.json>; /learning rollback-bundle --state <active-learning.json>'
+  'Usage: /learning init --out <launch.json> --model <model-id>; /learning start-shadow --out-dir <dir> --run-id <run> --model <model-id>; /learning status-shadow --run-dir <dir> --out <status.json>; /learning plan-shadow-rollouts --run-dir <dir> --out <task-queue.json>; /learning export-transcript-rollout --transcript <session.jsonl> --out <rollout.json> --run-id <run> --task-id <task> --split <train|dev|test|shadow> --model <model-id>; /learning intake-shadow-rollout --run-dir <dir> --input <rollout.json> --split <train|dev|held_out> --taxonomy <failure.code>; /learning intake-shadow-evidence --run-dir <dir> --kind <replay-results|failure-taxonomy|benchmark-splits|polar-spike-observations|reward-design|rollback-incident-plan> --input <evidence.json>; /learning collect-shadow --run-dir <dir> --out <collection.json>; /learning collect --out <launch.json> --model <model-id> --rollout <rollout.json>; /learning start --config <launch.json> --out <manifest.json>; /learning annotate-rollout --input <raw-rollout.json> --out <train-rollout.json> --taxonomy <failure.code> --outcome <resolved|unresolved|unknown>; /learning train-candidates --out <candidates.json> --run-id <run> --model <model-id> --rollout <rollout.json>; /learning train-polar --out <polar.json> --run-id <run> --model <model-id> --polar <observations.json>; /learning evaluation-snapshot --out <snapshot.json> --replay <replay.json> --held-out <rollout.json> --security <scan.json> --complexity <budget.json> --target-slice <slice.json> --regressions <regressions.json> --polar <observations.json>; /learning promotion-evidence --snapshot <eval.json> --heuristic-out <evidence.json> --polar-out <evidence.json>; /learning promote-candidates --out <promotion.json> --candidates <candidates.json> --evidence <evidence.json>; /learning promote-polar --out <promotion.json> --polar-candidates <polar.json> --evidence <evidence.json>; /learning run-pipeline --out-dir <dir> --run-id <run> --model <model-id> --rollout <rollout.json> --held-out <rollout.json> --polar-training <observations.json> --polar-eval <observations.json> --replay <replay.json> --security <scan.json> --complexity <budget.json> --target-slice <slice.json> --regressions <regressions.json>; /learning activate-bundle --bundle <learning-bundle.json> --state <active-learning.json>; /learning rollback-bundle --state <active-learning.json>'
 
 function tokenizeArgs(args: string): string[] {
   const tokens: string[] = []
@@ -401,6 +419,42 @@ export function parseLearningCommandArgs(
       action: 'plan-shadow-rollouts',
       run_dir,
       output_path: readFlag(tokens, ['--out', '--output']) || undefined,
+    }
+  }
+
+  if (tokens[0] === 'export-transcript-rollout') {
+    const transcript_path = readFlag(tokens, ['--transcript'])
+    const output_path = readFlag(tokens, ['--out', '--output'])
+    const run_id = readFlag(tokens, ['--run-id'])
+    const task_id = readFlag(tokens, ['--task-id'])
+    const split = readSplitFlag(tokens)
+    const provider_model_id = readFlag(tokens, ['--model'])
+    if (
+      !transcript_path ||
+      !output_path ||
+      !run_id ||
+      !task_id ||
+      !split ||
+      !provider_model_id
+    ) {
+      return { action: 'help' }
+    }
+
+    return {
+      action: 'export-transcript-rollout',
+      transcript_path,
+      output_path,
+      run_id,
+      task_id,
+      split,
+      provider_model_id,
+      harness_version:
+        readFlag(tokens, ['--harness-version']) || 'git:unknown',
+      heuristic_bundle_version:
+        readFlag(tokens, ['--heuristic-bundle']) || 'hb:unversioned',
+      repo: readFlag(tokens, ['--repo']) || 'local',
+      base_commit: readFlag(tokens, ['--base-commit']) || 'unknown',
+      cwd_alias: readFlag(tokens, ['--cwd-alias']) || undefined,
     }
   }
 
@@ -831,6 +885,26 @@ export async function call(
     })
     onDone(
       `Leviathan shadow rollout task queue: ${result.output_path}\nTasks: ${result.queue.tasks.length}\nSplit train/dev/held-out: ${result.queue.split_counts.train}/${result.queue.split_counts.dev}/${result.queue.split_counts.held_out}`,
+    )
+    return null
+  }
+
+  if (parsed.action === 'export-transcript-rollout') {
+    const result = await writeTranscriptRolloutFile({
+      transcript_path: parsed.transcript_path,
+      output_path: parsed.output_path,
+      run_id: parsed.run_id,
+      task_id: parsed.task_id,
+      split: parsed.split,
+      provider_model_id: parsed.provider_model_id,
+      harness_version: parsed.harness_version,
+      heuristic_bundle_version: parsed.heuristic_bundle_version,
+      repo: parsed.repo,
+      base_commit: parsed.base_commit,
+      cwd_alias: parsed.cwd_alias,
+    })
+    onDone(
+      `Leviathan transcript rollout exported: ${result.output_path}\nMessages: ${result.rollout.messages.length}\nTask: ${result.rollout.run.task_id}`,
     )
     return null
   }

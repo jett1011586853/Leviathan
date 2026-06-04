@@ -68,6 +68,46 @@ function rolloutBundle(): unknown {
   return bundle
 }
 
+function writeMinimalTranscript(path: string, sessionId: string): void {
+  const userUuid = '00000000-0000-4000-8000-000000000501'
+  const assistantUuid = '00000000-0000-4000-8000-000000000502'
+  const lines = [
+    {
+      type: 'user',
+      uuid: userUuid,
+      parentUuid: null,
+      sessionId,
+      timestamp: '2026-06-04T00:00:00.000Z',
+      message: {
+        role: 'user',
+        content: 'Capture a real headless Leviathan task transcript',
+      },
+    },
+    {
+      type: 'assistant',
+      uuid: assistantUuid,
+      parentUuid: userUuid,
+      sessionId,
+      timestamp: '2026-06-04T00:00:01.000Z',
+      requestId: 'req_learning_command_transcript_001',
+      message: {
+        id: 'msg_learning_command_transcript_001',
+        type: 'message',
+        role: 'assistant',
+        model: 'mimo-v2.5',
+        content: [{ type: 'text', text: 'Captured.' }],
+        stop_reason: 'end_turn',
+        stop_sequence: null,
+        usage: { input_tokens: 9, output_tokens: 2 },
+        container: null,
+        context_management: null,
+      },
+      isApiErrorMessage: false,
+    },
+  ]
+  writeFileSync(path, lines.map(line => JSON.stringify(line)).join('\n'), 'utf8')
+}
+
 function resolvedHeldOutRolloutBundle(): unknown {
   const bundle = createEmptyRolloutBundle({
     runId: 'run_held_out_1',
@@ -421,6 +461,27 @@ describe('Leviathan learning command', () => {
       action: 'plan-shadow-rollouts',
       run_dir: 'runs/train_shadow_001',
       output_path: 'runs/train_shadow_001/task-queue.json',
+    })
+  })
+
+  test('parses transcript rollout export arguments', () => {
+    expect(
+      parseLearningCommandArgs(
+        'export-transcript-rollout --transcript sessions/one.jsonl --out rollouts/one.json --run-id train_shadow_001 --task-id train_shadow_001_train_001 --split train --model mimo-v2.5 --harness-version git:abc123 --heuristic-bundle hb:unversioned --repo leviathan --base-commit abc123',
+      ),
+    ).toEqual({
+      action: 'export-transcript-rollout',
+      transcript_path: 'sessions/one.jsonl',
+      output_path: 'rollouts/one.json',
+      run_id: 'train_shadow_001',
+      task_id: 'train_shadow_001_train_001',
+      split: 'train',
+      provider_model_id: 'mimo-v2.5',
+      harness_version: 'git:abc123',
+      heuristic_bundle_version: 'hb:unversioned',
+      repo: 'leviathan',
+      base_commit: 'abc123',
+      cwd_alias: undefined,
     })
   })
 
@@ -872,6 +933,33 @@ describe('Leviathan learning command', () => {
       )
       expect(doneMessage).toContain('Leviathan shadow rollout task queue')
       expect(doneMessage).toContain(queuePath)
+    })
+  })
+
+  test('exports a persisted transcript rollout through the slash command', async () => {
+    await withTempDir(async dir => {
+      const sessionId = '00000000-0000-4000-8000-000000000501'
+      const transcriptPath = join(dir, `${sessionId}.jsonl`)
+      const outputPath = join(dir, 'rollout.json')
+      let doneMessage = ''
+      writeMinimalTranscript(transcriptPath, sessionId)
+
+      await call(
+        message => {
+          doneMessage = message ?? ''
+        },
+        {} as never,
+        `export-transcript-rollout --transcript ${transcriptPath} --out ${outputPath} --run-id train_shadow_001 --task-id train_shadow_001_train_001 --split train --model mimo-v2.5 --harness-version git:abc123 --heuristic-bundle hb:unversioned --repo leviathan --base-commit abc123`,
+      )
+
+      const exported = JSON.parse(readFileSync(outputPath, 'utf8'))
+      expect(exported.run.run_id).toBe('train_shadow_001')
+      expect(exported.run.session_id).toBe(sessionId)
+      expect(exported.run.task_id).toBe('train_shadow_001_train_001')
+      expect(exported.run.split).toBe('train')
+      expect(exported.messages).toHaveLength(2)
+      expect(doneMessage).toContain('Leviathan transcript rollout exported')
+      expect(doneMessage).toContain(outputPath)
     })
   })
 
