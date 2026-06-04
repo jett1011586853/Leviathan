@@ -1,0 +1,115 @@
+import { mkdirSync, readFileSync } from 'node:fs'
+import { dirname } from 'node:path'
+
+import {
+  evaluatePolarProxySpike,
+  type PolarProxySpikeObservation,
+} from './polarProxySpike.js'
+import type { PromotionEvidenceSnapshot } from './promotionEvidenceFiles.js'
+import { evaluateSparseOutcomeReward } from './rewardDesign.js'
+import type { LeviathanRolloutBundle } from './rolloutSchema.js'
+import {
+  jsonParse,
+  jsonStringify,
+  writeFileSync_DEPRECATED,
+} from '../utils/slowOperations.js'
+
+export type WriteEvaluationSnapshotFromFilesInput = {
+  output_path: string
+  replay_results_path: string
+  held_out_rollout_paths: string[]
+  security_scan_path: string
+  complexity_budget_path: string
+  target_failure_slice_path: string
+  regressions_path: string
+  polar_spike_observations_path: string
+}
+
+export type WriteEvaluationSnapshotFromFilesResult = {
+  output_path: string
+  snapshot: PromotionEvidenceSnapshot
+}
+
+type ReplayResultLike =
+  | { passed: boolean }
+  | { compare?: { passed?: boolean } }
+  | { status?: string; compare?: { passed?: boolean } }
+
+function readJson(path: string): unknown {
+  return jsonParse(readFileSync(path, 'utf8')) as unknown
+}
+
+function asArray(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [value]
+}
+
+function replayPassed(value: ReplayResultLike): boolean {
+  if ('passed' in value && typeof value.passed === 'boolean') {
+    return value.passed
+  }
+  if (value.compare && typeof value.compare.passed === 'boolean') {
+    return value.compare.passed
+  }
+  return false
+}
+
+function readReplayResults(path: string): { passed: boolean }[] {
+  return asArray(readJson(path)).map(value => ({
+    passed: replayPassed(value as ReplayResultLike),
+  }))
+}
+
+function readRollout(path: string): LeviathanRolloutBundle {
+  return readJson(path) as LeviathanRolloutBundle
+}
+
+function readHeldOutResults(paths: string[]): { passed: boolean }[] {
+  return paths.map(path => ({
+    passed: evaluateSparseOutcomeReward(readRollout(path)).reward === 1,
+  }))
+}
+
+function readPolarSpike(path: string): { passed: boolean } {
+  const observations = asArray(readJson(path)) as PolarProxySpikeObservation[]
+  return {
+    passed: evaluatePolarProxySpike(observations).passed,
+  }
+}
+
+export function buildEvaluationSnapshotFromFiles(
+  input: WriteEvaluationSnapshotFromFilesInput,
+): PromotionEvidenceSnapshot {
+  return {
+    replay_results: readReplayResults(input.replay_results_path),
+    held_out_results: readHeldOutResults(input.held_out_rollout_paths),
+    security_scan: readJson(input.security_scan_path) as { passed: boolean },
+    complexity_budget: readJson(input.complexity_budget_path) as {
+      passed: boolean
+      token_turn_cost_regression_pct: number
+    },
+    target_failure_slice: readJson(input.target_failure_slice_path) as {
+      before_success_rate: number
+      after_success_rate: number
+      min_delta?: number
+    },
+    regressions: readJson(input.regressions_path) as { p0_p1_count: number },
+    polar_spike: readPolarSpike(input.polar_spike_observations_path),
+  }
+}
+
+export function writeEvaluationSnapshotFromFiles(
+  input: WriteEvaluationSnapshotFromFilesInput,
+): WriteEvaluationSnapshotFromFilesResult {
+  const snapshot = buildEvaluationSnapshotFromFiles(input)
+
+  mkdirSync(dirname(input.output_path), { recursive: true })
+  writeFileSync_DEPRECATED(input.output_path, jsonStringify(snapshot, null, 2), {
+    encoding: 'utf-8',
+    flush: true,
+  })
+
+  return {
+    output_path: input.output_path,
+    snapshot,
+  }
+}

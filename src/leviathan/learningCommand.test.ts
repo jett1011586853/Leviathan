@@ -310,6 +310,24 @@ describe('Leviathan learning command', () => {
     })
   })
 
+  test('parses evaluation snapshot generation arguments', () => {
+    expect(
+      parseLearningCommandArgs(
+        'evaluation-snapshot --out snapshot.json --replay replay.json --held-out held-out-a.json --held-out held-out-b.json --security security.json --complexity complexity.json --target-slice target.json --regressions regressions.json --polar polar.json',
+      ),
+    ).toEqual({
+      action: 'evaluation-snapshot',
+      output_path: 'snapshot.json',
+      replay_results_path: 'replay.json',
+      held_out_rollout_paths: ['held-out-a.json', 'held-out-b.json'],
+      security_scan_path: 'security.json',
+      complexity_budget_path: 'complexity.json',
+      target_failure_slice_path: 'target.json',
+      regressions_path: 'regressions.json',
+      polar_spike_observations_path: 'polar.json',
+    })
+  })
+
   test('writes a manifest from the slash command entrypoint', async () => {
     await withTempDir(async dir => {
       const configPath = join(dir, 'launch.json')
@@ -559,6 +577,65 @@ describe('Leviathan learning command', () => {
       expect(doneMessage).toContain('Leviathan promotion evidence written')
       expect(doneMessage).toContain(heuristicPath)
       expect(doneMessage).toContain(polarPath)
+    })
+  })
+
+  test('writes evaluation snapshot files through the slash command', async () => {
+    await withTempDir(async dir => {
+      const replayPath = join(dir, 'replay.json')
+      const heldOutPath = join(dir, 'held-out.json')
+      const securityPath = join(dir, 'security.json')
+      const complexityPath = join(dir, 'complexity.json')
+      const targetSlicePath = join(dir, 'target-slice.json')
+      const regressionsPath = join(dir, 'regressions.json')
+      const polarPath = join(dir, 'polar.json')
+      const outputPath = join(dir, 'promotion-snapshot.json')
+      writeFileSync(replayPath, JSON.stringify([{ passed: true }]), 'utf8')
+      writeFileSync(heldOutPath, JSON.stringify(rolloutBundle()), 'utf8')
+      writeFileSync(securityPath, JSON.stringify({ passed: true }), 'utf8')
+      writeFileSync(
+        complexityPath,
+        JSON.stringify({
+          passed: true,
+          token_turn_cost_regression_pct: 0.04,
+        }),
+        'utf8',
+      )
+      writeFileSync(
+        targetSlicePath,
+        JSON.stringify({
+          before_success_rate: 0.5,
+          after_success_rate: 0.7,
+          min_delta: 0.05,
+        }),
+        'utf8',
+      )
+      writeFileSync(regressionsPath, JSON.stringify({ p0_p1_count: 0 }), 'utf8')
+      writeFileSync(
+        polarPath,
+        JSON.stringify([
+          polarObservation('case_a_no_tool'),
+          polarObservation('case_b_file_read_write'),
+          polarObservation('case_c_test_execution'),
+        ]),
+        'utf8',
+      )
+      let doneMessage = ''
+
+      await call(
+        message => {
+          doneMessage = message ?? ''
+        },
+        {} as never,
+        `evaluation-snapshot --out ${outputPath} --replay ${replayPath} --held-out ${heldOutPath} --security ${securityPath} --complexity ${complexityPath} --target-slice ${targetSlicePath} --regressions ${regressionsPath} --polar ${polarPath}`,
+      )
+
+      const snapshot = JSON.parse(readFileSync(outputPath, 'utf8'))
+      expect(snapshot.replay_results).toEqual([{ passed: true }])
+      expect(snapshot.held_out_results).toEqual([{ passed: false }])
+      expect(snapshot.polar_spike).toEqual({ passed: true })
+      expect(doneMessage).toContain('Leviathan evaluation snapshot written')
+      expect(doneMessage).toContain(outputPath)
     })
   })
 })
