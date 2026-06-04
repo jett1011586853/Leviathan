@@ -12,6 +12,7 @@
 import type { Command } from '../commands.js'
 import { getSystemPrompt } from '../constants/prompts.js'
 import { getSystemContext, getUserContext } from '../context.js'
+import { getActiveLearningPromptSection } from '../learning/activeLearningContext.js'
 import type { MCPServerConnection } from '../services/mcp/types.js'
 import type { AppState } from '../state/AppStateStore.js'
 import type { Tools, ToolUseContext } from '../Tool.js'
@@ -124,10 +125,12 @@ export async function buildSideQuestionFallbackParams({
       customSystemPrompt,
     })
 
+  const activeLearningPrompt = getActiveLearningPromptSection()
   const systemPrompt = asSystemPrompt([
     ...(customSystemPrompt !== undefined
       ? [customSystemPrompt]
       : defaultSystemPrompt),
+    ...(activeLearningPrompt ? [activeLearningPrompt] : []),
     ...(appendSystemPrompt ? [appendSystemPrompt] : []),
   ])
 

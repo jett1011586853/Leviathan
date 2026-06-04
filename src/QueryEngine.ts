@@ -47,6 +47,7 @@ import { getGlobalConfig } from './utils/config.js'
 import { getCwd } from './utils/cwd.js'
 import { isBareMode, isEnvTruthy } from './utils/envUtils.js'
 import { getFastModeState } from './utils/fastMode.js'
+import { getActiveLearningPromptSection } from './learning/activeLearningContext.js'
 import {
   type FileHistoryState,
   fileHistoryEnabled,
@@ -317,10 +318,12 @@ export class QueryEngine {
       customPrompt !== undefined && hasAutoMemPathOverride()
         ? await loadMemoryPrompt()
         : null
+    const activeLearningPrompt = getActiveLearningPromptSection()
 
     const systemPrompt = asSystemPrompt([
       ...(customPrompt !== undefined ? [customPrompt] : defaultSystemPrompt),
       ...(memoryMechanicsPrompt ? [memoryMechanicsPrompt] : []),
+      ...(activeLearningPrompt ? [activeLearningPrompt] : []),
       ...(appendSystemPrompt ? [appendSystemPrompt] : []),
     ])
 

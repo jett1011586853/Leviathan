@@ -945,6 +945,7 @@ describe('Leviathan learning command', () => {
       expect(state.polar_harness_version).toBe('polar:stable/train_1')
       expect(doneMessage).toContain('Leviathan learning bundle activated')
       expect(doneMessage).toContain(statePath)
+      expect(doneMessage).toContain('LEVIATHAN_CODE_ACTIVE_LEARNING_STATE_PATH')
     })
   })
 

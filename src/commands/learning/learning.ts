@@ -18,6 +18,7 @@ import {
   activateLearningBundleFromFiles,
   rollbackLearningActivationFile,
 } from '../../learning/learningActivationFiles.js'
+import { ACTIVE_LEARNING_STATE_PATH_ENV } from '../../learning/activeLearningContext.js'
 import type { LeviathanRolloutBundle } from '../../learning/rolloutSchema.js'
 
 export type ParsedLearningCommandArgs =
@@ -640,7 +641,9 @@ export async function call(
       activated_by: parsed.activated_by,
     })
     if (result.state.status === 'active') {
-      onDone(`Leviathan learning bundle activated: ${result.state_path}`)
+      onDone(
+        `Leviathan learning bundle activated: ${result.state_path}\nSet ${ACTIVE_LEARNING_STATE_PATH_ENV}=${result.state_path} before starting Leviathan to load this learning context at runtime.`,
+      )
       return null
     }
     onDone(
