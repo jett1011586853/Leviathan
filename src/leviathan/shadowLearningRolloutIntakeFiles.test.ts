@@ -16,11 +16,11 @@ async function withTempDir<T>(fn: (dir: string) => Promise<T> | T): Promise<T> {
   }
 }
 
-function rawRollout() {
+function rawRollout(input: { taskId?: string; sessionId?: string } = {}) {
   return createEmptyRolloutBundle({
     runId: 'run_intake_001',
-    sessionId: 'session_intake_001',
-    taskId: 'task_intake_001',
+    sessionId: input.sessionId ?? 'session_intake_001',
+    taskId: input.taskId ?? 'task_intake_001',
     source: 'internal',
     split: 'shadow',
     timestamp: '2026-06-04T14:00:00.000Z',
@@ -94,6 +94,67 @@ describe('Leviathan shadow rollout intake files', () => {
       expect(status.rollout_counts.raw).toBe(1)
       expect(status.rollout_counts.annotated.train).toBe(1)
       expect(status.provider_model_update).toBe('none')
+    })
+  })
+
+  test('uses rollout task id to avoid overwriting samples from the same run', async () => {
+    await withTempDir(dir => {
+      const runDir = join(dir, 'train_shadow_001')
+      const firstPath = join(dir, 'exported-rollout-one.json')
+      const secondPath = join(dir, 'exported-rollout-two.json')
+      initializeShadowLearningRun({
+        output_dir: runDir,
+        run_id: 'train_shadow_001',
+        provider_model_id: 'mimo-v2.5',
+        created_at: '2026-06-04T12:00:00.000Z',
+        git_commit: 'edab200',
+        rollback_checkpoint_tag: 'permanent-leviathan-current-2026-06-04',
+        target_rollout_count: 50,
+      })
+      writeFileSync(
+        firstPath,
+        JSON.stringify(
+          rawRollout({
+            taskId: 'train_shadow_001_train_001',
+            sessionId: 'session_intake_001',
+          }),
+        ),
+        'utf8',
+      )
+      writeFileSync(
+        secondPath,
+        JSON.stringify(
+          rawRollout({
+            taskId: 'train_shadow_001_train_002',
+            sessionId: 'session_intake_002',
+          }),
+        ),
+        'utf8',
+      )
+
+      const first = intakeShadowRolloutFile({
+        run_dir: runDir,
+        input_path: firstPath,
+        split: 'train',
+        taxonomy: ['model_interaction_failure.proxy_bypass'],
+      })
+      const second = intakeShadowRolloutFile({
+        run_dir: runDir,
+        input_path: secondPath,
+        split: 'train',
+        taxonomy: ['tool_choice_failure.bad_args'],
+      })
+
+      expect(first.report.raw_path).not.toBe(second.report.raw_path)
+      expect(first.report.annotated_path).not.toBe(second.report.annotated_path)
+      expect(first.report.raw_path).toContain('train_shadow_001_train_001')
+      expect(second.report.raw_path).toContain('train_shadow_001_train_002')
+
+      const status = JSON.parse(
+        readFileSync(join(runDir, 'shadow-status.json'), 'utf8'),
+      )
+      expect(status.rollout_counts.raw).toBe(2)
+      expect(status.rollout_counts.annotated.train).toBe(2)
     })
   })
 })

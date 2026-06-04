@@ -97,9 +97,19 @@ function safeFileStem(value: string): string {
   )
 }
 
+function rolloutFileStem(
+  rollout: LeviathanRolloutBundle,
+  inputPath?: string,
+): string {
+  const fallback = inputPath
+    ? basename(inputPath, extname(inputPath) || '.json')
+    : 'rollout'
+  return safeFileStem(rollout.run.task_id || rollout.run.run_id || fallback)
+}
+
 function rolloutFileName(rollout: LeviathanRolloutBundle, inputPath: string): string {
   const ext = extname(inputPath) || '.json'
-  return `${safeFileStem(rollout.run.run_id || basename(inputPath, ext))}${ext}`
+  return `${rolloutFileStem(rollout, inputPath)}${ext}`
 }
 
 function annotatedDirForSplit(
@@ -133,7 +143,7 @@ function defaultReportPath(
   runDir: string,
   rollout: LeviathanRolloutBundle,
 ): string {
-  return join(runDir, 'intake', `${safeFileStem(rollout.run.run_id)}.json`)
+  return join(runDir, 'intake', `${rolloutFileStem(rollout)}.json`)
 }
 
 export function intakeShadowRolloutFile(
