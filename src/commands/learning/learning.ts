@@ -20,6 +20,10 @@ import {
 } from '../../learning/learningActivationFiles.js'
 import { ACTIVE_LEARNING_STATE_PATH_ENV } from '../../learning/activeLearningContext.js'
 import { initializeShadowLearningRun } from '../../learning/shadowLearningRunFiles.js'
+import {
+  readShadowLearningRunStatusFromFiles,
+  writeShadowLearningRunStatusFile,
+} from '../../learning/shadowLearningRunStatusFiles.js'
 import type { LeviathanRolloutBundle } from '../../learning/rolloutSchema.js'
 
 export type ParsedLearningCommandArgs =
@@ -46,6 +50,11 @@ export type ParsedLearningCommandArgs =
       target_rollout_count: number
       created_at?: string
       cwd_alias: string
+    }
+  | {
+      action: 'status-shadow'
+      run_dir: string
+      output_path?: string
     }
   | {
       action: 'collect'
@@ -159,7 +168,7 @@ export type ParsedLearningCommandArgs =
     }
 
 const USAGE =
-  'Usage: /learning init --out <launch.json> --model <model-id>; /learning start-shadow --out-dir <dir> --run-id <run> --model <model-id>; /learning collect --out <launch.json> --model <model-id> --rollout <rollout.json>; /learning start --config <launch.json> --out <manifest.json>; /learning annotate-rollout --input <raw-rollout.json> --out <train-rollout.json> --taxonomy <failure.code> --outcome <resolved|unresolved|unknown>; /learning train-candidates --out <candidates.json> --run-id <run> --model <model-id> --rollout <rollout.json>; /learning train-polar --out <polar.json> --run-id <run> --model <model-id> --polar <observations.json>; /learning evaluation-snapshot --out <snapshot.json> --replay <replay.json> --held-out <rollout.json> --security <scan.json> --complexity <budget.json> --target-slice <slice.json> --regressions <regressions.json> --polar <observations.json>; /learning promotion-evidence --snapshot <eval.json> --heuristic-out <evidence.json> --polar-out <evidence.json>; /learning promote-candidates --out <promotion.json> --candidates <candidates.json> --evidence <evidence.json>; /learning promote-polar --out <promotion.json> --polar-candidates <polar.json> --evidence <evidence.json>; /learning run-pipeline --out-dir <dir> --run-id <run> --model <model-id> --rollout <rollout.json> --held-out <rollout.json> --polar-training <observations.json> --polar-eval <observations.json> --replay <replay.json> --security <scan.json> --complexity <budget.json> --target-slice <slice.json> --regressions <regressions.json>; /learning activate-bundle --bundle <learning-bundle.json> --state <active-learning.json>; /learning rollback-bundle --state <active-learning.json>'
+  'Usage: /learning init --out <launch.json> --model <model-id>; /learning start-shadow --out-dir <dir> --run-id <run> --model <model-id>; /learning status-shadow --run-dir <dir> --out <status.json>; /learning collect --out <launch.json> --model <model-id> --rollout <rollout.json>; /learning start --config <launch.json> --out <manifest.json>; /learning annotate-rollout --input <raw-rollout.json> --out <train-rollout.json> --taxonomy <failure.code> --outcome <resolved|unresolved|unknown>; /learning train-candidates --out <candidates.json> --run-id <run> --model <model-id> --rollout <rollout.json>; /learning train-polar --out <polar.json> --run-id <run> --model <model-id> --polar <observations.json>; /learning evaluation-snapshot --out <snapshot.json> --replay <replay.json> --held-out <rollout.json> --security <scan.json> --complexity <budget.json> --target-slice <slice.json> --regressions <regressions.json> --polar <observations.json>; /learning promotion-evidence --snapshot <eval.json> --heuristic-out <evidence.json> --polar-out <evidence.json>; /learning promote-candidates --out <promotion.json> --candidates <candidates.json> --evidence <evidence.json>; /learning promote-polar --out <promotion.json> --polar-candidates <polar.json> --evidence <evidence.json>; /learning run-pipeline --out-dir <dir> --run-id <run> --model <model-id> --rollout <rollout.json> --held-out <rollout.json> --polar-training <observations.json> --polar-eval <observations.json> --replay <replay.json> --security <scan.json> --complexity <budget.json> --target-slice <slice.json> --regressions <regressions.json>; /learning activate-bundle --bundle <learning-bundle.json> --state <active-learning.json>; /learning rollback-bundle --state <active-learning.json>'
 
 function tokenizeArgs(args: string): string[] {
   const tokens: string[] = []
@@ -313,6 +322,17 @@ export function parseLearningCommandArgs(
         readOptionalNumberFlag(tokens, ['--target-rollouts']) ?? 50,
       created_at: readFlag(tokens, ['--created-at']) || undefined,
       cwd_alias: readFlag(tokens, ['--cwd-alias']) || '$WORKDIR',
+    }
+  }
+
+  if (tokens[0] === 'status-shadow') {
+    const run_dir = readFlag(tokens, ['--run-dir'])
+    if (!run_dir) return { action: 'help' }
+
+    return {
+      action: 'status-shadow',
+      run_dir,
+      output_path: readFlag(tokens, ['--out', '--output']) || undefined,
     }
   }
 
@@ -645,6 +665,34 @@ export async function call(
     })
     onDone(
       `Leviathan shadow learning run initialized: ${result.paths.output_dir}\nRaw rollouts: ${result.paths.raw_rollouts_dir}\nAnnotated train/dev/held-out: ${result.paths.annotated_train_dir}; ${result.paths.annotated_dev_dir}; ${result.paths.annotated_held_out_dir}\nFormal launch manifest is currently ${result.formal_manifest.status}; collect evidence before running promotion.`,
+    )
+    return null
+  }
+
+  if (parsed.action === 'status-shadow') {
+    const result = parsed.output_path
+      ? writeShadowLearningRunStatusFile({
+          run_dir: parsed.run_dir,
+          output_path: parsed.output_path,
+        })
+      : {
+          output_path: '',
+          status: readShadowLearningRunStatusFromFiles({
+            run_dir: parsed.run_dir,
+          }),
+        }
+    const status = result.status
+    const outputLine = result.output_path
+      ? `\nStatus: ${result.output_path}`
+      : ''
+    onDone(
+      [
+        `Leviathan shadow learning status: ${status.run_id}`,
+        `ready_for_pipeline=${status.ready_for_pipeline}`,
+        `raw rollouts: ${status.rollout_counts.raw}/${status.target_rollout_count}`,
+        `annotated train/dev/held-out: ${status.rollout_counts.annotated.train}/${status.split_plan.train}; ${status.rollout_counts.annotated.dev}/${status.split_plan.dev}; ${status.rollout_counts.annotated.held_out}/${status.split_plan.held_out}`,
+        `missing gates: ${status.evidence.missing_gates.join(', ') || 'none'}`,
+      ].join('\n') + outputLine,
     )
     return null
   }

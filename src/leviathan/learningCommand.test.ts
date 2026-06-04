@@ -317,6 +317,18 @@ describe('Leviathan learning command', () => {
     })
   })
 
+  test('parses shadow learning run status audit arguments', () => {
+    expect(
+      parseLearningCommandArgs(
+        'status-shadow --run-dir runs/train_shadow_001 --out runs/train_shadow_001/status.json',
+      ),
+    ).toEqual({
+      action: 'status-shadow',
+      run_dir: 'runs/train_shadow_001',
+      output_path: 'runs/train_shadow_001/status.json',
+    })
+  })
+
   test('parses evidence collection arguments', () => {
     expect(
       parseLearningCommandArgs(
@@ -621,6 +633,65 @@ describe('Leviathan learning command', () => {
       expect(formalManifest.status).toBe('blocked')
       expect(doneMessage).toContain('Leviathan shadow learning run initialized')
       expect(doneMessage).toContain(outputDir)
+    })
+  })
+
+  test('audits shadow learning run status through the slash command', async () => {
+    await withTempDir(async dir => {
+      const outputDir = join(dir, 'train_shadow_001')
+      const statusPath = join(outputDir, 'shadow-status.json')
+      let startDoneMessage = ''
+      let statusDoneMessage = ''
+
+      await call(
+        message => {
+          startDoneMessage = message ?? ''
+        },
+        {} as never,
+        `start-shadow --out-dir ${outputDir} --run-id train_shadow_001 --model mimo-v2.5 --git-commit 7546f5e --checkpoint permanent-leviathan-current-2026-06-04 --target-rollouts 50 --created-at 2026-06-04T12:00:00.000Z`,
+      )
+
+      writeFileSync(
+        join(outputDir, 'rollouts', 'raw', 'raw-a.json'),
+        JSON.stringify(rolloutBundle()),
+        'utf8',
+      )
+      writeFileSync(
+        join(outputDir, 'rollouts', 'annotated', 'train', 'train-a.json'),
+        JSON.stringify(rolloutBundle()),
+        'utf8',
+      )
+      writeFileSync(
+        join(outputDir, 'evidence', 'replay-results.json'),
+        JSON.stringify([{ passed: true }]),
+        'utf8',
+      )
+
+      await call(
+        message => {
+          statusDoneMessage = message ?? ''
+        },
+        {} as never,
+        `status-shadow --run-dir ${outputDir} --out ${statusPath}`,
+      )
+
+      const status = JSON.parse(readFileSync(statusPath, 'utf8'))
+      expect(startDoneMessage).toContain('Leviathan shadow learning run initialized')
+      expect(status.schema_version).toBe('leviathan.shadow_learning_status.v1')
+      expect(status.run_id).toBe('train_shadow_001')
+      expect(status.provider_model_update).toBe('none')
+      expect(status.rollout_counts.raw).toBe(1)
+      expect(status.rollout_counts.annotated.train).toBe(1)
+      expect(status.rollout_counts.annotated.dev).toBe(0)
+      expect(status.rollout_counts.annotated.held_out).toBe(0)
+      expect(status.evidence.present_files).toContain('replay-results.json')
+      expect(status.evidence.missing_files).toContain('reward-design.json')
+      expect(status.evidence.missing_gates).toContain('required_fields_landable')
+      expect(status.ready_for_pipeline).toBe(false)
+      expect(status.next_actions).toContain('Collect 49 more raw rollout file(s).')
+      expect(statusDoneMessage).toContain('Leviathan shadow learning status')
+      expect(statusDoneMessage).toContain('ready_for_pipeline=false')
+      expect(statusDoneMessage).toContain(statusPath)
     })
   })
 
