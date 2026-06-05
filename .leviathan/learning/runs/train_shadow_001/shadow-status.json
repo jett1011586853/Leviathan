@@ -12,12 +12,12 @@
     "held_out": 10
   },
   "rollout_counts": {
-    "raw": 9,
+    "raw": 12,
     "annotated": {
-      "train": 9,
+      "train": 12,
       "dev": 0,
       "held_out": 0,
-      "total": 9
+      "total": 12
     }
   },
   "evidence": {
@@ -67,8 +67,8 @@
   },
   "ready_for_pipeline": false,
   "next_actions": [
-    "Collect 41 more raw rollout file(s).",
-    "Annotate 21 more file(s) into rollouts/annotated/train.",
+    "Collect 38 more raw rollout file(s).",
+    "Annotate 18 more file(s) into rollouts/annotated/train.",
     "Annotate 10 more file(s) into rollouts/annotated/dev.",
     "Annotate 10 more file(s) into rollouts/annotated/held_out.",
     "Add required evidence file(s): replay-results.json, failure-taxonomy.json, benchmark-splits.json, polar-spike-observations.json, reward-design.json, rollback-incident-plan.json.",
