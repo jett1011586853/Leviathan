@@ -541,6 +541,22 @@ describe('Leviathan learning command', () => {
     })
   })
 
+  test('parses shadow rollout intake regression outcomes', () => {
+    expect(
+      parseLearningCommandArgs(
+        'intake-shadow-rollout --run-dir runs/train_shadow_001 --input exported.json --split held_out --taxonomy verification_failure.hidden_regression --outcome regression --resolved-label false',
+      ),
+    ).toMatchObject({
+      action: 'intake-shadow-rollout',
+      run_dir: 'runs/train_shadow_001',
+      input_path: 'exported.json',
+      split: 'held_out',
+      taxonomy: ['verification_failure.hidden_regression'],
+      final_outcome: 'regression',
+      resolved_label: false,
+    })
+  })
+
   test('parses shadow evidence intake arguments', () => {
     expect(
       parseLearningCommandArgs(
@@ -707,6 +723,20 @@ describe('Leviathan learning command', () => {
       changed_files: ['src/commands/learning/learning.ts'],
       export_allowed: true,
       contains_private_code: false,
+    })
+  })
+
+  test('parses rollout annotation regression outcomes', () => {
+    expect(
+      parseLearningCommandArgs(
+        'annotate-rollout --input raw.json --out held.json --split held_out --taxonomy verification_failure.hidden_regression --outcome regression --resolved-label false',
+      ),
+    ).toMatchObject({
+      action: 'annotate-rollout',
+      split: 'held_out',
+      taxonomy: ['verification_failure.hidden_regression'],
+      final_outcome: 'regression',
+      resolved_label: false,
     })
   })
 

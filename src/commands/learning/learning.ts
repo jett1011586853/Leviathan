@@ -38,6 +38,7 @@ import { writeShadowLearningTaskQueueFile } from '../../learning/shadowLearningT
 import { writeTranscriptRolloutFile } from '../../learning/transcriptRolloutFiles.js'
 import type {
   LeviathanRolloutBundle,
+  RolloutFinalOutcome,
   RolloutSplit,
 } from '../../learning/rolloutSchema.js'
 
@@ -104,7 +105,7 @@ export type ParsedLearningCommandArgs =
       split?: ShadowRolloutIntakeSplit
       taxonomy: string[]
       root_cause_summary?: string
-      final_outcome?: 'unknown' | 'resolved' | 'unresolved'
+      final_outcome?: RolloutFinalOutcome
       resolved_label?: boolean | null
       test_commands?: string[]
       test_outputs?: string[]
@@ -206,7 +207,7 @@ export type ParsedLearningCommandArgs =
       split?: LeviathanRolloutBundle['run']['split']
       taxonomy: string[]
       root_cause_summary?: string
-      final_outcome?: 'unknown' | 'resolved' | 'unresolved'
+      final_outcome?: RolloutFinalOutcome
       resolved_label?: boolean | null
       test_commands?: string[]
       test_outputs?: string[]
@@ -233,7 +234,7 @@ export type ParsedLearningCommandArgs =
     }
 
 const USAGE =
-  'Usage: /learning init --out <launch.json> --model <model-id>; /learning start-shadow --out-dir <dir> --run-id <run> --model <model-id>; /learning status-shadow --run-dir <dir> --out <status.json>; /learning plan-shadow-rollouts --run-dir <dir> --out <task-queue.json>; /learning export-transcript-rollout --transcript <session.jsonl> --out <rollout.json> --run-id <run> --task-id <task> --split <train|dev|test|held_out|shadow> --model <model-id>; /learning intake-shadow-rollout --run-dir <dir> --input <rollout.json> --split <train|dev|held_out> --taxonomy <failure.code>; /learning intake-shadow-evidence --run-dir <dir> --kind <replay-results|failure-taxonomy|benchmark-splits|polar-spike-observations|reward-design|rollback-incident-plan> --input <evidence.json>; /learning collect-shadow --run-dir <dir> --out <collection.json>; /learning collect --out <launch.json> --model <model-id> --rollout <rollout.json>; /learning start --config <launch.json> --out <manifest.json>; /learning annotate-rollout --input <raw-rollout.json> --out <train-rollout.json> --taxonomy <failure.code> --outcome <resolved|unresolved|unknown>; /learning train-candidates --out <candidates.json> --run-id <run> --model <model-id> --rollout <rollout.json>; /learning train-polar --out <polar.json> --run-id <run> --model <model-id> --polar <observations.json>; /learning evaluation-snapshot --out <snapshot.json> --replay <replay.json> --held-out <rollout.json> --security <scan.json> --complexity <budget.json> --target-slice <slice.json> --regressions <regressions.json> --polar <observations.json>; /learning promotion-evidence --snapshot <eval.json> --heuristic-out <evidence.json> --polar-out <evidence.json>; /learning promote-candidates --out <promotion.json> --candidates <candidates.json> --evidence <evidence.json>; /learning promote-polar --out <promotion.json> --polar-candidates <polar.json> --evidence <evidence.json>; /learning run-pipeline --out-dir <dir> --run-id <run> --model <model-id> --rollout <rollout.json> --held-out <rollout.json> --polar-training <observations.json> --polar-eval <observations.json> --replay <replay.json> --security <scan.json> --complexity <budget.json> --target-slice <slice.json> --regressions <regressions.json>; /learning activate-bundle --bundle <learning-bundle.json> --state <active-learning.json>; /learning rollback-bundle --state <active-learning.json>'
+  'Usage: /learning init --out <launch.json> --model <model-id>; /learning start-shadow --out-dir <dir> --run-id <run> --model <model-id>; /learning status-shadow --run-dir <dir> --out <status.json>; /learning plan-shadow-rollouts --run-dir <dir> --out <task-queue.json>; /learning export-transcript-rollout --transcript <session.jsonl> --out <rollout.json> --run-id <run> --task-id <task> --split <train|dev|test|held_out|shadow> --model <model-id>; /learning intake-shadow-rollout --run-dir <dir> --input <rollout.json> --split <train|dev|held_out> --taxonomy <failure.code>; /learning intake-shadow-evidence --run-dir <dir> --kind <replay-results|failure-taxonomy|benchmark-splits|polar-spike-observations|reward-design|rollback-incident-plan> --input <evidence.json>; /learning collect-shadow --run-dir <dir> --out <collection.json>; /learning collect --out <launch.json> --model <model-id> --rollout <rollout.json>; /learning start --config <launch.json> --out <manifest.json>; /learning annotate-rollout --input <raw-rollout.json> --out <train-rollout.json> --taxonomy <failure.code> --outcome <resolved|unresolved|regression|unknown>; /learning train-candidates --out <candidates.json> --run-id <run> --model <model-id> --rollout <rollout.json>; /learning train-polar --out <polar.json> --run-id <run> --model <model-id> --polar <observations.json>; /learning evaluation-snapshot --out <snapshot.json> --replay <replay.json> --held-out <rollout.json> --security <scan.json> --complexity <budget.json> --target-slice <slice.json> --regressions <regressions.json> --polar <observations.json>; /learning promotion-evidence --snapshot <eval.json> --heuristic-out <evidence.json> --polar-out <evidence.json>; /learning promote-candidates --out <promotion.json> --candidates <candidates.json> --evidence <evidence.json>; /learning promote-polar --out <promotion.json> --polar-candidates <polar.json> --evidence <evidence.json>; /learning run-pipeline --out-dir <dir> --run-id <run> --model <model-id> --rollout <rollout.json> --held-out <rollout.json> --polar-training <observations.json> --polar-eval <observations.json> --replay <replay.json> --security <scan.json> --complexity <budget.json> --target-slice <slice.json> --regressions <regressions.json>; /learning activate-bundle --bundle <learning-bundle.json> --state <active-learning.json>; /learning rollback-bundle --state <active-learning.json>'
 
 function tokenizeArgs(args: string): string[] {
   const tokens: string[] = []
@@ -328,9 +329,14 @@ function readOptionalNumberFlag(
 
 function readOutcomeFlag(
   tokens: string[],
-): 'unknown' | 'resolved' | 'unresolved' | undefined {
+): RolloutFinalOutcome | undefined {
   const value = readFlag(tokens, ['--outcome', '--final-outcome'])
-  if (value === 'unknown' || value === 'resolved' || value === 'unresolved') {
+  if (
+    value === 'unknown' ||
+    value === 'resolved' ||
+    value === 'unresolved' ||
+    value === 'regression'
+  ) {
     return value
   }
   return undefined

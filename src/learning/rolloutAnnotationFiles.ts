@@ -1,7 +1,10 @@
 import { mkdirSync, readFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 
-import type { LeviathanRolloutBundle } from './rolloutSchema.js'
+import type {
+  LeviathanRolloutBundle,
+  RolloutFinalOutcome,
+} from './rolloutSchema.js'
 import { redactText } from './redaction.js'
 import {
   jsonParse,
@@ -15,7 +18,7 @@ export type AnnotateRolloutFileInput = {
   split?: LeviathanRolloutBundle['run']['split']
   taxonomy: string[]
   root_cause_summary?: string
-  final_outcome?: 'unknown' | 'resolved' | 'unresolved'
+  final_outcome?: RolloutFinalOutcome
   resolved_label?: boolean | null
   test_commands?: string[]
   test_outputs?: string[]
