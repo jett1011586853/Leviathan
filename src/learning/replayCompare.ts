@@ -39,6 +39,7 @@ function toolTraceSignature(events: RolloutToolEvent[]): string {
 
 function testsSignature(bundle: LeviathanRolloutBundle): string {
   return JSON.stringify({
+    test_commands: bundle.evaluation.test_commands.map(normalizeWhitespace),
     exit_codes: bundle.evaluation.exit_codes,
     test_outputs: bundle.evaluation.test_outputs,
   })

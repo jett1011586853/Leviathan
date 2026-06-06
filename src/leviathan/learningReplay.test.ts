@@ -40,7 +40,7 @@ describe('Leviathan replay plan scaffold', () => {
     expect(plan.compare_policy).toEqual({
       tool_trace: 'name_order_status',
       patch: 'normalized_diff',
-      tests: 'exit_code_and_output',
+      tests: 'command_identity_exit_code_and_output',
       failure_taxonomy: 'primary_class_exact',
       final_outcome: 'exact',
     })
@@ -95,6 +95,23 @@ describe('Leviathan replay plan scaffold', () => {
       failure_taxonomy: 1,
       final_outcome: 1,
     })
+  })
+
+  test('treats different test command selection as a replay mismatch', () => {
+    const golden = createReplayableBundle()
+    golden.evaluation.test_commands = ['bun test src/leviathan/a.test.ts']
+    golden.evaluation.exit_codes = [0]
+    golden.evaluation.test_outputs = ['PASS']
+    golden.evaluation.final_outcome = 'resolved'
+
+    const replay = structuredClone(golden)
+    replay.evaluation.test_commands = ['bun test src/leviathan/b.test.ts']
+
+    const result = compareReplayArtifacts(golden, replay)
+
+    expect(result.passed).toBe(false)
+    expect(result.mismatches).toContain('tests')
+    expect(result.scores.tests).toBe(0)
   })
 
   test('reports replay artifact mismatches with actionable fields', () => {
