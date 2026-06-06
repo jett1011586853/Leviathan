@@ -146,4 +146,15 @@ describe('Leviathan custom model freedom', () => {
     expect(prompts).not.toContain('default to the latest and most capable Claude models')
     expect(prompts).not.toContain("const FRONTIER_MODEL_NAME = 'Claude")
   })
+
+  test('system prompt treats resumed and compacted memory as stale until verified', () => {
+    const prompts = source('constants/prompts.ts')
+
+    expect(prompts).toContain(
+      'Treat compacted summaries, resumed transcripts, and remembered workspace state as hypotheses until verified',
+    )
+    expect(prompts).toContain(
+      'Prefer the newest user request and fresh file/tool reads over stale memory',
+    )
+  })
 })
