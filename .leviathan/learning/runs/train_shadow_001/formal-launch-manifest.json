@@ -1,30 +1,31 @@
 {
   "schema_version": "leviathan.training_run.v1",
   "run_id": "train_shadow_001",
-  "created_at": "2026-06-04T12:00:00.000Z",
+  "created_at": "2026-06-06T10:59:08.8753691Z",
   "cwd_alias": "$WORKDIR",
   "git_commit": "7546f5e",
   "rollback_checkpoint_tag": "permanent-leviathan-current-2026-06-04",
-  "status": "blocked",
-  "launch": null,
-  "blocked": {
-    "failed_checks": [
-      "required_fields_landable",
-      "replay_runner_fixed_task_reproducible",
-      "failure_taxonomy_covers_high_frequency_failures",
-      "benchmark_splits_isolated",
-      "polar_proxy_spike_cases_passed",
-      "sparse_outcome_reward_defined",
-      "rollback_and_incident_plan_ready"
+  "status": "started",
+  "launch": {
+    "mode": "hl_polar_harness_learning",
+    "provider_model_id": "mimo-v2.5",
+    "provider_model_update": "none",
+    "policy_trainability": "closed_api",
+    "enabled_arms": [
+      "baseline",
+      "hl_only",
+      "polar_only",
+      "hl_polar"
     ],
-    "reasons": [
-      "readiness.required_fields_landable",
-      "readiness.replay_runner_fixed_task_reproducible",
-      "readiness.failure_taxonomy_covers_high_frequency_failures",
-      "readiness.benchmark_splits_isolated",
-      "readiness.polar_proxy_spike_cases_passed",
-      "readiness.sparse_outcome_reward_defined",
-      "readiness.rollback_and_incident_plan_ready"
+    "rollout_bundle_count": 50,
+    "stages": [
+      "collect_redacted_rollouts",
+      "run_deterministic_replay",
+      "train_candidate_heuristics",
+      "run_polar_harness_update",
+      "evaluate_four_arm_matrix",
+      "promote_candidate_only"
     ]
-  }
+  },
+  "blocked": null
 }

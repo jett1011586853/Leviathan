@@ -5,20 +5,20 @@
     "concept_boundaries_fixed": true,
     "trainable_policy_boundaries_fixed": true,
     "rollout_schema_v1_implemented": true,
-    "required_fields_landable": false,
+    "required_fields_landable": true,
     "optional_field_degradation_defined": true,
     "data_redaction_exporter_implemented": true,
-    "replay_runner_fixed_task_reproducible": false,
-    "failure_taxonomy_covers_high_frequency_failures": false,
+    "replay_runner_fixed_task_reproducible": true,
+    "failure_taxonomy_covers_high_frequency_failures": true,
     "heuristic_promotion_gate_implemented": true,
     "updater_candidate_only_enforced": true,
-    "benchmark_splits_isolated": false,
-    "polar_proxy_spike_cases_passed": false,
+    "benchmark_splits_isolated": true,
+    "polar_proxy_spike_cases_passed": true,
     "provider_scope_locked_direct_anthropic": true,
-    "sparse_outcome_reward_defined": false,
+    "sparse_outcome_reward_defined": true,
     "baseline_matrix_fixed": true,
     "result_reporting_split_by_source": true,
-    "rollback_and_incident_plan_ready": false
+    "rollback_and_incident_plan_ready": true
   },
   "baseline_matrix": {
     "policy_trainability": "closed_api",
@@ -29,7 +29,7 @@
       "hl_polar"
     ]
   },
-  "rollout_bundle_count": 0,
+  "rollout_bundle_count": 50,
   "cwd_alias": "$WORKDIR",
   "git_commit": "7546f5e",
   "rollback_checkpoint_tag": "permanent-leviathan-current-2026-06-04"
