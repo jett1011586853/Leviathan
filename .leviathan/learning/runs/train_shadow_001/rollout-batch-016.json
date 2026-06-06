@@ -1,0 +1,82 @@
+{
+  "schema_version": "leviathan.shadow_rollout_batch.v1",
+  "run_id": "train_shadow_001",
+  "batch_id": "rollout-batch-016",
+  "provider_model_id": "mimo-v2.5",
+  "provider_model_update": "none",
+  "created_at": "2026-06-06T18:27:07.675+08:00",
+  "description": "Sixteenth real headless shadow rollout batch. This final batch completes the held_out split and reaches the planned 50 total raw rollouts. Full rollout files and held_out intake reports remain local-only under ignored rollouts/** and intake/**; this manifest tracks provenance, split, taxonomy, size, and SHA256.",
+  "counts": {
+    "raw_rollouts_added": 4,
+    "annotated_train_added": 0,
+    "annotated_dev_added": 0,
+    "annotated_held_out_added": 4
+  },
+  "tasks": [
+    {
+      "task_id": "train_shadow_001_held_out_047",
+      "split": "held_out",
+      "taxonomy": "recovery_control_failure.bad_rollback",
+      "session_id": "00000000-0000-4000-8000-000000001047",
+      "raw_file": "rollouts/raw/train_shadow_001_held_out_047.json",
+      "raw_bytes": 329071,
+      "raw_sha256": "f4ce3c1943d837946be3098cb97efe3716e2b1609cf7faf5a705db66f4d3ab60",
+      "annotated_file": "rollouts/annotated/held_out/train_shadow_001_held_out_047.json",
+      "annotated_bytes": 329122,
+      "annotated_sha256": "690d0cd0e2196795e19471562247b11b953814bd255dce8dc809e79dd71d66d8",
+      "intake_report": "intake/train_shadow_001_held_out_047.json",
+      "intake_report_local_only": true,
+      "intake_sha256": "9a4d88f3987a61dec2a87af4c8af5f279abda35fe822987fba23870a14edfcf1"
+    },
+    {
+      "task_id": "train_shadow_001_held_out_048",
+      "split": "held_out",
+      "taxonomy": "security_governance_failure.unsafe_export",
+      "session_id": "00000000-0000-4000-8000-000000001048",
+      "raw_file": "rollouts/raw/train_shadow_001_held_out_048.json",
+      "raw_bytes": 201693,
+      "raw_sha256": "0684d248085581a005b3d09163351e8c4b9fb330754117e30c167cb02ac47792",
+      "annotated_file": "rollouts/annotated/held_out/train_shadow_001_held_out_048.json",
+      "annotated_bytes": 201748,
+      "annotated_sha256": "806d859c55ec5bbc92c893904e6fe5de3d2dd4ff890af862da9b3b0786494ff5",
+      "intake_report": "intake/train_shadow_001_held_out_048.json",
+      "intake_report_local_only": true,
+      "intake_sha256": "35b66596cff5687eb36e0ff2732ec3ebd1d23a87324ccb34a4775688805ea4e5"
+    },
+    {
+      "task_id": "train_shadow_001_held_out_049",
+      "split": "held_out",
+      "taxonomy": "model_interaction_failure.proxy_bypass",
+      "session_id": "00000000-0000-4000-8000-000000001049",
+      "raw_file": "rollouts/raw/train_shadow_001_held_out_049.json",
+      "raw_bytes": 622217,
+      "raw_sha256": "dab41b73b8b80de06d47a1b082cc66cb6f29dc9d91416e37b4b2bab5cce8b8a3",
+      "annotated_file": "rollouts/annotated/held_out/train_shadow_001_held_out_049.json",
+      "annotated_bytes": 622269,
+      "annotated_sha256": "eeecf8c1d77f59f22a358b1760088e57469da4c430cfff253202fe0f6ec967da",
+      "intake_report": "intake/train_shadow_001_held_out_049.json",
+      "intake_report_local_only": true,
+      "intake_sha256": "78dfc650082f7838c9348c13333335633b0fa7219cb5489c82351801f277419b"
+    },
+    {
+      "task_id": "train_shadow_001_held_out_050",
+      "split": "held_out",
+      "taxonomy": "tool_choice_failure.bad_args",
+      "session_id": "00000000-0000-4000-8000-000000001050",
+      "raw_file": "rollouts/raw/train_shadow_001_held_out_050.json",
+      "raw_bytes": 690810,
+      "raw_sha256": "7e8534b672d1a6c4a25e3d59a7ade175b88f1ae1add46e850276ce8e3a6a2c3b",
+      "annotated_file": "rollouts/annotated/held_out/train_shadow_001_held_out_050.json",
+      "annotated_bytes": 690852,
+      "annotated_sha256": "34509d70f2edf840322c426ced27373f0ad48fc5f3ce74427f2cf4674252f8eb",
+      "intake_report": "intake/train_shadow_001_held_out_050.json",
+      "intake_report_local_only": true,
+      "intake_sha256": "973585fe6fab539033febcc7e7da682931a9b223a70d13b995965a40aae7bf3f"
+    }
+  ],
+  "next_actions": [
+    "Treat the 50 collected rollouts as the complete train_shadow_001 shadow rollout corpus: train 30, dev 10, held_out 10.",
+    "Keep held_out findings isolated from training and development decisions until final evaluation.",
+    "Do not run the HL + Polar pipeline until status-shadow reports ready_for_pipeline=true and redaction repair has been applied to earlier local rollout files."
+  ]
+}
