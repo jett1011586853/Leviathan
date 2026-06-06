@@ -12,12 +12,12 @@
     "held_out": 10
   },
   "rollout_counts": {
-    "raw": 43,
+    "raw": 46,
     "annotated": {
       "train": 30,
       "dev": 10,
-      "held_out": 3,
-      "total": 43
+      "held_out": 6,
+      "total": 46
     }
   },
   "evidence": {
@@ -67,8 +67,8 @@
   },
   "ready_for_pipeline": false,
   "next_actions": [
-    "Collect 7 more raw rollout file(s).",
-    "Annotate 7 more file(s) into rollouts/annotated/held_out.",
+    "Collect 4 more raw rollout file(s).",
+    "Annotate 4 more file(s) into rollouts/annotated/held_out.",
     "Add required evidence file(s): replay-results.json, failure-taxonomy.json, benchmark-splits.json, polar-spike-observations.json, reward-design.json, rollback-incident-plan.json.",
     "Resolve formal launch gate(s): required_fields_landable, replay_runner_fixed_task_reproducible, failure_taxonomy_covers_high_frequency_failures, benchmark_splits_isolated, polar_proxy_spike_cases_passed, sparse_outcome_reward_defined, rollback_and_incident_plan_ready.",
     "Do not run /learning run-pipeline until ready_for_pipeline=true."
