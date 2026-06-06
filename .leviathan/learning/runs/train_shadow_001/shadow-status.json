@@ -12,12 +12,12 @@
     "held_out": 10
   },
   "rollout_counts": {
-    "raw": 30,
+    "raw": 33,
     "annotated": {
       "train": 30,
-      "dev": 0,
+      "dev": 3,
       "held_out": 0,
-      "total": 30
+      "total": 33
     }
   },
   "evidence": {
@@ -67,8 +67,8 @@
   },
   "ready_for_pipeline": false,
   "next_actions": [
-    "Collect 20 more raw rollout file(s).",
-    "Annotate 10 more file(s) into rollouts/annotated/dev.",
+    "Collect 17 more raw rollout file(s).",
+    "Annotate 7 more file(s) into rollouts/annotated/dev.",
     "Annotate 10 more file(s) into rollouts/annotated/held_out.",
     "Add required evidence file(s): replay-results.json, failure-taxonomy.json, benchmark-splits.json, polar-spike-observations.json, reward-design.json, rollback-incident-plan.json.",
     "Resolve formal launch gate(s): required_fields_landable, replay_runner_fixed_task_reproducible, failure_taxonomy_covers_high_frequency_failures, benchmark_splits_isolated, polar_proxy_spike_cases_passed, sparse_outcome_reward_defined, rollback_and_incident_plan_ready.",

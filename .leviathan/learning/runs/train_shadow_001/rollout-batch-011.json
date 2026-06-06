@@ -1,0 +1,67 @@
+{
+  "schema_version": "leviathan.shadow_rollout_batch.v1",
+  "run_id": "train_shadow_001",
+  "batch_id": "rollout-batch-011",
+  "provider_model_id": "mimo-v2.5",
+  "provider_model_update": "none",
+  "created_at": "2026-06-06T00:00:00.000+08:00",
+  "description": "Eleventh real headless shadow rollout batch. This batch begins the dev split. Full rollout files and dev intake reports remain local-only under ignored rollouts/** and intake/**; this manifest tracks provenance, split, taxonomy, size, and SHA256.",
+  "counts": {
+    "raw_rollouts_added": 3,
+    "annotated_train_added": 0,
+    "annotated_dev_added": 3,
+    "annotated_held_out_added": 0
+  },
+  "tasks": [
+    {
+      "task_id": "train_shadow_001_dev_031",
+      "split": "dev",
+      "taxonomy": "recovery_control_failure.bad_rollback",
+      "session_id": "00000000-0000-4000-8000-000000001031",
+      "raw_file": "rollouts/raw/train_shadow_001_dev_031.json",
+      "raw_bytes": 539838,
+      "raw_sha256": "bb6881721310223bbe1a73d11a6c114877635559200b763a534732e164fc4dc8",
+      "annotated_file": "rollouts/annotated/dev/train_shadow_001_dev_031.json",
+      "annotated_bytes": 539889,
+      "annotated_sha256": "c35c7032300db76566fb7ca75bd6cf0c5a5edcada2d4ae4578f3f411f3da316c",
+      "intake_report": "intake/train_shadow_001_dev_031.json",
+      "intake_report_local_only": true,
+      "intake_sha256": "c13080df76b16d0ba266586d311365d81e9774c26d610aef66c81e7e4bb79f98"
+    },
+    {
+      "task_id": "train_shadow_001_dev_032",
+      "split": "dev",
+      "taxonomy": "security_governance_failure.benchmark_leak",
+      "session_id": "00000000-0000-4000-8000-000000001032",
+      "raw_file": "rollouts/raw/train_shadow_001_dev_032.json",
+      "raw_bytes": 452877,
+      "raw_sha256": "d785d8a8adaa9c468b700bce5103d75c59675c7e76325be5ecc9524f55e0ef8d",
+      "annotated_file": "rollouts/annotated/dev/train_shadow_001_dev_032.json",
+      "annotated_bytes": 452933,
+      "annotated_sha256": "e9ebeda00a1b5723113116c710bce57446926af14d10b82c680cd3bc21b0ed2b",
+      "intake_report": "intake/train_shadow_001_dev_032.json",
+      "intake_report_local_only": true,
+      "intake_sha256": "9f6c14b2b8aefcc77906a10d2bebe9df40dd63e160caf5ebb50396ca84f8a6eb"
+    },
+    {
+      "task_id": "train_shadow_001_dev_033",
+      "split": "dev",
+      "taxonomy": "model_interaction_failure.proxy_bypass",
+      "session_id": "00000000-0000-4000-8000-000000001033",
+      "raw_file": "rollouts/raw/train_shadow_001_dev_033.json",
+      "raw_bytes": 358707,
+      "raw_sha256": "76112f8698ed48d4d129ebf6ee5778292be714727eee9a31fed443c030c9b134",
+      "annotated_file": "rollouts/annotated/dev/train_shadow_001_dev_033.json",
+      "annotated_bytes": 358759,
+      "annotated_sha256": "e7cf023aaf64804872823fc3c741d2141b34fdcd92cb1458c8dff113f914a20f",
+      "intake_report": "intake/train_shadow_001_dev_033.json",
+      "intake_report_local_only": true,
+      "intake_sha256": "ba9d77711b9ed4b325c492a3082b2087f4367e1fefd869d3633231c73bc8aab0"
+    }
+  ],
+  "next_actions": [
+    "Continue collecting dev split tasks train_shadow_001_dev_034 through train_shadow_001_dev_040.",
+    "Keep held_out split isolated from training and development decisions until final evaluation.",
+    "Do not run the HL + Polar pipeline until status-shadow reports ready_for_pipeline=true."
+  ]
+}

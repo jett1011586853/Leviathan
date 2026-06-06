@@ -10,6 +10,7 @@ node_modules/
 .leviathan/settings.local.json
 .claude/settings.local.json
 .leviathan/learning/runs/*/rollouts/**
+.leviathan/learning/runs/*/intake/**
 .leviathan/learning/runs/*/evidence/**
 .leviathan/learning/runs/*/pipeline/**
 .leviathan/learning/runs/*/active-learning.json
