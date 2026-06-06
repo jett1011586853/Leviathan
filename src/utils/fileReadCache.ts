@@ -5,6 +5,8 @@ type CachedFileData = {
   content: string
   encoding: BufferEncoding
   mtime: number
+  ctime: number
+  size: number
 }
 
 /**
@@ -36,7 +38,12 @@ class FileReadCache {
     const cachedData = this.cache.get(cacheKey)
 
     // Check if we have valid cached data
-    if (cachedData && cachedData.mtime === stats.mtimeMs) {
+    if (
+      cachedData &&
+      cachedData.mtime === stats.mtimeMs &&
+      cachedData.ctime === stats.ctimeMs &&
+      cachedData.size === stats.size
+    ) {
       return {
         content: cachedData.content,
         encoding: cachedData.encoding,
@@ -54,6 +61,8 @@ class FileReadCache {
       content,
       encoding,
       mtime: stats.mtimeMs,
+      ctime: stats.ctimeMs,
+      size: stats.size,
     })
 
     // Evict oldest entries if cache is too large
