@@ -100,4 +100,24 @@ describe('Leviathan rollout annotation files', () => {
       )
     })
   })
+
+  test('rejects trainable rollout annotations that omit root-cause summaries', async () => {
+    await withTempDir(dir => {
+      const inputPath = join(dir, 'raw-rollout.json')
+      const outputPath = join(dir, 'annotated-rollout.json')
+      writeFileSync(inputPath, JSON.stringify(rawRollout()), 'utf8')
+
+      expect(() =>
+        annotateRolloutFile({
+          input_path: inputPath,
+          output_path: outputPath,
+          split: 'train',
+          taxonomy: ['tool_choice_failure.bad_args'],
+          final_outcome: 'unresolved',
+          resolved_label: false,
+        }),
+      ).toThrow('root_cause_summary.required_for_trainable_rollout')
+      expect(() => readFileSync(outputPath, 'utf8')).toThrow()
+    })
+  })
 })

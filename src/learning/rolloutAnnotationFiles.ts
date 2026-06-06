@@ -34,6 +34,9 @@ export type AnnotateRolloutFileResult = {
   rollout: LeviathanRolloutBundle
 }
 
+export const TRAINABLE_ROOT_CAUSE_REQUIRED_ERROR =
+  'root_cause_summary.required_for_trainable_rollout'
+
 function readRollout(path: string): LeviathanRolloutBundle {
   return jsonParse(readFileSync(path, 'utf8')) as LeviathanRolloutBundle
 }
@@ -44,6 +47,19 @@ function redactStrings(values: string[] | undefined): string[] | undefined {
 
 function uniqueNonEmpty(values: string[]): string[] {
   return [...new Set(values.map(value => value.trim()).filter(Boolean))]
+}
+
+export function assertTrainableRolloutRootCause(input: {
+  split: LeviathanRolloutBundle['run']['split']
+  taxonomy: string[]
+  root_cause_summary: string
+}): void {
+  const hasTrainableTaxonomy = uniqueNonEmpty(input.taxonomy).length > 0
+  const requiresRootCause =
+    (input.split === 'train' || input.split === 'dev') && hasTrainableTaxonomy
+  if (requiresRootCause && input.root_cause_summary.trim().length === 0) {
+    throw new Error(TRAINABLE_ROOT_CAUSE_REQUIRED_ERROR)
+  }
 }
 
 function writeRollout(path: string, rollout: LeviathanRolloutBundle): void {
@@ -58,11 +74,23 @@ export function annotateRolloutFile(
   input: AnnotateRolloutFileInput,
 ): AnnotateRolloutFileResult {
   const source = readRollout(input.input_path)
+  const split = input.split ?? source.run.split
+  const taxonomy = uniqueNonEmpty(input.taxonomy)
+  const rootCauseSummary =
+    input.root_cause_summary !== undefined
+      ? redactText(input.root_cause_summary)
+      : source.failure.root_cause_summary
+  assertTrainableRolloutRootCause({
+    split,
+    taxonomy,
+    root_cause_summary: rootCauseSummary,
+  })
+
   const rollout: LeviathanRolloutBundle = {
     ...source,
     run: {
       ...source.run,
-      split: input.split ?? source.run.split,
+      split,
     },
     code_changes: {
       diff:
@@ -85,11 +113,8 @@ export function annotateRolloutFile(
           : source.evaluation.resolved_label,
     },
     failure: {
-      taxonomy: uniqueNonEmpty(input.taxonomy),
-      root_cause_summary:
-        input.root_cause_summary !== undefined
-          ? redactText(input.root_cause_summary)
-          : source.failure.root_cause_summary,
+      taxonomy,
+      root_cause_summary: rootCauseSummary,
     },
     security: {
       ...source.security,

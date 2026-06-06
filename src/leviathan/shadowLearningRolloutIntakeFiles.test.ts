@@ -137,12 +137,16 @@ describe('Leviathan shadow rollout intake files', () => {
         input_path: firstPath,
         split: 'train',
         taxonomy: ['model_interaction_failure.proxy_bypass'],
+        root_cause_summary:
+          'The connected model attempted to bypass the configured provider proxy.',
       })
       const second = intakeShadowRolloutFile({
         run_dir: runDir,
         input_path: secondPath,
         split: 'train',
         taxonomy: ['tool_choice_failure.bad_args'],
+        root_cause_summary:
+          'The connected model selected a tool call with invalid arguments.',
       })
 
       expect(first.report.raw_path).not.toBe(second.report.raw_path)
@@ -155,6 +159,39 @@ describe('Leviathan shadow rollout intake files', () => {
       )
       expect(status.rollout_counts.raw).toBe(2)
       expect(status.rollout_counts.annotated.train).toBe(2)
+    })
+  })
+
+  test('rejects trainable rollout intake before writing raw storage when root cause is missing', async () => {
+    await withTempDir(dir => {
+      const runDir = join(dir, 'train_shadow_001')
+      const sourcePath = join(dir, 'exported-rollout.json')
+      initializeShadowLearningRun({
+        output_dir: runDir,
+        run_id: 'train_shadow_001',
+        provider_model_id: 'mimo-v2.5',
+        created_at: '2026-06-04T12:00:00.000Z',
+        git_commit: 'edab200',
+        rollback_checkpoint_tag: 'permanent-leviathan-current-2026-06-04',
+        target_rollout_count: 50,
+      })
+      writeFileSync(sourcePath, JSON.stringify(rawRollout()), 'utf8')
+
+      expect(() =>
+        intakeShadowRolloutFile({
+          run_dir: runDir,
+          input_path: sourcePath,
+          split: 'dev',
+          taxonomy: ['verification_failure.hidden_regression'],
+          final_outcome: 'regression',
+          resolved_label: false,
+        }),
+      ).toThrow('root_cause_summary.required_for_trainable_rollout')
+
+      expect(
+        existsSync(join(runDir, 'rollouts', 'raw', 'task_intake_001.json')),
+      ).toBe(false)
+      expect(existsSync(join(runDir, 'shadow-status.json'))).toBe(false)
     })
   })
 })

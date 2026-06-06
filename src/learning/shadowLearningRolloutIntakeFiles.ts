@@ -3,6 +3,7 @@ import { basename, dirname, extname, isAbsolute, join } from 'node:path'
 
 import {
   annotateRolloutFile,
+  assertTrainableRolloutRootCause,
   type AnnotateRolloutFileInput,
 } from './rolloutAnnotationFiles.js'
 import type { LeviathanRolloutBundle } from './rolloutSchema.js'
@@ -135,6 +136,22 @@ function shouldAnnotate(input: IntakeShadowRolloutFileInput): boolean {
   )
 }
 
+function validateTrainableIntakeRootCause(
+  input: IntakeShadowRolloutFileInput,
+  rollout: LeviathanRolloutBundle,
+): void {
+  if (!shouldAnnotate(input)) return
+  const split = input.split as ShadowRolloutIntakeSplit
+  assertTrainableRolloutRootCause({
+    split: rolloutSchemaSplit(split),
+    taxonomy: input.taxonomy ?? [],
+    root_cause_summary:
+      input.root_cause_summary !== undefined
+        ? input.root_cause_summary
+        : rollout.failure.root_cause_summary,
+  })
+}
+
 function statusPath(runDir: string): string {
   return join(runDir, 'shadow-status.json')
 }
@@ -153,6 +170,8 @@ export function intakeShadowRolloutFile(
     join(input.run_dir, 'shadow-learning-run.json'),
   )
   const rollout = readJsonFile<LeviathanRolloutBundle>(input.input_path)
+  validateTrainableIntakeRootCause(input, rollout)
+
   const fileName = rolloutFileName(rollout, input.input_path)
   const rawDir = resolveRunPath(
     input.run_dir,
