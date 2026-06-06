@@ -37,6 +37,53 @@
     "missing_files": [],
     "missing_gates": []
   },
+  "annotation_quality": {
+    "missing_root_cause_summary": {
+      "train": 24,
+      "dev": 10,
+      "total": 34
+    },
+    "missing_root_cause_files": {
+      "train": [
+        "rollouts/annotated/train/train_shadow_001_train_007.json",
+        "rollouts/annotated/train/train_shadow_001_train_008.json",
+        "rollouts/annotated/train/train_shadow_001_train_009.json",
+        "rollouts/annotated/train/train_shadow_001_train_010.json",
+        "rollouts/annotated/train/train_shadow_001_train_011.json",
+        "rollouts/annotated/train/train_shadow_001_train_012.json",
+        "rollouts/annotated/train/train_shadow_001_train_013.json",
+        "rollouts/annotated/train/train_shadow_001_train_014.json",
+        "rollouts/annotated/train/train_shadow_001_train_015.json",
+        "rollouts/annotated/train/train_shadow_001_train_016.json",
+        "rollouts/annotated/train/train_shadow_001_train_017.json",
+        "rollouts/annotated/train/train_shadow_001_train_018.json",
+        "rollouts/annotated/train/train_shadow_001_train_019.json",
+        "rollouts/annotated/train/train_shadow_001_train_020.json",
+        "rollouts/annotated/train/train_shadow_001_train_021.json",
+        "rollouts/annotated/train/train_shadow_001_train_022.json",
+        "rollouts/annotated/train/train_shadow_001_train_023.json",
+        "rollouts/annotated/train/train_shadow_001_train_024.json",
+        "rollouts/annotated/train/train_shadow_001_train_025.json",
+        "rollouts/annotated/train/train_shadow_001_train_026.json",
+        "rollouts/annotated/train/train_shadow_001_train_027.json",
+        "rollouts/annotated/train/train_shadow_001_train_028.json",
+        "rollouts/annotated/train/train_shadow_001_train_029.json",
+        "rollouts/annotated/train/train_shadow_001_train_030.json"
+      ],
+      "dev": [
+        "rollouts/annotated/dev/train_shadow_001_dev_031.json",
+        "rollouts/annotated/dev/train_shadow_001_dev_032.json",
+        "rollouts/annotated/dev/train_shadow_001_dev_033.json",
+        "rollouts/annotated/dev/train_shadow_001_dev_034.json",
+        "rollouts/annotated/dev/train_shadow_001_dev_035.json",
+        "rollouts/annotated/dev/train_shadow_001_dev_036.json",
+        "rollouts/annotated/dev/train_shadow_001_dev_037.json",
+        "rollouts/annotated/dev/train_shadow_001_dev_038.json",
+        "rollouts/annotated/dev/train_shadow_001_dev_039.json",
+        "rollouts/annotated/dev/train_shadow_001_dev_040.json"
+      ]
+    }
+  },
   "pipeline": {
     "present_artifacts": [
       "heuristic-candidates.json",
@@ -60,10 +107,12 @@
     "dev_split_ready": true,
     "held_out_split_ready": true,
     "evidence_files_present": true,
+    "annotation_quality_ready": false,
     "formal_gates_cleared": true
   },
-  "ready_for_pipeline": true,
+  "ready_for_pipeline": false,
   "next_actions": [
-    "Run /learning run-pipeline with train rollouts, held-out rollouts, and evidence files."
+    "Add root-cause summaries to 34 train/dev annotated rollout file(s).",
+    "Do not run /learning run-pipeline until ready_for_pipeline=true."
   ]
 }

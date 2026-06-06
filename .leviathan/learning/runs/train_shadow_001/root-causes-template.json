@@ -1,0 +1,176 @@
+{
+  "schema_version": "leviathan.root_cause_repair_manifest.v1",
+  "run_id": "train_shadow_001",
+  "entries": [
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_007.json",
+      "root_cause_summary": "",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate."
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_008.json",
+      "root_cause_summary": "",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate."
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_009.json",
+      "root_cause_summary": "",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate."
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_010.json",
+      "root_cause_summary": "",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate."
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_011.json",
+      "root_cause_summary": "",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate."
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_012.json",
+      "root_cause_summary": "",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate."
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_013.json",
+      "root_cause_summary": "",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate."
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_014.json",
+      "root_cause_summary": "",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate."
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_015.json",
+      "root_cause_summary": "",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate."
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_016.json",
+      "root_cause_summary": "",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate."
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_017.json",
+      "root_cause_summary": "",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate."
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_018.json",
+      "root_cause_summary": "",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate."
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_019.json",
+      "root_cause_summary": "",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate."
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_020.json",
+      "root_cause_summary": "",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate."
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_021.json",
+      "root_cause_summary": "",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate."
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_022.json",
+      "root_cause_summary": "",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate."
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_023.json",
+      "root_cause_summary": "",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate."
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_024.json",
+      "root_cause_summary": "",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate."
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_025.json",
+      "root_cause_summary": "",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate."
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_026.json",
+      "root_cause_summary": "",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate."
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_027.json",
+      "root_cause_summary": "",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate."
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_028.json",
+      "root_cause_summary": "",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate."
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_029.json",
+      "root_cause_summary": "",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate."
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_030.json",
+      "root_cause_summary": "",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate."
+    },
+    {
+      "path": "rollouts/annotated/dev/train_shadow_001_dev_031.json",
+      "root_cause_summary": "",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate."
+    },
+    {
+      "path": "rollouts/annotated/dev/train_shadow_001_dev_032.json",
+      "root_cause_summary": "",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate."
+    },
+    {
+      "path": "rollouts/annotated/dev/train_shadow_001_dev_033.json",
+      "root_cause_summary": "",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate."
+    },
+    {
+      "path": "rollouts/annotated/dev/train_shadow_001_dev_034.json",
+      "root_cause_summary": "",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate."
+    },
+    {
+      "path": "rollouts/annotated/dev/train_shadow_001_dev_035.json",
+      "root_cause_summary": "",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate."
+    },
+    {
+      "path": "rollouts/annotated/dev/train_shadow_001_dev_036.json",
+      "root_cause_summary": "",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate."
+    },
+    {
+      "path": "rollouts/annotated/dev/train_shadow_001_dev_037.json",
+      "root_cause_summary": "",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate."
+    },
+    {
+      "path": "rollouts/annotated/dev/train_shadow_001_dev_038.json",
+      "root_cause_summary": "",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate."
+    },
+    {
+      "path": "rollouts/annotated/dev/train_shadow_001_dev_039.json",
+      "root_cause_summary": "",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate."
+    },
+    {
+      "path": "rollouts/annotated/dev/train_shadow_001_dev_040.json",
+      "root_cause_summary": "",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate."
+    }
+  ]
+}
