@@ -300,6 +300,22 @@ describe('Leviathan HL/Polar rollout schema', () => {
     })
   })
 
+  test('parses held-out rollout export split metadata', () => {
+    expect(
+      parseExportArgs(
+        '--rollout held-out-rollout.json --run-id train_shadow_001 --task-id train_shadow_001_held_out_001 --split held_out',
+      ),
+    ).toEqual({
+      mode: 'rollout',
+      filename: 'held-out-rollout.json',
+      overrides: {
+        runId: 'train_shadow_001',
+        taskId: 'train_shadow_001_held_out_001',
+        split: 'held_out',
+      },
+    })
+  })
+
   test('writes rollout export metadata flags into the bundle', async () => {
     await withTempDir(async dir => {
       const outputName = 'shadow-rollout.json'

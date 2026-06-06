@@ -491,6 +491,18 @@ describe('Leviathan learning command', () => {
     })
   })
 
+  test('parses held-out transcript rollout export arguments', () => {
+    expect(
+      parseLearningCommandArgs(
+        'export-transcript-rollout --transcript sessions/held.jsonl --out rollouts/held.json --run-id train_shadow_001 --task-id train_shadow_001_held_out_001 --split held_out --model mimo-v2.5 --harness-version git:abc123 --heuristic-bundle hb:unversioned --repo leviathan --base-commit abc123',
+      ),
+    ).toMatchObject({
+      action: 'export-transcript-rollout',
+      split: 'held_out',
+      task_id: 'train_shadow_001_held_out_001',
+    })
+  })
+
   test('parses shadow learning collection arguments', () => {
     expect(
       parseLearningCommandArgs(

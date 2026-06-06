@@ -77,7 +77,7 @@ export function parseExportArgs(args: string): ParsedExportArgs {
       if (token === '--cwd-alias') overrides.cwdAlias = readFlagValue(i);
       if (token === '--split') {
         const split = readFlagValue(i);
-        if (split === 'train' || split === 'dev' || split === 'test' || split === 'shadow') {
+        if (split === 'train' || split === 'dev' || split === 'test' || split === 'held_out' || split === 'shadow') {
           overrides.split = split;
         }
       }
