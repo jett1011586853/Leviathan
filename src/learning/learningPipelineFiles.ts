@@ -72,6 +72,7 @@ export type LearningPipelineManifest = {
   provider_model_id: string
   provider_model_update: 'none'
   stable_promotion_ready: boolean
+  blocked_reasons: string[]
   artifacts: LearningPipelineArtifacts
   reports: {
     heuristic_training_status: TrainHeuristicCandidatesFromFilesResult['training']['status']
@@ -124,7 +125,64 @@ function pipelineStatus(
     polarPromotion.report.status === 'ready_for_stable_promotion' &&
     learningBundle.bundle.status === 'ready_for_activation'
     ? 'ready_for_stable_promotion'
-    : 'needs_more_evidence'
+      : 'needs_more_evidence'
+}
+
+function unique(values: string[]): string[] {
+  return [...new Set(values.filter(value => value.trim().length > 0))]
+}
+
+function prefixed(prefix: string, reasons: string[]): string[] {
+  return reasons.map(reason => `${prefix}.${reason}`)
+}
+
+function pipelineBlockers(
+  heuristicTraining: TrainHeuristicCandidatesFromFilesResult,
+  polarTraining: TrainPolarHarnessCandidatesFromFilesResult,
+  heuristicPromotion: WriteHeuristicPromotionReportFromFilesResult,
+  polarPromotion: WritePolarHarnessPromotionReportFromFilesResult,
+  learningBundle: WriteLearningBundleFromFilesResult,
+): string[] {
+  const blockers: string[] = []
+
+  if (heuristicTraining.training.status !== 'candidate_only') {
+    blockers.push(`heuristic_training.status.${heuristicTraining.training.status}`)
+    blockers.push(
+      ...prefixed(
+        'heuristic_training',
+        heuristicTraining.training.blocked_reasons,
+      ),
+    )
+  }
+  if (polarTraining.training.status !== 'candidate_only') {
+    blockers.push(`polar_training.status.${polarTraining.training.status}`)
+    blockers.push(
+      ...prefixed('polar_training', polarTraining.training.blocked_reasons),
+    )
+  }
+  if (heuristicPromotion.report.status !== 'ready_for_stable_promotion') {
+    blockers.push(`heuristic_promotion.status.${heuristicPromotion.report.status}`)
+    blockers.push(
+      ...prefixed(
+        'heuristic_promotion',
+        heuristicPromotion.report.blocked_reasons,
+      ),
+    )
+  }
+  if (polarPromotion.report.status !== 'ready_for_stable_promotion') {
+    blockers.push(`polar_promotion.status.${polarPromotion.report.status}`)
+    blockers.push(
+      ...prefixed('polar_promotion', polarPromotion.report.blocked_reasons),
+    )
+  }
+  if (learningBundle.bundle.status !== 'ready_for_activation') {
+    blockers.push(`learning_bundle.status.${learningBundle.bundle.status}`)
+    blockers.push(
+      ...prefixed('learning_bundle', learningBundle.bundle.blocked_reasons),
+    )
+  }
+
+  return unique(blockers)
 }
 
 function writeManifest(manifest: LearningPipelineManifest): void {
@@ -205,6 +263,13 @@ export function runLearningPipelineFromFiles(
     learning_bundle,
   )
   const stable_promotion_ready = status === 'ready_for_stable_promotion'
+  const blocked_reasons = pipelineBlockers(
+    heuristic_training,
+    polar_training,
+    heuristic_promotion,
+    polar_promotion,
+    learning_bundle,
+  )
   const manifest: LearningPipelineManifest = {
     schema_version: 'leviathan.learning_pipeline.v1',
     status,
@@ -212,6 +277,7 @@ export function runLearningPipelineFromFiles(
     provider_model_id: input.provider_model_id,
     provider_model_update: 'none',
     stable_promotion_ready,
+    blocked_reasons,
     artifacts,
     reports: {
       heuristic_training_status: heuristic_training.training.status,

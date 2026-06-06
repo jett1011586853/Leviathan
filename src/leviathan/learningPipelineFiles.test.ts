@@ -236,4 +236,76 @@ describe('Leviathan learning pipeline files', () => {
       expect(bundle.blocked_reasons).toContain('heuristic_report.status.rejected')
     })
   })
+
+  test('surfaces final evaluation leakage blockers in the pipeline manifest', () => {
+    withTempDir(dir => {
+      const leakedTrainingRolloutPath = writeJson(
+        dir,
+        'leaked-held-out-rollout.json',
+        rollout('leaked', 'held_out', 'unresolved'),
+      )
+      const heldOutRolloutPath = writeJson(
+        dir,
+        'held-out-rollout.json',
+        rollout('held_out', 'held_out', 'resolved'),
+      )
+      const polarTrainingPath = writeJson(dir, 'polar-training.json', [
+        polarObservation('case_a_no_tool', {
+          captured_requests_count: 0,
+        }),
+        polarObservation('case_b_file_read_write'),
+        polarObservation('case_c_test_execution'),
+      ])
+      const polarEvalPath = writeJson(dir, 'polar-eval.json', [
+        polarObservation('case_a_no_tool'),
+        polarObservation('case_b_file_read_write'),
+        polarObservation('case_c_test_execution'),
+      ])
+      const replayPath = writeJson(dir, 'replay.json', [{ passed: true }])
+      const securityPath = writeJson(dir, 'security.json', { passed: true })
+      const complexityPath = writeJson(dir, 'complexity.json', {
+        passed: true,
+        token_turn_cost_regression_pct: 0.04,
+      })
+      const targetSlicePath = writeJson(dir, 'target-slice.json', {
+        before_success_rate: 0.5,
+        after_success_rate: 0.7,
+        min_delta: 0.05,
+      })
+      const regressionsPath = writeJson(dir, 'regressions.json', {
+        p0_p1_count: 0,
+      })
+      const outputDir = join(dir, 'artifacts')
+
+      const result = runLearningPipelineFromFiles({
+        output_dir: outputDir,
+        training_run_id: 'train_leakage',
+        provider_model_id: 'mimo-v2.5',
+        base_heuristic_bundle_version: 'hb:initial',
+        base_harness_version: 'git:abc123',
+        rollout_bundle_paths: [leakedTrainingRolloutPath],
+        held_out_rollout_paths: [heldOutRolloutPath],
+        polar_training_observations_path: polarTrainingPath,
+        polar_eval_observations_path: polarEvalPath,
+        replay_results_path: replayPath,
+        security_scan_path: securityPath,
+        complexity_budget_path: complexityPath,
+        target_failure_slice_path: targetSlicePath,
+        regressions_path: regressionsPath,
+      })
+
+      expect(result.manifest.status).toBe('blocked')
+      expect(result.manifest.stable_promotion_ready).toBe(false)
+      expect(result.manifest.reports.heuristic_training_status).toBe('blocked')
+      expect(result.manifest.blocked_reasons).toContain(
+        'heuristic_training.rollouts.final_evaluation_split_not_trainable',
+      )
+      expect(
+        JSON.parse(readFileSync(result.manifest.artifacts.manifest, 'utf8'))
+          .blocked_reasons,
+      ).toContain(
+        'heuristic_training.rollouts.final_evaluation_split_not_trainable',
+      )
+    })
+  })
 })
