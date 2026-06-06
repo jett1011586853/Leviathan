@@ -295,14 +295,12 @@ export const FileWriteTool = buildTool({
     }
 
     const enc = meta?.encoding ?? 'utf8'
+    const lineEndings = meta?.lineEndings ?? 'LF'
     const oldContent = meta?.content ?? null
 
-    // Write is a full content replacement — the model sent explicit line endings
-    // in `content` and meant them. Do not rewrite them. Previously we preserved
-    // the old file's line endings (or sampled the repo via ripgrep for new
-    // files), which silently corrupted e.g. bash scripts with \r on Linux when
-    // overwriting a CRLF file or when binaries in cwd poisoned the repo sample.
-    writeTextContent(fullFilePath, content, enc, 'LF')
+    // Preserve the existing file's line-ending style on overwrite so Windows
+    // workspaces do not get whole-file phantom diffs. New files default to LF.
+    writeTextContent(fullFilePath, content, enc, lineEndings)
 
     // Notify LSP servers about file modification (didChange) and save (didSave)
     const lspManager = getLspServerManager()
