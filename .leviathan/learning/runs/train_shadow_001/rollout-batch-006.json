@@ -1,0 +1,64 @@
+{
+  "schema_version": "leviathan.shadow_rollout_batch.v1",
+  "run_id": "train_shadow_001",
+  "batch_id": "rollout-batch-006",
+  "provider_model_id": "mimo-v2.5",
+  "provider_model_update": "none",
+  "created_at": "2026-06-06T00:00:00.000+08:00",
+  "description": "Sixth real headless shadow rollout batch. Full rollout files remain local-only under ignored rollouts/**; this manifest tracks provenance, split, taxonomy, size, and SHA256.",
+  "counts": {
+    "raw_rollouts_added": 3,
+    "annotated_train_added": 3,
+    "annotated_dev_added": 0,
+    "annotated_held_out_added": 0
+  },
+  "tasks": [
+    {
+      "task_id": "train_shadow_001_train_016",
+      "split": "train",
+      "taxonomy": "security_governance_failure.secret_leak",
+      "session_id": "00000000-0000-4000-8000-000000001016",
+      "raw_file": "rollouts/raw/train_shadow_001_train_016.json",
+      "raw_bytes": 332601,
+      "raw_sha256": "08bfbce49cfa92a04e12500d09e0ec91799cf323a2b10febd23948cfe5874f0e",
+      "annotated_file": "rollouts/annotated/train/train_shadow_001_train_016.json",
+      "annotated_bytes": 332654,
+      "annotated_sha256": "a76cdc443dc37f33ae55f2c9511694933cc33e6faa9043dbadeb933a20f69efc",
+      "intake_report": "intake/train_shadow_001_train_016.json",
+      "intake_sha256": "0ea9361a38244ebf8dbd020d2e5b48c5ed96c0754bf02417f2145675bdcecff6"
+    },
+    {
+      "task_id": "train_shadow_001_train_017",
+      "split": "train",
+      "taxonomy": "model_interaction_failure.proxy_bypass",
+      "session_id": "00000000-0000-4000-8000-000000001017",
+      "raw_file": "rollouts/raw/train_shadow_001_train_017.json",
+      "raw_bytes": 286986,
+      "raw_sha256": "029c40459e0a98f72d1af73d62d668300278462e5fbf80c08b15571794042a6a",
+      "annotated_file": "rollouts/annotated/train/train_shadow_001_train_017.json",
+      "annotated_bytes": 287038,
+      "annotated_sha256": "489f48f74a184227ba136ece7bc5d9a48de784ff571d11d938af2ff0de40fb02",
+      "intake_report": "intake/train_shadow_001_train_017.json",
+      "intake_sha256": "a5ce4440edcf3bc031f9ef0b803cdbd844b7e998026fdd4b152557965f29442a"
+    },
+    {
+      "task_id": "train_shadow_001_train_018",
+      "split": "train",
+      "taxonomy": "tool_choice_failure.bad_args",
+      "session_id": "00000000-0000-4000-8000-000000001018",
+      "raw_file": "rollouts/raw/train_shadow_001_train_018.json",
+      "raw_bytes": 410545,
+      "raw_sha256": "ab25e554db2c79034e32d8ccdf4ff4797476ec44468e2aabe66c95eebccf1644",
+      "annotated_file": "rollouts/annotated/train/train_shadow_001_train_018.json",
+      "annotated_bytes": 410587,
+      "annotated_sha256": "82264a5dd3052770172c9a0493c59cc99651e223642b4c6498457ea56fcec737",
+      "intake_report": "intake/train_shadow_001_train_018.json",
+      "intake_sha256": "fcd30be593a461abd5418a1e1b94bb99ad8de083448cfadd1d7c590f587f260f"
+    }
+  ],
+  "next_actions": [
+    "Continue collecting train_shadow_001_train_019 through train_shadow_001_train_030.",
+    "Keep dev and held_out splits isolated from training until their queued tasks are collected.",
+    "Do not run the HL + Polar pipeline until status-shadow reports ready_for_pipeline=true."
+  ]
+}
