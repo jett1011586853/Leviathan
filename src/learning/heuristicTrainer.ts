@@ -81,14 +81,24 @@ function primaryFailureClass(taxonomy: string): string {
 function candidateForFailureClass(
   failureClass: string,
   sourceTaxonomy: string[],
+  sourceRootCauses: string[],
 ): HeuristicCandidate {
   const featureFlag = `hl.candidate.${failureClass}_001`
+  const rootCauseGuidance =
+    sourceRootCauses.length > 0
+      ? [
+          `Observed root-cause pattern from training rollouts: ${sourceRootCauses.join(' | ')}`,
+        ]
+      : []
   return {
     id: `candidate_${failureClass}_001`,
     type: FAILURE_TO_CANDIDATE_TYPE[failureClass]!,
     status: 'candidate',
     source_failure_taxonomy: sourceTaxonomy,
-    learned_guidance: [...(FAILURE_TO_LEARNED_GUIDANCE[failureClass] ?? [])],
+    learned_guidance: [
+      ...(FAILURE_TO_LEARNED_GUIDANCE[failureClass] ?? []),
+      ...rootCauseGuidance,
+    ],
     feature_flag: featureFlag,
     rollback_plan: `Disable feature flag ${featureFlag}`,
   }
@@ -135,6 +145,34 @@ function hasMissingRootCauseSummary(
   )
 }
 
+function cleanRootCause(value: string): string {
+  return value.replace(/\s+/g, ' ').trim().slice(0, 240)
+}
+
+function rootCausesForFailureClass(
+  rollouts: LeviathanRolloutBundle[],
+  failureClass: string,
+): string[] {
+  const rootCauses: string[] = []
+
+  for (const rollout of rollouts) {
+    if (
+      !rollout.failure.taxonomy.some(
+        taxonomy => primaryFailureClass(taxonomy) === failureClass,
+      )
+    ) {
+      continue
+    }
+    const rootCause = cleanRootCause(rollout.failure.root_cause_summary)
+    if (rootCause.length > 0 && !rootCauses.includes(rootCause)) {
+      rootCauses.push(rootCause)
+    }
+    if (rootCauses.length >= 3) break
+  }
+
+  return rootCauses
+}
+
 export function trainHeuristicCandidatesFromRollouts(
   input: HeuristicTrainingInput,
 ): HeuristicTrainingResult {
@@ -173,7 +211,11 @@ export function trainHeuristicCandidatesFromRollouts(
   const grouped = groupTrainableTaxonomy(input.rollouts)
   const trained_failure_classes = [...grouped.keys()]
   const candidates = trained_failure_classes.map(failureClass =>
-    candidateForFailureClass(failureClass, grouped.get(failureClass) ?? []),
+    candidateForFailureClass(
+      failureClass,
+      grouped.get(failureClass) ?? [],
+      rootCausesForFailureClass(input.rollouts, failureClass),
+    ),
   )
   const blocked_reasons =
     candidates.length === 0 ? ['rollouts.no_trainable_failure_taxonomy'] : []

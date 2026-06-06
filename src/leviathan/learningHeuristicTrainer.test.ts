@@ -71,6 +71,7 @@ describe('Leviathan candidate-only heuristic trainer', () => {
           learned_guidance: [
             'Before emitting a tool call, verify the tool name is present in the current available tool set; if Glob, Read, or another familiar tool is unavailable, use an available equivalent instead of calling it.',
             'Validate required tool input fields and path arguments before the call; prefer confirmed cwd or repo-relative paths over unverified $WORKDIR placeholders.',
+            'Observed root-cause pattern from training rollouts: root cause for 1',
           ],
           feature_flag: 'hl.candidate.tool_choice_failure_001',
           rollback_plan: 'Disable feature flag hl.candidate.tool_choice_failure_001',
@@ -83,6 +84,7 @@ describe('Leviathan candidate-only heuristic trainer', () => {
           learned_guidance: [
             'Run the smallest relevant verification command after a change and capture exit code plus failure output before claiming resolution.',
             'Separate pre-existing or flaky failures from regressions introduced by the current trajectory.',
+            'Observed root-cause pattern from training rollouts: root cause for 2',
           ],
           feature_flag: 'hl.candidate.verification_failure_001',
           rollback_plan:
@@ -96,6 +98,7 @@ describe('Leviathan candidate-only heuristic trainer', () => {
           learned_guidance: [
             'After a tool or command failure, inspect the concrete stderr, exit code, cwd, and previous tool input before retrying.',
             'Retry with a corrected plan once; avoid repeating the same failed command or tool input without new evidence.',
+            'Observed root-cause pattern from training rollouts: root cause for 3',
           ],
           feature_flag: 'hl.candidate.recovery_control_failure_001',
           rollback_plan:
