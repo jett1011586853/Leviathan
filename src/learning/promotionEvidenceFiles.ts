@@ -79,10 +79,22 @@ function targetFailureSliceImproved(
 
 function heldOutRegressionCount(snapshot: PromotionEvidenceSnapshot): number {
   const summaryCount = snapshot.held_out_summary?.regression_count ?? 0
+  const hiddenRegressionSummaryCount =
+    snapshot.held_out_summary?.by_taxonomy[
+      'verification_failure.hidden_regression'
+    ] ?? 0
   const resultCount = snapshot.held_out_results.filter(
     result => result.final_outcome === 'regression',
   ).length
-  return Math.max(summaryCount, resultCount)
+  const hiddenRegressionResultCount = snapshot.held_out_results.filter(result =>
+    result.taxonomy?.includes('verification_failure.hidden_regression'),
+  ).length
+  return Math.max(
+    summaryCount,
+    hiddenRegressionSummaryCount,
+    resultCount,
+    hiddenRegressionResultCount,
+  )
 }
 
 export function buildPromotionEvidenceFromSnapshot(
