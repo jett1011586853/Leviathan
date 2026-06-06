@@ -2,7 +2,7 @@
   "schema_version": "leviathan.redaction_repair.v1",
   "run_id": "train_shadow_001",
   "repair_id": "redaction-repair-001",
-  "created_at": "2026-06-06T10:45:17.0898929Z",
+  "created_at": "2026-06-06T10:55:03.767Z",
   "provider_model_id": "mimo-v2.5",
   "provider_model_update": "none",
   "applied_redaction_module": "src/learning/redaction.ts",
@@ -21,11 +21,15 @@
     "unredacted_base_url_env": 0,
     "forward_windows_paths": 0
   },
-  "post_repair_corpus_digest_sha256": "7b6c23b6f17fa57df2467be75a7831c7f1f7ef58782bf49ef3ac8112b277646e",
+  "post_repair_corpus_digest_sha256": "a5c0e8fe3e4f82668234050b41714ae4725659cc2bf12801556bd9e71ea3a15f",
   "notes": [
     "This repair applies hardened provider URL, quoted assignment, object-key, and forward-slash Windows path redaction to local rollout/export/intake JSON artifacts before any pipeline run.",
     "A secondary raw-text provider URL pass repaired transcript text fragments that were preserved as code or command text rather than structured fields.",
     "Earlier rollout-batch manifests preserve historical pre-repair file hashes; this repair manifest supersedes those local artifact hashes for pipeline-readiness evidence.",
     "No provider model update was performed."
-  ]
+  ],
+  "final_json_parse_check": {
+    "files_checked": 200,
+    "invalid_files": 0
+  }
 }
