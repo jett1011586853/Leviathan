@@ -5,7 +5,11 @@ import {
   evaluatePolarProxySpike,
   type PolarProxySpikeObservation,
 } from './polarProxySpike.js'
-import type { PromotionEvidenceSnapshot } from './promotionEvidenceFiles.js'
+import type {
+  HeldOutEvaluationResult,
+  HeldOutEvaluationSummary,
+  PromotionEvidenceSnapshot,
+} from './promotionEvidenceFiles.js'
 import { evaluateSparseOutcomeReward } from './rewardDesign.js'
 import type { LeviathanRolloutBundle } from './rolloutSchema.js'
 import {
@@ -63,10 +67,57 @@ function readRollout(path: string): LeviathanRolloutBundle {
   return readJson(path) as LeviathanRolloutBundle
 }
 
-function readHeldOutResults(paths: string[]): { passed: boolean }[] {
-  return paths.map(path => ({
-    passed: evaluateSparseOutcomeReward(readRollout(path)).reward === 1,
-  }))
+function heldOutSplitLabel(bundle: LeviathanRolloutBundle): string {
+  return bundle.run.split === 'test' ? 'held_out' : bundle.run.split
+}
+
+function readHeldOutResults(paths: string[]): HeldOutEvaluationResult[] {
+  return paths.map(path => {
+    const bundle = readRollout(path)
+    return {
+      passed: evaluateSparseOutcomeReward(bundle).reward === 1,
+      task_id: bundle.run.task_id,
+      split: heldOutSplitLabel(bundle),
+      final_outcome: bundle.evaluation.final_outcome,
+      resolved_label: bundle.evaluation.resolved_label,
+      taxonomy: [...bundle.failure.taxonomy],
+      exit_codes: [...bundle.evaluation.exit_codes],
+      test_commands: [...bundle.evaluation.test_commands],
+      test_outputs_count: bundle.evaluation.test_outputs.length,
+      changed_files: [...bundle.code_changes.changed_files],
+      root_cause_summary: bundle.failure.root_cause_summary,
+    }
+  })
+}
+
+function summarizeHeldOutResults(
+  results: HeldOutEvaluationResult[],
+): HeldOutEvaluationSummary {
+  const by_taxonomy: Record<string, number> = {}
+  let regression_count = 0
+  let unresolved_count = 0
+  let unknown_count = 0
+  let passed = 0
+
+  for (const result of results) {
+    if (result.passed) passed += 1
+    if (result.final_outcome === 'regression') regression_count += 1
+    if (result.final_outcome === 'unresolved') unresolved_count += 1
+    if (result.final_outcome === 'unknown') unknown_count += 1
+    for (const taxonomy of result.taxonomy) {
+      by_taxonomy[taxonomy] = (by_taxonomy[taxonomy] ?? 0) + 1
+    }
+  }
+
+  return {
+    total: results.length,
+    passed,
+    failed: results.length - passed,
+    regression_count,
+    unresolved_count,
+    unknown_count,
+    by_taxonomy,
+  }
 }
 
 function readPolarSpike(path: string): { passed: boolean } {
@@ -79,9 +130,11 @@ function readPolarSpike(path: string): { passed: boolean } {
 export function buildEvaluationSnapshotFromFiles(
   input: WriteEvaluationSnapshotFromFilesInput,
 ): PromotionEvidenceSnapshot {
+  const heldOutResults = readHeldOutResults(input.held_out_rollout_paths)
   return {
     replay_results: readReplayResults(input.replay_results_path),
-    held_out_results: readHeldOutResults(input.held_out_rollout_paths),
+    held_out_results: heldOutResults,
+    held_out_summary: summarizeHeldOutResults(heldOutResults),
     security_scan: readJson(input.security_scan_path) as { passed: boolean },
     complexity_budget: readJson(input.complexity_budget_path) as {
       passed: boolean

@@ -1451,7 +1451,27 @@ describe('Leviathan learning command', () => {
 
       const snapshot = JSON.parse(readFileSync(outputPath, 'utf8'))
       expect(snapshot.replay_results).toEqual([{ passed: true }])
-      expect(snapshot.held_out_results).toEqual([{ passed: false }])
+      expect(snapshot.held_out_results).toEqual([
+        {
+          passed: false,
+          task_id: 'task_collect_1',
+          split: 'shadow',
+          final_outcome: 'unknown',
+          resolved_label: null,
+          taxonomy: ['tool_choice_failure.bad_args'],
+          exit_codes: [],
+          test_commands: [],
+          test_outputs_count: 0,
+          changed_files: [],
+          root_cause_summary: '',
+        },
+      ])
+      expect(snapshot.held_out_summary).toMatchObject({
+        total: 1,
+        passed: 0,
+        failed: 1,
+        unknown_count: 1,
+      })
       expect(snapshot.polar_spike).toEqual({ passed: true })
       expect(doneMessage).toContain('Leviathan evaluation snapshot written')
       expect(doneMessage).toContain(outputPath)

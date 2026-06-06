@@ -23,7 +23,12 @@ export const POLAR_ONLY_ROLLOUT_FIELDS = [
 ] as const
 
 export type RolloutSource = 'internal' | 'benchmark' | 'replay' | 'canary'
-export type RolloutSplit = 'train' | 'dev' | 'test' | 'shadow'
+export type RolloutSplit = 'train' | 'dev' | 'test' | 'held_out' | 'shadow'
+export type RolloutFinalOutcome =
+  | 'unknown'
+  | 'resolved'
+  | 'unresolved'
+  | 'regression'
 
 export type CreateRolloutBundleInput = {
   runId: string
@@ -95,7 +100,7 @@ export type LeviathanRolloutBundle = {
     test_commands: string[]
     test_outputs: string[]
     exit_codes: number[]
-    final_outcome: 'unknown' | 'resolved' | 'unresolved'
+    final_outcome: RolloutFinalOutcome
     resolved_label: boolean | null
   }
   failure: {

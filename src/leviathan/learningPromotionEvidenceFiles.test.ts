@@ -128,4 +128,56 @@ describe('Leviathan promotion evidence files', () => {
       expect(result.polar_evidence.polar_spike_passed).toBe(false)
     })
   })
+
+  test('counts held-out regression outcomes even when regression input misses them', () => {
+    withTempDir(dir => {
+      const snapshotPath = join(dir, 'promotion-snapshot.json')
+      const heuristicPath = join(dir, 'heuristic-evidence.json')
+      const polarPath = join(dir, 'polar-evidence.json')
+      writeFileSync(
+        snapshotPath,
+        JSON.stringify(
+          snapshot({
+            held_out_results: [
+              {
+                passed: false,
+                task_id: 'train_shadow_001_held_out_045',
+                split: 'held_out',
+                final_outcome: 'regression',
+                resolved_label: false,
+                taxonomy: ['verification_failure.hidden_regression'],
+                exit_codes: [1],
+                test_commands: ['bun test src/leviathan'],
+                test_outputs_count: 1,
+                changed_files: ['src/example.ts'],
+                root_cause_summary: 'hidden held-out regression',
+              },
+            ],
+            held_out_summary: {
+              total: 1,
+              passed: 0,
+              failed: 1,
+              regression_count: 1,
+              unresolved_count: 0,
+              unknown_count: 0,
+              by_taxonomy: {
+                'verification_failure.hidden_regression': 1,
+              },
+            },
+            regressions: { p0_p1_count: 0 },
+          }),
+        ),
+        'utf8',
+      )
+
+      const result = writePromotionEvidenceFromSnapshotFiles({
+        snapshot_path: snapshotPath,
+        heuristic_output_path: heuristicPath,
+        polar_output_path: polarPath,
+      })
+
+      expect(result.heuristic_evidence.p0_p1_regressions).toBe(1)
+      expect(result.polar_evidence.p0_p1_regressions).toBe(1)
+    })
+  })
 })
