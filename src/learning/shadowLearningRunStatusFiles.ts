@@ -109,6 +109,10 @@ export type ShadowLearningRunStatusSnapshot = {
       dev: number
       total: number
     }
+    missing_root_cause_files: {
+      train: string[]
+      dev: string[]
+    }
   }
   pipeline: {
     present_artifacts: string[]
@@ -207,14 +211,21 @@ function hasTrainableTaxonomy(bundle: LeviathanRolloutBundle): boolean {
   return bundle.failure.taxonomy.length > 0
 }
 
-function missingRootCauseSummaryCount(dir: string): number {
-  return jsonFiles(dir).filter(file => {
+function relativeStatusPath(relativeDir: string, file: string): string {
+  return `${relativeDir}/${file}`.replace(/\\/g, '/')
+}
+
+function missingRootCauseSummaryFiles(
+  dir: string,
+  relativeDir: string,
+): string[] {
+  return jsonFiles(dir).flatMap(file => {
     const bundle = readJsonFile<LeviathanRolloutBundle>(join(dir, file))
-    return (
+    const missing =
       hasTrainableTaxonomy(bundle) &&
       bundle.failure.root_cause_summary.trim().length === 0
-    )
-  }).length
+    return missing ? [relativeStatusPath(relativeDir, file)] : []
+  })
 }
 
 export function readShadowLearningRunStatusFromFiles(
@@ -273,8 +284,16 @@ export function readShadowLearningRunStatusFromFiles(
   const dev = jsonFiles(devDir).length
   const held_out = jsonFiles(heldOutDir).length
   const annotatedTotal = train + dev + held_out
-  const trainMissingRootCause = missingRootCauseSummaryCount(trainDir)
-  const devMissingRootCause = missingRootCauseSummaryCount(devDir)
+  const trainMissingRootCauseFiles = missingRootCauseSummaryFiles(
+    trainDir,
+    'rollouts/annotated/train',
+  )
+  const devMissingRootCauseFiles = missingRootCauseSummaryFiles(
+    devDir,
+    'rollouts/annotated/dev',
+  )
+  const trainMissingRootCause = trainMissingRootCauseFiles.length
+  const devMissingRootCause = devMissingRootCauseFiles.length
   const missingRootCauseTotal = trainMissingRootCause + devMissingRootCause
   const requiredEvidenceFiles = REQUIRED_SHADOW_LEARNING_EVIDENCE_FILES.map(
     evidence => evidence.file,
@@ -343,6 +362,10 @@ export function readShadowLearningRunStatusFromFiles(
         train: trainMissingRootCause,
         dev: devMissingRootCause,
         total: missingRootCauseTotal,
+      },
+      missing_root_cause_files: {
+        train: trainMissingRootCauseFiles,
+        dev: devMissingRootCauseFiles,
       },
     },
     pipeline: {

@@ -1160,6 +1160,9 @@ describe('Leviathan learning command', () => {
       expect(collection.blocked_reasons).toContain('annotation_quality_ready')
       expect(status.readiness.annotation_quality_ready).toBe(false)
       expect(status.annotation_quality.missing_root_cause_summary.train).toBe(1)
+      expect(status.annotation_quality.missing_root_cause_files.train).toContain(
+        'rollouts/annotated/train/train-0.json',
+      )
       expect(doneMessage).toContain('Leviathan shadow collection blocked')
     })
   })
