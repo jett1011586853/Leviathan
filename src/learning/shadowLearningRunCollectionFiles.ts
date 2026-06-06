@@ -139,6 +139,9 @@ function readinessBlockers(
   if (!status.readiness.evidence_files_present) {
     blockers.push('evidence_files_present')
   }
+  if (!status.readiness.annotation_quality_ready) {
+    blockers.push('annotation_quality_ready')
+  }
   return blockers
 }
 

@@ -10,6 +10,7 @@ import type {
   ShadowLearningRun,
   ShadowLearningRunSplitPlan,
 } from './shadowLearningRunFiles.js'
+import type { LeviathanRolloutBundle } from './rolloutSchema.js'
 import type { TrainingRunManifest } from './trainingRunManifest.js'
 import {
   jsonParse,
@@ -102,6 +103,13 @@ export type ShadowLearningRunStatusSnapshot = {
     missing_files: string[]
     missing_gates: string[]
   }
+  annotation_quality: {
+    missing_root_cause_summary: {
+      train: number
+      dev: number
+      total: number
+    }
+  }
   pipeline: {
     present_artifacts: string[]
     missing_artifacts: string[]
@@ -115,6 +123,7 @@ export type ShadowLearningRunStatusSnapshot = {
     dev_split_ready: boolean
     held_out_split_ready: boolean
     evidence_files_present: boolean
+    annotation_quality_ready: boolean
     formal_gates_cleared: boolean
   }
   ready_for_pipeline: boolean
@@ -167,6 +176,7 @@ function nextActions(input: {
   heldOutMissing: number
   missingEvidenceFiles: string[]
   missingGates: string[]
+  missingRootCauseSummaries: number
   readyForPipeline: boolean
 }): string[] {
   const actions = [
@@ -182,12 +192,29 @@ function nextActions(input: {
     input.missingGates.length > 0
       ? `Resolve formal launch gate(s): ${input.missingGates.join(', ')}.`
       : null,
+    input.missingRootCauseSummaries > 0
+      ? `Add root-cause summaries to ${input.missingRootCauseSummaries} train/dev annotated rollout file(s).`
+      : null,
     input.readyForPipeline
       ? 'Run /learning run-pipeline with train rollouts, held-out rollouts, and evidence files.'
       : 'Do not run /learning run-pipeline until ready_for_pipeline=true.',
   ]
 
   return actions.filter((action): action is string => action !== null)
+}
+
+function hasTrainableTaxonomy(bundle: LeviathanRolloutBundle): boolean {
+  return bundle.failure.taxonomy.length > 0
+}
+
+function missingRootCauseSummaryCount(dir: string): number {
+  return jsonFiles(dir).filter(file => {
+    const bundle = readJsonFile<LeviathanRolloutBundle>(join(dir, file))
+    return (
+      hasTrainableTaxonomy(bundle) &&
+      bundle.failure.root_cause_summary.trim().length === 0
+    )
+  }).length
 }
 
 export function readShadowLearningRunStatusFromFiles(
@@ -246,6 +273,9 @@ export function readShadowLearningRunStatusFromFiles(
   const dev = jsonFiles(devDir).length
   const held_out = jsonFiles(heldOutDir).length
   const annotatedTotal = train + dev + held_out
+  const trainMissingRootCause = missingRootCauseSummaryCount(trainDir)
+  const devMissingRootCause = missingRootCauseSummaryCount(devDir)
+  const missingRootCauseTotal = trainMissingRootCause + devMissingRootCause
   const requiredEvidenceFiles = REQUIRED_SHADOW_LEARNING_EVIDENCE_FILES.map(
     evidence => evidence.file,
   )
@@ -271,6 +301,7 @@ export function readShadowLearningRunStatusFromFiles(
     dev_split_ready: dev >= run.split_plan.dev,
     held_out_split_ready: held_out >= run.split_plan.held_out,
     evidence_files_present: missingEvidenceFiles.length === 0,
+    annotation_quality_ready: missingRootCauseTotal === 0,
     formal_gates_cleared: formalManifest?.status === 'started',
   }
   const readyForPipeline =
@@ -281,6 +312,7 @@ export function readShadowLearningRunStatusFromFiles(
     readiness.dev_split_ready &&
     readiness.held_out_split_ready &&
     readiness.evidence_files_present &&
+    readiness.annotation_quality_ready &&
     readiness.formal_gates_cleared
 
   return {
@@ -306,6 +338,13 @@ export function readShadowLearningRunStatusFromFiles(
       missing_files: missingEvidenceFiles,
       missing_gates: missingGates,
     },
+    annotation_quality: {
+      missing_root_cause_summary: {
+        train: trainMissingRootCause,
+        dev: devMissingRootCause,
+        total: missingRootCauseTotal,
+      },
+    },
     pipeline: {
       present_artifacts: pipelinePresentArtifacts,
       missing_artifacts: pipelineMissingArtifacts,
@@ -323,6 +362,7 @@ export function readShadowLearningRunStatusFromFiles(
       heldOutMissing,
       missingEvidenceFiles,
       missingGates,
+      missingRootCauseSummaries: missingRootCauseTotal,
       readyForPipeline,
     }),
   }

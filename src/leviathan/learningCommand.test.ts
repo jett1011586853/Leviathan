@@ -1050,6 +1050,120 @@ describe('Leviathan learning command', () => {
     })
   })
 
+  test('blocks shadow collection when trainable annotations lack root-cause summaries', async () => {
+    await withTempDir(async dir => {
+      const outputDir = join(dir, 'train_shadow_001')
+      const collectionPath = join(outputDir, 'shadow-collection.json')
+      let doneMessage = ''
+
+      await call(
+        () => {},
+        {} as never,
+        `start-shadow --out-dir ${outputDir} --run-id train_shadow_001 --model mimo-v2.5 --git-commit 7546f5e --checkpoint permanent-leviathan-current-2026-06-04 --target-rollouts 20 --created-at 2026-06-04T12:00:00.000Z`,
+      )
+
+      for (let index = 0; index < 20; index++) {
+        writeFileSync(
+          join(outputDir, 'rollouts', 'raw', `raw-${index}.json`),
+          JSON.stringify(rolloutBundleForSplit(index, 'train')),
+          'utf8',
+        )
+      }
+
+      const missingRootCause = rolloutBundleForSplit(0, 'train') as {
+        failure: { root_cause_summary: string }
+      }
+      missingRootCause.failure.root_cause_summary = ''
+      writeFileSync(
+        join(outputDir, 'rollouts', 'annotated', 'train', 'train-0.json'),
+        JSON.stringify(missingRootCause),
+        'utf8',
+      )
+      for (let index = 1; index < 12; index++) {
+        writeFileSync(
+          join(outputDir, 'rollouts', 'annotated', 'train', `train-${index}.json`),
+          JSON.stringify(rolloutBundleForSplit(index, 'train')),
+          'utf8',
+        )
+      }
+      for (let index = 0; index < 4; index++) {
+        writeFileSync(
+          join(outputDir, 'rollouts', 'annotated', 'dev', `dev-${index}.json`),
+          JSON.stringify(rolloutBundleForSplit(index, 'dev')),
+          'utf8',
+        )
+        writeFileSync(
+          join(
+            outputDir,
+            'rollouts',
+            'annotated',
+            'held_out',
+            `held-${index}.json`,
+          ),
+          JSON.stringify(rolloutBundleForSplit(index, 'held_out')),
+          'utf8',
+        )
+      }
+
+      writeFileSync(
+        join(outputDir, 'evidence', 'replay-results.json'),
+        JSON.stringify([{ status: 'completed', blockers: [], compare_passed: true }]),
+        'utf8',
+      )
+      writeFileSync(
+        join(outputDir, 'evidence', 'failure-taxonomy.json'),
+        JSON.stringify({ covered_classes: ['tool_choice_failure'] }),
+        'utf8',
+      )
+      writeFileSync(
+        join(outputDir, 'evidence', 'benchmark-splits.json'),
+        JSON.stringify([
+          benchmarkRecord('train_1', 'train'),
+          benchmarkRecord('dev_1', 'dev'),
+          benchmarkRecord('test_1', 'test'),
+        ]),
+        'utf8',
+      )
+      writeFileSync(
+        join(outputDir, 'evidence', 'polar-spike-observations.json'),
+        JSON.stringify([
+          polarObservation('case_a_no_tool'),
+          polarObservation('case_b_file_read_write'),
+          polarObservation('case_c_test_execution'),
+        ]),
+        'utf8',
+      )
+      writeFileSync(
+        join(outputDir, 'evidence', 'reward-design.json'),
+        JSON.stringify(rewardDesign()),
+        'utf8',
+      )
+      writeFileSync(
+        join(outputDir, 'evidence', 'rollback-incident-plan.json'),
+        JSON.stringify(rollbackIncidentPlan()),
+        'utf8',
+      )
+
+      await call(
+        message => {
+          doneMessage = message ?? ''
+        },
+        {} as never,
+        `collect-shadow --run-dir ${outputDir} --out ${collectionPath} --created-at 2026-06-04T13:00:00.000Z`,
+      )
+
+      const collection = JSON.parse(readFileSync(collectionPath, 'utf8'))
+      const status = JSON.parse(
+        readFileSync(join(outputDir, 'shadow-status.json'), 'utf8'),
+      )
+      expect(collection.status).toBe('blocked')
+      expect(collection.blocked_reasons).toContain('annotation_quality_ready')
+      expect(status.readiness.annotation_quality_ready).toBe(false)
+      expect(status.annotation_quality.missing_root_cause_summary.train).toBe(1)
+      expect(doneMessage).toContain('Leviathan shadow collection blocked')
+    })
+  })
+
   test('collects shadow evidence from a complete run directory', async () => {
     await withTempDir(async dir => {
       const outputDir = join(dir, 'train_shadow_001')
