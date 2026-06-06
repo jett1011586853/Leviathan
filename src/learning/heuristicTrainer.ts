@@ -112,9 +112,31 @@ function groupTrainableTaxonomy(
   return grouped
 }
 
+function hasFinalEvaluationRollout(rollouts: LeviathanRolloutBundle[]): boolean {
+  return rollouts.some(
+    rollout => rollout.run.split === 'test' || rollout.run.split === 'held_out',
+  )
+}
+
 export function trainHeuristicCandidatesFromRollouts(
   input: HeuristicTrainingInput,
 ): HeuristicTrainingResult {
+  if (hasFinalEvaluationRollout(input.rollouts)) {
+    return {
+      schema_version: HEURISTIC_TRAINING_SCHEMA_VERSION,
+      status: 'blocked',
+      training_run_id: input.training_run_id,
+      provider_model_id: input.provider_model_id,
+      provider_model_update: 'none',
+      base_heuristic_bundle_version: input.base_heuristic_bundle_version,
+      candidate_heuristic_bundle_version: `hb:candidate/${input.training_run_id}`,
+      stable_promotions_allowed: false,
+      trained_failure_classes: [],
+      candidates: [],
+      blocked_reasons: ['rollouts.final_evaluation_split_not_trainable'],
+    }
+  }
+
   const grouped = groupTrainableTaxonomy(input.rollouts)
   const trained_failure_classes = [...grouped.keys()]
   const candidates = trained_failure_classes.map(failureClass =>

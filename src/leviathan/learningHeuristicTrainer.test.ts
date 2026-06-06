@@ -3,15 +3,22 @@ import { describe, expect, test } from 'bun:test'
 import {
   trainHeuristicCandidatesFromRollouts,
 } from '../learning/heuristicTrainer.js'
-import { createEmptyRolloutBundle } from '../learning/rolloutSchema.js'
+import {
+  createEmptyRolloutBundle,
+  type RolloutSplit,
+} from '../learning/rolloutSchema.js'
 
-function rollout(id: string, taxonomy: string[]) {
+function rollout(
+  id: string,
+  taxonomy: string[],
+  split: RolloutSplit = 'shadow',
+) {
   const bundle = createEmptyRolloutBundle({
     runId: `run_${id}`,
     sessionId: `session_${id}`,
     taskId: `task_${id}`,
     source: 'internal',
-    split: 'shadow',
+    split,
     timestamp: '2026-06-03T00:00:00.000Z',
     harnessVersion: 'git:abc123',
     heuristicBundleVersion: 'hb:initial',
@@ -114,6 +121,26 @@ describe('Leviathan candidate-only heuristic trainer', () => {
     expect(result.candidates).toEqual([])
     expect(result.blocked_reasons).toEqual([
       'rollouts.no_trainable_failure_taxonomy',
+    ])
+  })
+
+  test('blocks candidate training when final evaluation rollouts are included', () => {
+    const result = trainHeuristicCandidatesFromRollouts({
+      training_run_id: 'train_leak',
+      provider_model_id: 'mimo-v2.5',
+      base_heuristic_bundle_version: 'hb:initial',
+      rollouts: [
+        rollout('1', ['tool_choice_failure.bad_args'], 'train'),
+        rollout('held', ['verification_failure.hidden_regression'], 'held_out'),
+      ],
+    })
+
+    expect(result.status).toBe('blocked')
+    expect(result.provider_model_update).toBe('none')
+    expect(result.stable_promotions_allowed).toBe(false)
+    expect(result.candidates).toEqual([])
+    expect(result.blocked_reasons).toEqual([
+      'rollouts.final_evaluation_split_not_trainable',
     ])
   })
 })
