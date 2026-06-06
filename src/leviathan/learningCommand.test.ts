@@ -587,6 +587,18 @@ describe('Leviathan learning command', () => {
     })
   })
 
+  test('parses root-cause template export arguments', () => {
+    expect(
+      parseLearningCommandArgs(
+        'root-cause-template --run-dir runs/train_shadow_001 --out root-causes.json',
+      ),
+    ).toEqual({
+      action: 'root-cause-template',
+      run_dir: 'runs/train_shadow_001',
+      output_path: 'root-causes.json',
+    })
+  })
+
   test('parses evidence collection arguments', () => {
     expect(
       parseLearningCommandArgs(
@@ -1437,6 +1449,53 @@ describe('Leviathan learning command', () => {
       )
       expect(doneMessage).toContain('Leviathan root-cause repair applied')
       expect(doneMessage).toContain(reportPath)
+    })
+  })
+
+  test('exports a root-cause repair template through the slash command', async () => {
+    await withTempDir(async dir => {
+      const outputDir = join(dir, 'train_shadow_001')
+      const annotatedDir = join(outputDir, 'rollouts', 'annotated', 'dev')
+      const annotatedPath = join(annotatedDir, 'task_collect_1.json')
+      const templatePath = join(outputDir, 'root-causes-template.json')
+      let doneMessage = ''
+
+      await call(
+        () => {},
+        {} as never,
+        `start-shadow --out-dir ${outputDir} --run-id train_shadow_001 --model mimo-v2.5 --git-commit edab200 --checkpoint permanent-leviathan-current-2026-06-04 --target-rollouts 50 --created-at 2026-06-04T12:00:00.000Z`,
+      )
+
+      const missingRootCause = rolloutBundle() as ReturnType<
+        typeof createEmptyRolloutBundle
+      >
+      missingRootCause.run.split = 'dev'
+      missingRootCause.failure.root_cause_summary = ''
+      mkdirSync(annotatedDir, { recursive: true })
+      writeFileSync(annotatedPath, JSON.stringify(missingRootCause), 'utf8')
+
+      await call(
+        message => {
+          doneMessage = message ?? ''
+        },
+        {} as never,
+        `root-cause-template --run-dir ${outputDir} --out ${templatePath}`,
+      )
+
+      const template = JSON.parse(readFileSync(templatePath, 'utf8'))
+      expect(template.schema_version).toBe(
+        'leviathan.root_cause_repair_manifest.v1',
+      )
+      expect(template.entries).toEqual([
+        {
+          path: 'rollouts/annotated/dev/task_collect_1.json',
+          root_cause_summary: '',
+          evidence_required:
+            'Fill from transcript, tool, diff, and evaluation evidence; do not fabricate.',
+        },
+      ])
+      expect(doneMessage).toContain('Leviathan root-cause template exported')
+      expect(doneMessage).toContain(templatePath)
     })
   })
 

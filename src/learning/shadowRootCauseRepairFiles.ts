@@ -13,6 +13,7 @@ import {
 
 import type { LeviathanRolloutBundle } from './rolloutSchema.js'
 import {
+  readShadowLearningRunStatusFromFiles,
   writeShadowLearningRunStatusFile,
   type ShadowLearningRunStatusSnapshot,
 } from './shadowLearningRunStatusFiles.js'
@@ -34,6 +35,7 @@ export type RootCauseRepairManifestEntry = {
   file?: string
   rollout_path?: string
   root_cause_summary?: string
+  evidence_required?: string
 }
 
 export type RootCauseRepairManifest = {
@@ -72,6 +74,24 @@ export type ShadowRootCauseRepairReport = {
 export type WriteShadowRootCauseRepairReportResult = {
   output_path: string
   report: ShadowRootCauseRepairReport
+}
+
+export type WriteShadowRootCauseTemplateFileInput = {
+  run_dir: string
+  output_path: string
+}
+
+export type ShadowRootCauseTemplate = {
+  schema_version: typeof ROOT_CAUSE_REPAIR_MANIFEST_SCHEMA_VERSION
+  run_id: string
+  entries: Required<
+    Pick<RootCauseRepairManifestEntry, 'path' | 'root_cause_summary' | 'evidence_required'>
+  >[]
+}
+
+export type WriteShadowRootCauseTemplateFileResult = {
+  output_path: string
+  template: ShadowRootCauseTemplate
 }
 
 function readJsonFile<T>(path: string): T {
@@ -126,6 +146,33 @@ function statusPath(runDir: string): string {
 
 function defaultReportPath(runDir: string): string {
   return join(runDir, 'root-cause-repair.json')
+}
+
+export function writeShadowRootCauseTemplateFile(
+  input: WriteShadowRootCauseTemplateFileInput,
+): WriteShadowRootCauseTemplateFileResult {
+  const status = readShadowLearningRunStatusFromFiles({
+    run_dir: input.run_dir,
+  })
+  const missingFiles = [
+    ...status.annotation_quality.missing_root_cause_files.train,
+    ...status.annotation_quality.missing_root_cause_files.dev,
+  ]
+  const template: ShadowRootCauseTemplate = {
+    schema_version: ROOT_CAUSE_REPAIR_MANIFEST_SCHEMA_VERSION,
+    run_id: status.run_id,
+    entries: missingFiles.map(path => ({
+      path,
+      root_cause_summary: '',
+      evidence_required:
+        'Fill from transcript, tool, diff, and evaluation evidence; do not fabricate.',
+    })),
+  }
+  writeJsonFile(input.output_path, template)
+  return {
+    output_path: input.output_path,
+    template,
+  }
 }
 
 export function writeShadowRootCauseRepairReportFile(
