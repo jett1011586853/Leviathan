@@ -1146,6 +1146,9 @@ describe('Leviathan learning command', () => {
       const formalManifest = JSON.parse(
         readFileSync(join(outputDir, 'formal-launch-manifest.json'), 'utf8'),
       )
+      const launchConfig = JSON.parse(
+        readFileSync(join(outputDir, 'launch.json'), 'utf8'),
+      )
       const status = JSON.parse(
         readFileSync(join(outputDir, 'shadow-status.json'), 'utf8'),
       )
@@ -1154,6 +1157,7 @@ describe('Leviathan learning command', () => {
       expect(collection.rollout_bundle_paths).toHaveLength(20)
       expect(collection.training_rollout_paths).toHaveLength(12)
       expect(collection.held_out_rollout_paths).toHaveLength(4)
+      expect(launchConfig.rollout_bundle_count).toBe(16)
       expect(formalManifest.status).toBe('started')
       expect(status.ready_for_pipeline).toBe(true)
       expect(doneMessage).toContain('Leviathan shadow collection ready')

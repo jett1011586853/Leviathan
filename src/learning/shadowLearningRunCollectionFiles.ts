@@ -239,6 +239,10 @@ export function collectShadowLearningRunFromFiles(
     ...developmentRollouts,
     ...heldOutRollouts,
   ]
+  const trainingEvidenceRollouts = [
+    ...trainingRollouts,
+    ...developmentRollouts,
+  ]
 
   writeTrainingLaunchConfigFile(
     paths.launchConfig,
@@ -248,7 +252,7 @@ export function collectShadowLearningRunFromFiles(
       git_commit: run.git_commit,
       cwd_alias: run.cwd_alias,
       rollback_checkpoint_tag: run.rollback_checkpoint_tag,
-      rollout_bundle_paths: rolloutBundlePaths,
+      rollout_bundle_paths: trainingEvidenceRollouts,
       replay_results_path: evidencePaths.replay_results,
       benchmark_records_path: evidencePaths.benchmark_records,
       polar_spike_observations_path: evidencePaths.polar_spike_observations,
