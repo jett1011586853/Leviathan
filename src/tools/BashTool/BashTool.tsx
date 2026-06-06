@@ -16,6 +16,7 @@ import type { AgentId } from '../../types/ids.js';
 import type { AssistantMessage } from '../../types/message.js';
 import { parseForSecurity } from '../../utils/bash/ast.js';
 import { splitCommand_DEPRECATED, splitCommandWithOperators } from '../../utils/bash/commands.js';
+import { tryParseShellCommand } from '../../utils/bash/shellQuote.js';
 import { extractLeviathanHints } from '../../utils/leviathanHints.js';
 import { detectCodeIndexingFromCommand } from '../../utils/codeIndexing.js';
 import { isEnvTruthy } from '../../utils/envUtils.js';
@@ -79,6 +80,54 @@ const BASH_SEMANTIC_NEUTRAL_COMMANDS = new Set(['echo', 'printf', 'true', 'false
 
 // Commands that typically produce no stdout on success
 const BASH_SILENT_COMMANDS = new Set(['mv', 'cp', 'rm', 'mkdir', 'rmdir', 'chmod', 'chown', 'chgrp', 'touch', 'ln', 'cd', 'export', 'unset', 'wait']);
+
+function hasUnterminatedShellQuote(command: string): boolean {
+  let inSingleQuote = false;
+  let inDoubleQuote = false;
+
+  for (let i = 0; i < command.length; i++) {
+    const char = command[i];
+
+    if (char === '\\' && !inSingleQuote) {
+      i++;
+      continue;
+    }
+
+    if (char === "'" && !inDoubleQuote) {
+      inSingleQuote = !inSingleQuote;
+      continue;
+    }
+
+    if (char === '"' && !inSingleQuote) {
+      inDoubleQuote = !inDoubleQuote;
+    }
+  }
+
+  return inSingleQuote || inDoubleQuote;
+}
+
+function validateBashCommandSyntax(command: string): ValidationResult {
+  const parseResult = tryParseShellCommand(command, env => `$${env}`);
+  if (!parseResult.success) {
+    return {
+      result: false,
+      message: `Blocked: malformed shell syntax: ${parseResult.error}`,
+      errorCode: 11
+    };
+  }
+
+  if (hasUnterminatedShellQuote(command)) {
+    return {
+      result: false,
+      message: 'Blocked: malformed shell syntax: command contains unbalanced shell quoting.',
+      errorCode: 11
+    };
+  }
+
+  return {
+    result: true
+  };
+}
 
 /**
  * Checks if a bash command is a search or read operation.
@@ -522,6 +571,11 @@ export const BashTool = buildTool({
     return `Running ${desc}`;
   },
   async validateInput(input: BashToolInput): Promise<ValidationResult> {
+    const syntaxValidation = validateBashCommandSyntax(input.command);
+    if (syntaxValidation.result === false) {
+      return syntaxValidation;
+    }
+
     if (feature('MONITOR_TOOL') && !isBackgroundTasksDisabled && !input.run_in_background) {
       const sleepPattern = detectBlockedSleepPattern(input.command);
       if (sleepPattern !== null) {
