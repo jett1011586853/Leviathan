@@ -81,7 +81,11 @@ function targetAsset(index: number): string {
   return entry.target_assets[index % entry.target_assets.length] ?? 'harness'
 }
 
-function instructionFor(index: number): string {
+function requiresRootCause(split: ShadowTaskQueueSplit): boolean {
+  return split === 'train' || split === 'dev'
+}
+
+function instructionFor(index: number, split: ShadowTaskQueueSplit): string {
   const entry = FAILURE_TAXONOMY[index % FAILURE_TAXONOMY.length]
   const signal = entry.signals[index % entry.signals.length] ?? 'general'
   return [
@@ -90,8 +94,13 @@ function instructionFor(index: number): string {
     'Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data.',
     'Use only tools that are actually available in the current Leviathan session. Do not call Glob or Read unless those tools are explicitly available; if they are absent, use Bash with repo-relative commands such as rg, find, ls, sed, or Get-Content equivalents.',
     'Do not treat $WORKDIR as a verified shell variable. Confirm cwd with pwd or use repo-relative paths; when a path variable is truly available, use balanced quoting such as "$WORKDIR".',
+    requiresRootCause(split)
+      ? 'Fill --root-cause with an evidence-grounded root-cause summary before running the intake command.'
+      : null,
     'After the task, export the rollout and intake it with the provided command.',
-  ].join(' ')
+  ]
+    .filter((line): line is string => line !== null)
+    .join(' ')
 }
 
 function splitSequence(run: ShadowLearningRun): ShadowTaskQueueSplit[] {
@@ -118,6 +127,10 @@ function shellQuote(value: string): string {
   return `'${value.replace(/'/g, "'\\''")}'`
 }
 
+function rootCauseIntakeFlag(split: ShadowTaskQueueSplit): string {
+  return requiresRootCause(split) ? ` --root-cause ${shellQuote('')}` : ''
+}
+
 function buildTask(
   run: ShadowLearningRun,
   split: ShadowTaskQueueSplit,
@@ -134,7 +147,7 @@ function buildTask(
     source: 'internal',
     taxonomy_hint: hint,
     target_asset: targetAsset(index),
-    collection_instruction: instructionFor(index),
+    collection_instruction: instructionFor(index, split),
     export_path: exported,
     export_command:
       `/export --rollout ${shellQuote(exported)}` +
@@ -152,7 +165,8 @@ function buildTask(
       ` --input ${shellQuote(exported)}` +
       ` --out ${shellQuote(intakeReportPath(run, id))}` +
       ` --split ${split}` +
-      ` --taxonomy ${hint}`,
+      ` --taxonomy ${hint}` +
+      rootCauseIntakeFlag(split),
   }
 }
 
@@ -188,7 +202,7 @@ export function createShadowLearningTaskQueue(
     },
     tasks,
     next_actions: [
-      'Run the pending tasks with Leviathan, export each rollout, then intake it with the task intake command.',
+      'Run pending tasks with Leviathan, export each rollout, fill required root-cause summaries for train/dev, then intake with the task command.',
       'Keep held_out tasks isolated from training and do not promote any bundle before collect-shadow reports ready.',
       'Refresh /learning status-shadow after every intake batch.',
     ],

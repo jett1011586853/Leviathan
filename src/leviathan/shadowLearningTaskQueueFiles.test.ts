@@ -60,8 +60,12 @@ describe('Leviathan shadow learning task queue files', () => {
       expect(first?.export_command).toContain('--policy-version mimo-v2.5')
       expect(first?.intake_command).toContain('/learning intake-shadow-rollout')
       expect(first?.intake_command).toContain('--run-dir')
+      expect(first?.intake_command).toContain("--root-cause ''")
       expect(first?.taxonomy_hint).toContain('.')
       expect(first?.collection_instruction).toContain('Leviathan')
+      expect(first?.collection_instruction).toContain(
+        'Fill --root-cause with an evidence-grounded root-cause summary',
+      )
       expect(first?.collection_instruction).toContain(
         'Use only tools that are actually available in the current Leviathan session',
       )
@@ -75,7 +79,7 @@ describe('Leviathan shadow learning task queue files', () => {
 
       const written = JSON.parse(readFileSync(outputPath, 'utf8'))
       expect(written.next_actions).toContain(
-        'Run the pending tasks with Leviathan, export each rollout, then intake it with the task intake command.',
+        'Run pending tasks with Leviathan, export each rollout, fill required root-cause summaries for train/dev, then intake with the task command.',
       )
     })
   })
