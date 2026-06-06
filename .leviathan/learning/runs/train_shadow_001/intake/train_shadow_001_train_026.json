@@ -1,0 +1,92 @@
+{
+  "schema_version": "leviathan.shadow_rollout_intake.v1",
+  "run_id": "train_shadow_001",
+  "source_path": ".leviathan/learning/runs/train_shadow_001/rollouts/exported/train_shadow_001_train_026.json",
+  "raw_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\raw\\train_shadow_001_train_026.json",
+  "annotated_path": ".leviathan\\learning\\runs\\train_shadow_001\\rollouts\\annotated\\train\\train_shadow_001_train_026.json",
+  "split": "train",
+  "taxonomy": [
+    "tool_choice_failure.bad_args"
+  ],
+  "provider_model_id": "mimo-v2.5",
+  "provider_model_update": "none",
+  "status_path": ".leviathan\\learning\\runs\\train_shadow_001\\shadow-status.json",
+  "status": {
+    "schema_version": "leviathan.shadow_learning_status.v1",
+    "run_id": "train_shadow_001",
+    "status": "collecting_rollouts",
+    "provider_model_id": "mimo-v2.5",
+    "provider_model_update": "none",
+    "target_rollout_count": 50,
+    "minimum_trainable_rollouts": 20,
+    "split_plan": {
+      "train": 30,
+      "dev": 10,
+      "held_out": 10
+    },
+    "rollout_counts": {
+      "raw": 26,
+      "annotated": {
+        "train": 26,
+        "dev": 0,
+        "held_out": 0,
+        "total": 26
+      }
+    },
+    "evidence": {
+      "present_files": [],
+      "missing_files": [
+        "replay-results.json",
+        "failure-taxonomy.json",
+        "benchmark-splits.json",
+        "polar-spike-observations.json",
+        "reward-design.json",
+        "rollback-incident-plan.json"
+      ],
+      "missing_gates": [
+        "required_fields_landable",
+        "replay_runner_fixed_task_reproducible",
+        "failure_taxonomy_covers_high_frequency_failures",
+        "benchmark_splits_isolated",
+        "polar_proxy_spike_cases_passed",
+        "sparse_outcome_reward_defined",
+        "rollback_and_incident_plan_ready"
+      ]
+    },
+    "pipeline": {
+      "present_artifacts": [],
+      "missing_artifacts": [
+        "heuristic-candidates.json",
+        "polar-candidates.json",
+        "promotion-snapshot.json",
+        "heuristic-evidence.json",
+        "polar-evidence.json",
+        "heuristic-promotion-report.json",
+        "polar-promotion-report.json",
+        "learning-bundle.json",
+        "learning-pipeline-manifest.json"
+      ],
+      "learning_bundle_present": false,
+      "active_state_present": false
+    },
+    "readiness": {
+      "raw_rollouts_collected": false,
+      "minimum_trainable_rollouts_ready": true,
+      "train_split_ready": false,
+      "dev_split_ready": false,
+      "held_out_split_ready": false,
+      "evidence_files_present": false,
+      "formal_gates_cleared": false
+    },
+    "ready_for_pipeline": false,
+    "next_actions": [
+      "Collect 24 more raw rollout file(s).",
+      "Annotate 4 more file(s) into rollouts/annotated/train.",
+      "Annotate 10 more file(s) into rollouts/annotated/dev.",
+      "Annotate 10 more file(s) into rollouts/annotated/held_out.",
+      "Add required evidence file(s): replay-results.json, failure-taxonomy.json, benchmark-splits.json, polar-spike-observations.json, reward-design.json, rollback-incident-plan.json.",
+      "Resolve formal launch gate(s): required_fields_landable, replay_runner_fixed_task_reproducible, failure_taxonomy_covers_high_frequency_failures, benchmark_splits_isolated, polar_proxy_spike_cases_passed, sparse_outcome_reward_defined, rollback_and_incident_plan_ready.",
+      "Do not run /learning run-pipeline until ready_for_pipeline=true."
+    ]
+  }
+}
