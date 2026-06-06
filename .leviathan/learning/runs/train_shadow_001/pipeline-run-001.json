@@ -1,0 +1,75 @@
+{
+  "schema_version": "leviathan.pipeline_run_summary.v1",
+  "run_id": "train_shadow_001",
+  "pipeline_run_id": "pipeline-run-001",
+  "created_at": "2026-06-06T11:07:38.663Z",
+  "provider_model_id": "mimo-v2.5",
+  "provider_model_update": "none",
+  "status": "needs_more_evidence",
+  "stable_promotion_ready": false,
+  "activation_attempted": false,
+  "reports": {
+    "heuristic_training_status": "candidate_only",
+    "polar_training_status": "candidate_only",
+    "heuristic_promotion_status": "rejected",
+    "polar_promotion_status": "rejected",
+    "learning_bundle_status": "blocked"
+  },
+  "candidate_summary": {
+    "heuristic_status": "candidate_only",
+    "heuristic_candidate_count": 8,
+    "trained_failure_classes": [
+      "model_interaction_failure",
+      "tool_choice_failure",
+      "execution_environment_failure",
+      "code_modification_failure",
+      "verification_failure",
+      "memory_context_failure",
+      "recovery_control_failure",
+      "security_governance_failure"
+    ],
+    "polar_status": "candidate_only",
+    "polar_update_count": 1,
+    "trained_failure_attributions": [
+      "proxy_bypass"
+    ]
+  },
+  "promotion_evidence": {
+    "replay_passed": true,
+    "held_out_passed": false,
+    "security_scan_passed": true,
+    "complexity_budget_passed": true,
+    "target_failure_slice_improved": false,
+    "p0_p1_regressions": 1,
+    "token_turn_cost_regression_pct": 0
+  },
+  "rejection_reasons": [
+    "evidence.held_out_passed",
+    "evidence.target_failure_slice_improved",
+    "evidence.p0_p1_regressions"
+  ],
+  "learning_bundle_status": "blocked",
+  "learning_bundle_blocked_reasons": [
+    "heuristic_report.status.rejected",
+    "heuristic_report.stable_promotions_allowed",
+    "polar_report.status.rejected",
+    "polar_report.stable_promotions_allowed"
+  ],
+  "artifact_hashes": {
+    "heuristic-candidates.json": "0f7f13be8209452b4f1180273c06f47be27018dc3727ca44ec4dfa9e9a0a03c9",
+    "polar-candidates.json": "4c8080048024d57e2a7dc931679bcb67a0b85aac4c8ce1f899fddac39224bb87",
+    "promotion-snapshot.json": "736784f72743761615553237a3527c43aed5b43715c79ebe51683db34d8c1c15",
+    "heuristic-evidence.json": "548d373ddedcbc87f866cee21d3b14bae6ba252d6f31e28d04db2126ec02d320",
+    "polar-evidence.json": "804c8335dfc92452fe122a7d4e9f0e8081cc5f686bdf8c7a589172346f52c78a",
+    "heuristic-promotion-report.json": "2e38cb446cc38633500d8079238fd8b7dc6fcc181715a2f3756e22d61a128f60",
+    "polar-promotion-report.json": "566d015dcedfb97032bbb0acd8722af9c159b09fb1b23777e9436c58a31d4be8",
+    "learning-bundle.json": "34091daaaf95d077feb7570d6ae2bd27ceb15b257566bc1e77356aac923482f0",
+    "learning-pipeline-manifest.json": "7d0938991187cff72e236f8bec4018135f15585059afca26ed137483a9d33a79"
+  },
+  "next_actions": [
+    "Do not activate learning-bundle.json because stable_promotion_ready=false.",
+    "Use candidate outputs to patch harness/tool/prompt/recovery policies in a new implementation phase.",
+    "Backfill structured rollout outcomes and rerun held_out evaluation after the candidate policy changes are implemented.",
+    "Only activate a bundle after held_out_passed=true, target_failure_slice_improved=true, and p0_p1_regressions=0."
+  ]
+}

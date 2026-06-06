@@ -23,18 +23,22 @@
   "evidence": {
     "present_files": [
       "benchmark-splits.json",
+      "complexity-budget.json",
       "failure-taxonomy.json",
       "polar-spike-observations.json",
+      "polar-training-observations.json",
+      "regressions.json",
       "replay-results.json",
       "reward-design.json",
-      "rollback-incident-plan.json"
+      "rollback-incident-plan.json",
+      "security-scan.json",
+      "target-failure-slice.json"
     ],
     "missing_files": [],
     "missing_gates": []
   },
   "pipeline": {
-    "present_artifacts": [],
-    "missing_artifacts": [
+    "present_artifacts": [
       "heuristic-candidates.json",
       "polar-candidates.json",
       "promotion-snapshot.json",
@@ -45,7 +49,8 @@
       "learning-bundle.json",
       "learning-pipeline-manifest.json"
     ],
-    "learning_bundle_present": false,
+    "missing_artifacts": [],
+    "learning_bundle_present": true,
     "active_state_present": false
   },
   "readiness": {
