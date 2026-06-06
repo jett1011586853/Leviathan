@@ -81,14 +81,17 @@ describe('Leviathan HL/Polar rollout schema', () => {
 
   test('redacts credentials, authorization headers, and local filesystem paths', () => {
     const text =
-      'Authorization: Bearer local-redaction-token in D:\\hl-agent4\\HL-agent3 and /home/yini/private'
+      'Authorization: Bearer local-redaction-token in D:\\hl-agent4\\HL-agent3, D:/hl-agent4/HL-agent3, /home/yini/private, and ANTHROPIC_BASE_URL=https://token-plan-cn.example.com/anthropic'
 
     const redacted = redactText(text)
 
     expect(redacted).not.toContain('local-redaction-token')
     expect(redacted).not.toContain('D:\\hl-agent4')
+    expect(redacted).not.toContain('D:/hl-agent4')
     expect(redacted).not.toContain('/home/yini')
+    expect(redacted).not.toContain('token-plan-cn.example.com')
     expect(redacted).toContain('[REDACTED_BEARER_TOKEN]')
+    expect(redacted).toContain('ANTHROPIC_BASE_URL=[REDACTED_PROVIDER_URL]')
     expect(redacted).toContain('$WORKDIR')
     expect(redacted).toContain('$HOME_ALIAS')
   })
@@ -99,6 +102,10 @@ describe('Leviathan HL/Polar rollout schema', () => {
         Authorization: 'Bearer local-redaction-token',
         xCustom: 'safe',
       },
+      ANTHROPIC_BASE_URL: 'https://api.deepseek.com/anthropic',
+      provider: {
+        base_url: 'https://token-plan-cn.example.com/anthropic',
+      },
       cwd: 'C:\\Users\\yini\\project',
       nested: ['ANTHROPIC_AUTH_TOKEN=local-redaction-token'],
     })
@@ -107,6 +114,10 @@ describe('Leviathan HL/Polar rollout schema', () => {
       headers: {
         Authorization: '[REDACTED_AUTH_HEADER]',
         xCustom: 'safe',
+      },
+      ANTHROPIC_BASE_URL: '[REDACTED_PROVIDER_URL]',
+      provider: {
+        base_url: '[REDACTED_PROVIDER_URL]',
       },
       cwd: '$HOME_ALIAS\\project',
       nested: ['ANTHROPIC_AUTH_TOKEN=[REDACTED_SECRET]'],
