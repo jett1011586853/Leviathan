@@ -334,6 +334,31 @@ function getMcpServerBaseUrlFromToolName(
   return getLoggingSafeMcpBaseUrl(serverConnection.config)
 }
 
+function formatAvailableToolNames(toolNames: readonly string[]): string {
+  const unique = [...new Set(toolNames.filter(name => name.trim().length > 0))]
+  if (unique.length === 0) return ''
+
+  const visible = unique.slice(0, 20).join(', ')
+  return unique.length > 20
+    ? ` Available tools: ${visible}, and ${unique.length - 20} more.`
+    : ` Available tools: ${visible}.`
+}
+
+export function getUnavailableToolUseError(
+  toolName: string,
+  availableToolNames: readonly string[] = [],
+): string {
+  const normalized = toolName.toLowerCase()
+  const suggestion =
+    normalized === 'glob' || normalized === 'grep'
+      ? 'Use an available search path instead; in a Bash-only session, use Bash with rg, find, or ls.'
+      : normalized === 'read'
+        ? 'Use an available file-reading path instead; use REPL if it is available, or Bash with sed, cat, or Get-Content.'
+        : 'Check the currently available tool names and use an available equivalent instead of retrying the missing tool.'
+
+  return `Error: No such tool available: ${toolName}. ${suggestion}${formatAvailableToolNames(availableToolNames)}`
+}
+
 export async function* runToolUse(
   toolUse: ToolUseBlock,
   assistantMessage: AssistantMessage,
@@ -368,6 +393,10 @@ export async function* runToolUse(
   // Check if the tool exists
   if (!tool) {
     const sanitizedToolName = sanitizeToolNameForAnalytics(toolName)
+    const unavailableToolError = getUnavailableToolUseError(
+      toolName,
+      toolUseContext.options.tools.map(availableTool => availableTool.name),
+    )
     logForDebugging(`Unknown tool ${toolName}: ${toolUse.id}`)
     logEvent('tengu_tool_use_error', {
       error:
@@ -398,12 +427,12 @@ export async function* runToolUse(
         content: [
           {
             type: 'tool_result',
-            content: `<tool_use_error>Error: No such tool available: ${toolName}</tool_use_error>`,
+            content: `<tool_use_error>${unavailableToolError}</tool_use_error>`,
             is_error: true,
             tool_use_id: toolUse.id,
           },
         ],
-        toolUseResult: `Error: No such tool available: ${toolName}`,
+        toolUseResult: unavailableToolError,
         sourceToolAssistantUUID: assistantMessage.uuid,
       }),
     }
