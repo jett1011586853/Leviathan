@@ -118,6 +118,23 @@ function hasFinalEvaluationRollout(rollouts: LeviathanRolloutBundle[]): boolean 
   )
 }
 
+function hasTrainableTaxonomy(rollout: LeviathanRolloutBundle): boolean {
+  return rollout.failure.taxonomy.some(taxonomy => {
+    const failureClass = primaryFailureClass(taxonomy)
+    return Boolean(FAILURE_TO_CANDIDATE_TYPE[failureClass])
+  })
+}
+
+function hasMissingRootCauseSummary(
+  rollouts: LeviathanRolloutBundle[],
+): boolean {
+  return rollouts.some(
+    rollout =>
+      hasTrainableTaxonomy(rollout) &&
+      rollout.failure.root_cause_summary.trim().length === 0,
+  )
+}
+
 export function trainHeuristicCandidatesFromRollouts(
   input: HeuristicTrainingInput,
 ): HeuristicTrainingResult {
@@ -134,6 +151,22 @@ export function trainHeuristicCandidatesFromRollouts(
       trained_failure_classes: [],
       candidates: [],
       blocked_reasons: ['rollouts.final_evaluation_split_not_trainable'],
+    }
+  }
+
+  if (hasMissingRootCauseSummary(input.rollouts)) {
+    return {
+      schema_version: HEURISTIC_TRAINING_SCHEMA_VERSION,
+      status: 'blocked',
+      training_run_id: input.training_run_id,
+      provider_model_id: input.provider_model_id,
+      provider_model_update: 'none',
+      base_heuristic_bundle_version: input.base_heuristic_bundle_version,
+      candidate_heuristic_bundle_version: `hb:candidate/${input.training_run_id}`,
+      stable_promotions_allowed: false,
+      trained_failure_classes: [],
+      candidates: [],
+      blocked_reasons: ['rollouts.missing_root_cause_summary'],
     }
   }
 

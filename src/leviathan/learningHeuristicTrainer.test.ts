@@ -12,6 +12,7 @@ function rollout(
   id: string,
   taxonomy: string[],
   split: RolloutSplit = 'shadow',
+  rootCause = `root cause for ${id}`,
 ) {
   const bundle = createEmptyRolloutBundle({
     runId: `run_${id}`,
@@ -29,6 +30,7 @@ function rollout(
     cwdAlias: '$WORKDIR',
   })
   bundle.failure.taxonomy = taxonomy
+  bundle.failure.root_cause_summary = rootCause
   return bundle
 }
 
@@ -141,6 +143,25 @@ describe('Leviathan candidate-only heuristic trainer', () => {
     expect(result.candidates).toEqual([])
     expect(result.blocked_reasons).toEqual([
       'rollouts.final_evaluation_split_not_trainable',
+    ])
+  })
+
+  test('blocks candidate training when trainable rollouts lack root-cause summaries', () => {
+    const result = trainHeuristicCandidatesFromRollouts({
+      training_run_id: 'train_missing_root_cause',
+      provider_model_id: 'mimo-v2.5',
+      base_heuristic_bundle_version: 'hb:initial',
+      rollouts: [
+        rollout('1', ['tool_choice_failure.bad_args'], 'train', ''),
+      ],
+    })
+
+    expect(result.status).toBe('blocked')
+    expect(result.provider_model_update).toBe('none')
+    expect(result.stable_promotions_allowed).toBe(false)
+    expect(result.candidates).toEqual([])
+    expect(result.blocked_reasons).toEqual([
+      'rollouts.missing_root_cause_summary',
     ])
   })
 })

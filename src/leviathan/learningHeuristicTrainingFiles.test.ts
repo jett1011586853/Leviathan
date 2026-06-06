@@ -26,6 +26,7 @@ function writeRollout(
   dir: string,
   id: string,
   taxonomy: string[],
+  rootCause = `root cause for ${id}`,
 ): string {
   const bundle = createEmptyRolloutBundle({
     runId: `run_${id}`,
@@ -43,6 +44,7 @@ function writeRollout(
     cwdAlias: '$WORKDIR',
   })
   bundle.failure.taxonomy = taxonomy
+  bundle.failure.root_cause_summary = rootCause
 
   const path = join(dir, `rollout-${id}.json`)
   writeFileSync(path, JSON.stringify(bundle), 'utf8')
@@ -93,6 +95,30 @@ describe('Leviathan heuristic training file runner', () => {
       expect(result.training.candidates).toEqual([])
       expect(result.training.blocked_reasons).toEqual([
         'rollouts.no_trainable_failure_taxonomy',
+      ])
+      expect(JSON.parse(readFileSync(outputPath, 'utf8'))).toEqual(
+        result.training,
+      )
+    })
+  })
+
+  test('writes blocked training results when trainable rollout files lack root-cause summaries', () => {
+    withTempDir(dir => {
+      const outputPath = join(dir, 'candidate-heuristics.json')
+      const result = trainHeuristicCandidatesFromFiles({
+        training_run_id: 'train_missing_root_cause',
+        provider_model_id: 'mimo-v2.5',
+        base_heuristic_bundle_version: 'hb:initial',
+        rollout_bundle_paths: [
+          writeRollout(dir, '1', ['tool_choice_failure.bad_args'], ''),
+        ],
+        output_path: outputPath,
+      })
+
+      expect(result.training.status).toBe('blocked')
+      expect(result.training.candidates).toEqual([])
+      expect(result.training.blocked_reasons).toEqual([
+        'rollouts.missing_root_cause_summary',
       ])
       expect(JSON.parse(readFileSync(outputPath, 'utf8'))).toEqual(
         result.training,

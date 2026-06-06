@@ -65,6 +65,8 @@ function rolloutBundle(): unknown {
     cwdAlias: '$WORKDIR',
   })
   bundle.failure.taxonomy = ['tool_choice_failure.bad_args']
+  bundle.failure.root_cause_summary =
+    'The agent selected malformed tool arguments for the requested task.'
   return bundle
 }
 
@@ -1515,7 +1517,8 @@ describe('Leviathan learning command', () => {
           test_commands: [],
           test_outputs_count: 0,
           changed_files: [],
-          root_cause_summary: '',
+          root_cause_summary:
+            'The agent selected malformed tool arguments for the requested task.',
         },
       ])
       expect(snapshot.held_out_summary).toMatchObject({

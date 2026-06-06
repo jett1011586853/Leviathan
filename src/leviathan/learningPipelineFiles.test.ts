@@ -50,6 +50,8 @@ function rollout(
     cwdAlias: '$WORKDIR',
   })
   bundle.failure.taxonomy = ['tool_choice_failure.bad_args']
+  bundle.failure.root_cause_summary =
+    'The agent selected malformed tool arguments in the pipeline sample.'
   bundle.evaluation.final_outcome = finalOutcome
   bundle.evaluation.resolved_label = finalOutcome === 'resolved'
   bundle.evaluation.exit_codes = finalOutcome === 'resolved' ? [0] : [1]
