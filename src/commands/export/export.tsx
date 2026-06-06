@@ -42,8 +42,21 @@ function formatTimestamp(date: Date): string {
   const seconds = String(date.getSeconds()).padStart(2, '0');
   return `${year}-${month}-${day}-${hours}${minutes}${seconds}`;
 }
+
+function tokenizeExportArgs(args: string): string[] {
+  const tokens: string[] = [];
+  const pattern = /"([^"]*)"|'([^']*)'|(\S+)/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = pattern.exec(args)) !== null) {
+    tokens.push(match[1] ?? match[2] ?? match[3] ?? '');
+  }
+
+  return tokens;
+}
+
 export function parseExportArgs(args: string): ParsedExportArgs {
-  const tokens = args.trim().split(/\s+/).filter(Boolean);
+  const tokens = tokenizeExportArgs(args.trim());
   if (tokens.length === 0) {
     return { mode: 'conversation', filename: '', overrides: {} };
   }

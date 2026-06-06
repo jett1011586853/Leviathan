@@ -112,6 +112,10 @@ function rolloutExportSplit(split: ShadowTaskQueueSplit): 'train' | 'dev' | 'tes
   return split === 'held_out' ? 'test' : split
 }
 
+function shellQuote(value: string): string {
+  return `'${value.replace(/'/g, "'\\''")}'`
+}
+
 function buildTask(
   run: ShadowLearningRun,
   split: ShadowTaskQueueSplit,
@@ -131,7 +135,7 @@ function buildTask(
     collection_instruction: instructionFor(index),
     export_path: exported,
     export_command:
-      `/export --rollout ${exported}` +
+      `/export --rollout ${shellQuote(exported)}` +
       ` --run-id ${run.run_id}` +
       ` --task-id ${id}` +
       ` --split ${exportSplit}` +
@@ -140,11 +144,11 @@ function buildTask(
       ` --policy-version ${run.provider_model_id}` +
       ` --repo leviathan` +
       ` --base-commit ${run.git_commit}` +
-      ` --cwd-alias ${run.cwd_alias}`,
+      ` --cwd-alias ${shellQuote(run.cwd_alias)}`,
     intake_command:
-      `/learning intake-shadow-rollout --run-dir ${run.artifacts.output_dir}` +
-      ` --input ${exported}` +
-      ` --out ${intakeReportPath(run, id)}` +
+      `/learning intake-shadow-rollout --run-dir ${shellQuote(run.artifacts.output_dir)}` +
+      ` --input ${shellQuote(exported)}` +
+      ` --out ${shellQuote(intakeReportPath(run, id))}` +
       ` --split ${split}` +
       ` --taxonomy ${hint}`,
   }

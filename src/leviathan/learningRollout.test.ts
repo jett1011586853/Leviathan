@@ -263,6 +263,22 @@ describe('Leviathan HL/Polar rollout schema', () => {
     })
   })
 
+  test('parses quoted rollout export paths with spaces', () => {
+    expect(
+      parseExportArgs(
+        "--rollout 'runs/train shadow 001/exported rollout.json' --run-id train_shadow_001 --task-id train_shadow_001_train_001 --cwd-alias '$WORKDIR'",
+      ),
+    ).toEqual({
+      mode: 'rollout',
+      filename: 'runs/train shadow 001/exported rollout.json',
+      overrides: {
+        runId: 'train_shadow_001',
+        taskId: 'train_shadow_001_train_001',
+        cwdAlias: '$WORKDIR',
+      },
+    })
+  })
+
   test('parses rollout export metadata flags for shadow task provenance', () => {
     expect(
       parseExportArgs(

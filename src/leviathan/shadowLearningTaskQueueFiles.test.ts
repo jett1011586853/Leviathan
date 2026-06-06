@@ -70,4 +70,35 @@ describe('Leviathan shadow learning task queue files', () => {
       )
     })
   })
+
+  test('quotes generated rollout command paths for shell-safe execution', async () => {
+    await withTempDir(dir => {
+      const runDir = join(dir, 'train shadow 001')
+      const outputPath = join(runDir, 'task-queue.json')
+      initializeShadowLearningRun({
+        output_dir: runDir,
+        run_id: 'train_shadow_001',
+        provider_model_id: 'mimo-v2.5',
+        created_at: '2026-06-04T12:00:00.000Z',
+        git_commit: '3c2c341',
+        rollback_checkpoint_tag: 'permanent-leviathan-current-2026-06-04',
+        target_rollout_count: 50,
+      })
+
+      const result = writeShadowLearningTaskQueueFile({
+        run_dir: runDir,
+        output_path: outputPath,
+      })
+
+      const first = result.queue.tasks[0]
+      expect(first?.export_command).toContain(
+        "--rollout '",
+      )
+      expect(first?.export_command).toContain('train shadow 001')
+      expect(first?.export_command).toContain("--cwd-alias '$WORKDIR'")
+      expect(first?.intake_command).toContain("--run-dir '")
+      expect(first?.intake_command).toContain("--input '")
+      expect(first?.intake_command).toContain("--out '")
+    })
+  })
 })
