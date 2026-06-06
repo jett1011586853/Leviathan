@@ -39,6 +39,41 @@ const FAILURE_TO_CANDIDATE_TYPE: Record<string, CandidateHeuristicType> = {
   security_governance_failure: 'candidate controller patch',
 }
 
+const FAILURE_TO_LEARNED_GUIDANCE: Record<string, string[]> = {
+  model_interaction_failure: [
+    'Honor the user configured provider base URL, auth token, and model id on every model request; do not substitute recovered product defaults or hidden fallback models.',
+    'When auditing provider behavior, verify the actual request path and model resolver before concluding the provider adapter is correct.',
+  ],
+  tool_choice_failure: [
+    'Before emitting a tool call, verify the tool name is present in the current available tool set; if Glob, Read, or another familiar tool is unavailable, use an available equivalent instead of calling it.',
+    'Validate required tool input fields and path arguments before the call; prefer confirmed cwd or repo-relative paths over unverified $WORKDIR placeholders.',
+  ],
+  execution_environment_failure: [
+    'Treat failed shell commands as syntax, cwd, permission, dependency, or timeout signals only after inspecting stderr, exit code, and the exact command that ran.',
+    'Use balanced quoting for path variables and avoid literal placeholder paths unless the variable is actually exported in the shell environment.',
+  ],
+  code_modification_failure: [
+    'Before editing, inspect current file content and git status so stale reads, dirty worktree changes, and user edits are preserved.',
+    'Prefer narrow patches tied to current context; if replacement context is ambiguous, reread the file and rebuild the patch instead of forcing a broad edit.',
+  ],
+  verification_failure: [
+    'Run the smallest relevant verification command after a change and capture exit code plus failure output before claiming resolution.',
+    'Separate pre-existing or flaky failures from regressions introduced by the current trajectory.',
+  ],
+  memory_context_failure: [
+    'Treat compacted summaries, resumed state, and recalled memory as hypotheses until checked against the newest user request and current workspace state.',
+    'When context conflicts, prefer fresh file reads and the latest conversation turn over stale memory artifacts.',
+  ],
+  recovery_control_failure: [
+    'After a tool or command failure, inspect the concrete stderr, exit code, cwd, and previous tool input before retrying.',
+    'Retry with a corrected plan once; avoid repeating the same failed command or tool input without new evidence.',
+  ],
+  security_governance_failure: [
+    'Do not print, request, or persist secrets during audits, rollouts, or learning artifacts; redact provider credentials and local absolute paths.',
+    'Keep held-out evidence isolated from training and block promotion when benchmark leakage or unsafe export evidence appears.',
+  ],
+}
+
 function primaryFailureClass(taxonomy: string): string {
   return taxonomy.split('.')[0] ?? ''
 }
@@ -53,6 +88,7 @@ function candidateForFailureClass(
     type: FAILURE_TO_CANDIDATE_TYPE[failureClass]!,
     status: 'candidate',
     source_failure_taxonomy: sourceTaxonomy,
+    learned_guidance: [...(FAILURE_TO_LEARNED_GUIDANCE[failureClass] ?? [])],
     feature_flag: featureFlag,
     rollback_plan: `Disable feature flag ${featureFlag}`,
   }

@@ -15,6 +15,7 @@ export type HeuristicCandidate = {
   type: CandidateHeuristicType
   status: 'candidate'
   source_failure_taxonomy: string[]
+  learned_guidance?: string[]
   feature_flag: string
   rollback_plan: string
 }
@@ -52,6 +53,9 @@ export function evaluatePromotionCandidate(
   }
   if (!candidate.source_failure_taxonomy.length) {
     reasons.push('candidate.source_failure_taxonomy')
+  }
+  if (!candidate.learned_guidance?.some(hasText)) {
+    reasons.push('candidate.learned_guidance')
   }
   if (!hasText(candidate.feature_flag)) reasons.push('candidate.feature_flag')
   if (!hasText(candidate.rollback_plan)) reasons.push('candidate.rollback_plan')

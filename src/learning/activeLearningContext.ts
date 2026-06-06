@@ -19,6 +19,7 @@ export type ActiveLearningRuntimeContext = {
     id: string
     type: string
     source_failure_taxonomy: string[]
+    learned_guidance: string[]
     feature_flag: string
   }>
   polar_updates: Array<{
@@ -88,6 +89,7 @@ export function loadActiveLearningRuntimeContextFromFile(
         id: candidate.id,
         type: candidate.type,
         source_failure_taxonomy: [...candidate.source_failure_taxonomy],
+        learned_guidance: [...(candidate.learned_guidance ?? [])],
         feature_flag: candidate.feature_flag,
       })),
       polar_updates: bundle.polar_harness.updates.map(update => ({
@@ -118,7 +120,7 @@ export function renderActiveLearningRuntimeContext(
   if (!context) return ''
 
   const heuristicLines = context.heuristic_candidates.slice(0, 12).map(candidate =>
-    `- ${clean(candidate.id)}: ${clean(candidate.type)}; taxonomy=${cleanList(candidate.source_failure_taxonomy)}; feature_flag=${clean(candidate.feature_flag)}`,
+    `- ${clean(candidate.id)}: ${clean(candidate.type)}; taxonomy=${cleanList(candidate.source_failure_taxonomy)}; guidance=${cleanList(candidate.learned_guidance, 4)}; feature_flag=${clean(candidate.feature_flag)}`,
   )
   const polarLines = context.polar_updates.slice(0, 12).map(update =>
     `- ${clean(update.id)}: target=${clean(update.target_harness_asset)}; attribution=${clean(update.failure_attribution)}; source_cases=${cleanList(update.source_cases)}; feature_flag=${clean(update.feature_flag)}`,

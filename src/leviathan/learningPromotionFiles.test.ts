@@ -42,6 +42,9 @@ function training(
         type: 'candidate tool policy',
         status: 'candidate',
         source_failure_taxonomy: ['tool_choice_failure.tool_unavailable'],
+        learned_guidance: [
+          'Verify the selected tool exists before emitting a tool call.',
+        ],
         feature_flag: 'hl.candidate.tool_choice_failure_001',
         rollback_plan:
           'Disable feature flag hl.candidate.tool_choice_failure_001',

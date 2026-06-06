@@ -12,6 +12,9 @@ function createCandidate(): HeuristicCandidate {
     type: 'candidate prompt policy',
     status: 'candidate',
     source_failure_taxonomy: ['tool_choice_failure'],
+    learned_guidance: [
+      'Verify the selected tool exists before emitting a tool call.',
+    ],
     feature_flag: 'hl.prompt_policy.candidate_001',
     rollback_plan: 'Disable feature flag hl.prompt_policy.candidate_001',
   }
@@ -46,6 +49,7 @@ describe('Leviathan heuristic promotion gate', () => {
       {
         ...createCandidate(),
         status: 'stable' as never,
+        learned_guidance: [],
         feature_flag: '',
         rollback_plan: '',
       },
@@ -61,6 +65,7 @@ describe('Leviathan heuristic promotion gate', () => {
     expect(result.decision).toBe('reject')
     expect(result.stable_allowed).toBe(false)
     expect(result.reasons).toContain('candidate.status')
+    expect(result.reasons).toContain('candidate.learned_guidance')
     expect(result.reasons).toContain('candidate.feature_flag')
     expect(result.reasons).toContain('candidate.rollback_plan')
     expect(result.reasons).toContain('evidence.replay_passed')

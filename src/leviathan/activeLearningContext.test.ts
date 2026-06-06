@@ -46,6 +46,9 @@ function learningBundle(overrides: Partial<LearningBundle> = {}): LearningBundle
           type: 'candidate tool policy',
           status: 'candidate',
           source_failure_taxonomy: ['tool_choice_failure.bad_args'],
+          learned_guidance: [
+            'Before emitting a tool call, verify the tool name is present in the current available tool set.',
+          ],
           feature_flag: 'hl.candidate.tool_choice_failure_001',
           rollback_plan:
             'Disable feature flag hl.candidate.tool_choice_failure_001',
@@ -121,6 +124,9 @@ describe('Leviathan active learning runtime context', () => {
       expect(context?.heuristic_candidates.map(candidate => candidate.id)).toEqual([
         'candidate_tool_choice_failure_001',
       ])
+      expect(context?.heuristic_candidates[0]?.learned_guidance).toEqual([
+        'Before emitting a tool call, verify the tool name is present in the current available tool set.',
+      ])
       expect(context?.polar_updates.map(update => update.id)).toEqual([
         'polar_candidate_proxy_bypass_001',
       ])
@@ -131,6 +137,7 @@ describe('Leviathan active learning runtime context', () => {
       expect(rendered).toContain('hb:stable/train_runtime_1')
       expect(rendered).toContain('polar:stable/train_runtime_1')
       expect(rendered).toContain('candidate_tool_choice_failure_001')
+      expect(rendered).toContain('verify the tool name is present')
       expect(rendered).toContain('polar_candidate_proxy_bypass_001')
       expect(rendered).not.toContain(dir)
       expect(rendered).not.toContain(bundlePath)
