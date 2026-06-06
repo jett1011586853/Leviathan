@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import {
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
@@ -570,6 +571,19 @@ describe('Leviathan learning command', () => {
       kind: 'replay-results',
       input_path: 'replay.json',
       output_path: 'evidence-intake.json',
+    })
+  })
+
+  test('parses root-cause repair manifest arguments', () => {
+    expect(
+      parseLearningCommandArgs(
+        'repair-root-causes --run-dir runs/train_shadow_001 --manifest root-causes.json --out repair-report.json',
+      ),
+    ).toEqual({
+      action: 'repair-root-causes',
+      run_dir: 'runs/train_shadow_001',
+      manifest_path: 'root-causes.json',
+      output_path: 'repair-report.json',
     })
   })
 
@@ -1360,6 +1374,68 @@ describe('Leviathan learning command', () => {
       )
       expect(status.evidence.present_files).toContain('replay-results.json')
       expect(doneMessage).toContain('Leviathan shadow evidence intaked')
+      expect(doneMessage).toContain(reportPath)
+    })
+  })
+
+  test('repairs missing trainable root causes through the slash command', async () => {
+    await withTempDir(async dir => {
+      const outputDir = join(dir, 'train_shadow_001')
+      const annotatedDir = join(outputDir, 'rollouts', 'annotated', 'train')
+      const annotatedPath = join(annotatedDir, 'task_collect_1.json')
+      const manifestPath = join(dir, 'root-causes.json')
+      const reportPath = join(outputDir, 'root-cause-repair.json')
+      let doneMessage = ''
+
+      await call(
+        () => {},
+        {} as never,
+        `start-shadow --out-dir ${outputDir} --run-id train_shadow_001 --model mimo-v2.5 --git-commit edab200 --checkpoint permanent-leviathan-current-2026-06-04 --target-rollouts 50 --created-at 2026-06-04T12:00:00.000Z`,
+      )
+
+      const missingRootCause = rolloutBundle() as ReturnType<
+        typeof createEmptyRolloutBundle
+      >
+      missingRootCause.run.split = 'train'
+      missingRootCause.failure.root_cause_summary = ''
+      mkdirSync(annotatedDir, { recursive: true })
+      writeFileSync(annotatedPath, JSON.stringify(missingRootCause), 'utf8')
+      writeFileSync(
+        manifestPath,
+        JSON.stringify({
+          schema_version: 'leviathan.root_cause_repair_manifest.v1',
+          entries: [
+            {
+              path: 'rollouts/annotated/train/task_collect_1.json',
+              root_cause_summary:
+                'The connected model selected malformed tool arguments for the requested task.',
+            },
+          ],
+        }),
+        'utf8',
+      )
+
+      await call(
+        message => {
+          doneMessage = message ?? ''
+        },
+        {} as never,
+        `repair-root-causes --run-dir ${outputDir} --manifest ${manifestPath} --out ${reportPath}`,
+      )
+
+      const report = JSON.parse(readFileSync(reportPath, 'utf8'))
+      const repaired = JSON.parse(readFileSync(annotatedPath, 'utf8'))
+      expect(report.schema_version).toBe(
+        'leviathan.root_cause_repair_report.v1',
+      )
+      expect(report.repaired_count).toBe(1)
+      expect(report.status.annotation_quality.missing_root_cause_summary.total).toBe(
+        0,
+      )
+      expect(repaired.failure.root_cause_summary).toBe(
+        'The connected model selected malformed tool arguments for the requested task.',
+      )
+      expect(doneMessage).toContain('Leviathan root-cause repair applied')
       expect(doneMessage).toContain(reportPath)
     })
   })

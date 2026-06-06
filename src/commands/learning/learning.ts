@@ -34,6 +34,7 @@ import {
   writeShadowEvidenceIntakeReportFile,
   type ShadowEvidenceKind,
 } from '../../learning/shadowLearningEvidenceIntakeFiles.js'
+import { writeShadowRootCauseRepairReportFile } from '../../learning/shadowRootCauseRepairFiles.js'
 import { writeShadowLearningTaskQueueFile } from '../../learning/shadowLearningTaskQueueFiles.js'
 import { writeTranscriptRolloutFile } from '../../learning/transcriptRolloutFiles.js'
 import type {
@@ -120,6 +121,12 @@ export type ParsedLearningCommandArgs =
       run_dir: string
       kind: ShadowEvidenceKind
       input_path: string
+      output_path?: string
+    }
+  | {
+      action: 'repair-root-causes'
+      run_dir: string
+      manifest_path: string
       output_path?: string
     }
   | {
@@ -234,7 +241,7 @@ export type ParsedLearningCommandArgs =
     }
 
 const USAGE =
-  'Usage: /learning init --out <launch.json> --model <model-id>; /learning start-shadow --out-dir <dir> --run-id <run> --model <model-id>; /learning status-shadow --run-dir <dir> --out <status.json>; /learning plan-shadow-rollouts --run-dir <dir> --out <task-queue.json>; /learning export-transcript-rollout --transcript <session.jsonl> --out <rollout.json> --run-id <run> --task-id <task> --split <train|dev|test|held_out|shadow> --model <model-id>; /learning intake-shadow-rollout --run-dir <dir> --input <rollout.json> --split <train|dev|held_out> --taxonomy <failure.code>; /learning intake-shadow-evidence --run-dir <dir> --kind <replay-results|failure-taxonomy|benchmark-splits|polar-spike-observations|reward-design|rollback-incident-plan> --input <evidence.json>; /learning collect-shadow --run-dir <dir> --out <collection.json>; /learning collect --out <launch.json> --model <model-id> --rollout <rollout.json>; /learning start --config <launch.json> --out <manifest.json>; /learning annotate-rollout --input <raw-rollout.json> --out <train-rollout.json> --taxonomy <failure.code> --outcome <resolved|unresolved|regression|unknown>; /learning train-candidates --out <candidates.json> --run-id <run> --model <model-id> --rollout <rollout.json>; /learning train-polar --out <polar.json> --run-id <run> --model <model-id> --polar <observations.json>; /learning evaluation-snapshot --out <snapshot.json> --replay <replay.json> --held-out <rollout.json> --security <scan.json> --complexity <budget.json> --target-slice <slice.json> --regressions <regressions.json> --polar <observations.json>; /learning promotion-evidence --snapshot <eval.json> --heuristic-out <evidence.json> --polar-out <evidence.json>; /learning promote-candidates --out <promotion.json> --candidates <candidates.json> --evidence <evidence.json>; /learning promote-polar --out <promotion.json> --polar-candidates <polar.json> --evidence <evidence.json>; /learning run-pipeline --out-dir <dir> --run-id <run> --model <model-id> --rollout <rollout.json> --held-out <rollout.json> --polar-training <observations.json> --polar-eval <observations.json> --replay <replay.json> --security <scan.json> --complexity <budget.json> --target-slice <slice.json> --regressions <regressions.json>; /learning activate-bundle --bundle <learning-bundle.json> --state <active-learning.json>; /learning rollback-bundle --state <active-learning.json>'
+  'Usage: /learning init --out <launch.json> --model <model-id>; /learning start-shadow --out-dir <dir> --run-id <run> --model <model-id>; /learning status-shadow --run-dir <dir> --out <status.json>; /learning plan-shadow-rollouts --run-dir <dir> --out <task-queue.json>; /learning export-transcript-rollout --transcript <session.jsonl> --out <rollout.json> --run-id <run> --task-id <task> --split <train|dev|test|held_out|shadow> --model <model-id>; /learning intake-shadow-rollout --run-dir <dir> --input <rollout.json> --split <train|dev|held_out> --taxonomy <failure.code>; /learning intake-shadow-evidence --run-dir <dir> --kind <replay-results|failure-taxonomy|benchmark-splits|polar-spike-observations|reward-design|rollback-incident-plan> --input <evidence.json>; /learning repair-root-causes --run-dir <dir> --manifest <root-causes.json>; /learning collect-shadow --run-dir <dir> --out <collection.json>; /learning collect --out <launch.json> --model <model-id> --rollout <rollout.json>; /learning start --config <launch.json> --out <manifest.json>; /learning annotate-rollout --input <raw-rollout.json> --out <train-rollout.json> --taxonomy <failure.code> --outcome <resolved|unresolved|regression|unknown>; /learning train-candidates --out <candidates.json> --run-id <run> --model <model-id> --rollout <rollout.json>; /learning train-polar --out <polar.json> --run-id <run> --model <model-id> --polar <observations.json>; /learning evaluation-snapshot --out <snapshot.json> --replay <replay.json> --held-out <rollout.json> --security <scan.json> --complexity <budget.json> --target-slice <slice.json> --regressions <regressions.json> --polar <observations.json>; /learning promotion-evidence --snapshot <eval.json> --heuristic-out <evidence.json> --polar-out <evidence.json>; /learning promote-candidates --out <promotion.json> --candidates <candidates.json> --evidence <evidence.json>; /learning promote-polar --out <promotion.json> --polar-candidates <polar.json> --evidence <evidence.json>; /learning run-pipeline --out-dir <dir> --run-id <run> --model <model-id> --rollout <rollout.json> --held-out <rollout.json> --polar-training <observations.json> --polar-eval <observations.json> --replay <replay.json> --security <scan.json> --complexity <budget.json> --target-slice <slice.json> --regressions <regressions.json>; /learning activate-bundle --bundle <learning-bundle.json> --state <active-learning.json>; /learning rollback-bundle --state <active-learning.json>'
 
 function tokenizeArgs(args: string): string[] {
   const tokens: string[] = []
@@ -520,6 +527,19 @@ export function parseLearningCommandArgs(
       run_dir,
       kind,
       input_path,
+      output_path: readFlag(tokens, ['--out', '--output']) || undefined,
+    }
+  }
+
+  if (tokens[0] === 'repair-root-causes') {
+    const run_dir = readFlag(tokens, ['--run-dir'])
+    const manifest_path = readFlag(tokens, ['--manifest'])
+    if (!run_dir || !manifest_path) return { action: 'help' }
+
+    return {
+      action: 'repair-root-causes',
+      run_dir,
+      manifest_path,
       output_path: readFlag(tokens, ['--out', '--output']) || undefined,
     }
   }
@@ -969,6 +989,18 @@ export async function call(
     })
     onDone(
       `Leviathan shadow evidence intaked: ${result.output_path}\nEvidence: ${result.report.evidence_path}\nStatus: ${result.report.status_path}`,
+    )
+    return null
+  }
+
+  if (parsed.action === 'repair-root-causes') {
+    const result = writeShadowRootCauseRepairReportFile({
+      run_dir: parsed.run_dir,
+      manifest_path: parsed.manifest_path,
+      output_path: parsed.output_path,
+    })
+    onDone(
+      `Leviathan root-cause repair applied: ${result.output_path}\nRepaired: ${result.report.repaired_count}\nBlocked: ${result.report.blocked_count}\nStatus: ${result.report.status_path}`,
     )
     return null
   }
