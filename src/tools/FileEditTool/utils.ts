@@ -209,6 +209,10 @@ export function applyEditToFile(
   newString: string,
   replaceAll: boolean = false,
 ): string {
+  if (replaceAll && oldString === '') {
+    throw new Error('Cannot use replace_all with an empty old_string.')
+  }
+
   const f = replaceAll
     ? (content: string, search: string, replace: string) =>
         content.replaceAll(search, () => replace)
