@@ -96,6 +96,32 @@ describe('Leviathan HL/Polar rollout schema', () => {
     expect(redacted).toContain('$HOME_ALIAS')
   })
 
+  test('redacts quoted provider assignments and sensitive object keys', () => {
+    const text =
+      'ANTHROPIC_BASE_URL="https://token-plan-cn.example.com/anthropic" and ANTHROPIC_AUTH_TOKEN=\'local-redaction-token\''
+
+    const redactedText = redactText(text)
+
+    expect(redactedText).not.toContain('token-plan-cn.example.com')
+    expect(redactedText).not.toContain('local-redaction-token')
+    expect(redactedText).toContain('ANTHROPIC_BASE_URL="[REDACTED_PROVIDER_URL]"')
+    expect(redactedText).toContain("ANTHROPIC_AUTH_TOKEN='[REDACTED_SECRET]'")
+
+    const redactedValue = redactValue({
+      'D:/hl-agent4/report folder/file name.md': 'safe',
+      nested: {
+        'ANTHROPIC_BASE_URL=https://token-plan-cn.example.com/anthropic': 'safe',
+      },
+    })
+
+    expect(redactedValue).toEqual({
+      '$WORKDIR': 'safe',
+      nested: {
+        'ANTHROPIC_BASE_URL=[REDACTED_PROVIDER_URL]': 'safe',
+      },
+    })
+  })
+
   test('redacts nested values while preserving structure', () => {
     const redacted = redactValue({
       headers: {
