@@ -62,6 +62,15 @@ describe('Leviathan shadow learning task queue files', () => {
       expect(first?.intake_command).toContain('--run-dir')
       expect(first?.taxonomy_hint).toContain('.')
       expect(first?.collection_instruction).toContain('Leviathan')
+      expect(first?.collection_instruction).toContain(
+        'Use only tools that are actually available in the current Leviathan session',
+      )
+      expect(first?.collection_instruction).toContain(
+        'Do not call Glob or Read unless those tools are explicitly available',
+      )
+      expect(first?.collection_instruction).toContain(
+        'Do not treat $WORKDIR as a verified shell variable',
+      )
       expect(existsSync(outputPath)).toBe(true)
 
       const written = JSON.parse(readFileSync(outputPath, 'utf8'))

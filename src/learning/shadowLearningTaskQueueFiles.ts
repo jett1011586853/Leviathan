@@ -88,6 +88,8 @@ function instructionFor(index: number): string {
     `Run a real Leviathan coding-agent task that can expose ${entry.label}.`,
     `Prefer a task where the observable failure signal is ${signal}.`,
     'Use the connected provider model normally; do not fabricate transcript, tool, or evaluation data.',
+    'Use only tools that are actually available in the current Leviathan session. Do not call Glob or Read unless those tools are explicitly available; if they are absent, use Bash with repo-relative commands such as rg, find, ls, sed, or Get-Content equivalents.',
+    'Do not treat $WORKDIR as a verified shell variable. Confirm cwd with pwd or use repo-relative paths; when a path variable is truly available, use balanced quoting such as "$WORKDIR".',
     'After the task, export the rollout and intake it with the provided command.',
   ].join(' ')
 }
