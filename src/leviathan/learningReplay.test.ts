@@ -41,7 +41,7 @@ describe('Leviathan replay plan scaffold', () => {
       tool_trace: 'name_order_status',
       patch: 'normalized_diff',
       tests: 'command_identity_exit_code_and_output',
-      failure_taxonomy: 'primary_class_exact',
+      failure_taxonomy: 'ordered_full_taxonomy_exact',
       final_outcome: 'exact',
     })
   })
@@ -58,7 +58,7 @@ describe('Leviathan replay plan scaffold', () => {
     expect(plan.blockers).toContain('runtime.network_policy')
   })
 
-  test('compares replay artifacts using normalized diff and exact outcome gates', () => {
+  test('compares replay artifacts using normalized diff and exact taxonomy gates', () => {
     const golden = createReplayableBundle()
     golden.tool_events = [
       {
@@ -86,13 +86,13 @@ describe('Leviathan replay plan scaffold', () => {
 
     const result = compareReplayArtifacts(golden, replay)
 
-    expect(result.passed).toBe(true)
-    expect(result.mismatches).toEqual([])
+    expect(result.passed).toBe(false)
+    expect(result.mismatches).toEqual(['failure_taxonomy'])
     expect(result.scores).toEqual({
       tool_trace: 1,
       patch: 1,
       tests: 1,
-      failure_taxonomy: 1,
+      failure_taxonomy: 0,
       final_outcome: 1,
     })
   })

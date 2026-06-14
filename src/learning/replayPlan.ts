@@ -15,7 +15,7 @@ export type ReplayPlan = {
     tool_trace: 'name_order_status'
     patch: 'normalized_diff'
     tests: 'command_identity_exit_code_and_output'
-    failure_taxonomy: 'primary_class_exact'
+    failure_taxonomy: 'ordered_full_taxonomy_exact'
     final_outcome: 'exact'
   }
 }
@@ -55,7 +55,7 @@ export function deriveReplayPlan(bundle: LeviathanRolloutBundle): ReplayPlan {
       tool_trace: 'name_order_status',
       patch: 'normalized_diff',
       tests: 'command_identity_exit_code_and_output',
-      failure_taxonomy: 'primary_class_exact',
+      failure_taxonomy: 'ordered_full_taxonomy_exact',
       final_outcome: 'exact',
     },
   }

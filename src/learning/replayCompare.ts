@@ -45,9 +45,10 @@ function testsSignature(bundle: LeviathanRolloutBundle): string {
   })
 }
 
-function primaryFailureTaxonomy(bundle: LeviathanRolloutBundle): string {
-  const first = bundle.failure.taxonomy[0] ?? ''
-  return first.split('.')[0]
+function failureTaxonomySignature(bundle: LeviathanRolloutBundle): string {
+  return JSON.stringify(
+    bundle.failure.taxonomy.map(value => value.trim()).filter(Boolean),
+  )
 }
 
 export function compareReplayArtifacts(
@@ -67,7 +68,9 @@ export function compareReplayArtifacts(
         : 0,
     tests: testsSignature(golden) === testsSignature(replay) ? 1 : 0,
     failure_taxonomy:
-      primaryFailureTaxonomy(golden) === primaryFailureTaxonomy(replay) ? 1 : 0,
+      failureTaxonomySignature(golden) === failureTaxonomySignature(replay)
+        ? 1
+        : 0,
     final_outcome:
       golden.evaluation.final_outcome === replay.evaluation.final_outcome
         ? 1

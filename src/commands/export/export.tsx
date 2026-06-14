@@ -45,14 +45,56 @@ function formatTimestamp(date: Date): string {
 
 function tokenizeExportArgs(args: string): string[] {
   const tokens: string[] = [];
-  const pattern = /"([^"]*)"|'([^']*)'|(\S+)/g;
-  let match: RegExpExecArray | null;
+  let current = '';
+  let quote: '"' | "'" | null = null;
 
-  while ((match = pattern.exec(args)) !== null) {
-    tokens.push(match[1] ?? match[2] ?? match[3] ?? '');
+  for (const char of args) {
+    if (quote !== null) {
+      if (char === quote) {
+        quote = null;
+      } else {
+        current += char;
+      }
+      continue;
+    }
+
+    if (char === '"' || char === "'") {
+      quote = char;
+      continue;
+    }
+
+    if (/\s/.test(char)) {
+      if (current.length > 0) {
+        tokens.push(current);
+        current = '';
+      }
+      continue;
+    }
+
+    current += char;
+  }
+
+  if (current.length > 0) {
+    tokens.push(current);
   }
 
   return tokens;
+}
+
+function readFlagValue(tokens: string[], index: number, flag: string): string {
+  const token = tokens[index] ?? '';
+  const inlinePrefix = `${flag}=`;
+  if (token.startsWith(inlinePrefix)) {
+    return token.slice(inlinePrefix.length);
+  }
+  if (token === flag) {
+    return tokens[index + 1] ?? '';
+  }
+  return '';
+}
+
+function tokenMatchesFlag(token: string | undefined, flag: string): boolean {
+  return token === flag || token?.startsWith(`${flag}=`) === true;
 }
 
 export function parseExportArgs(args: string): ParsedExportArgs {
@@ -62,21 +104,20 @@ export function parseExportArgs(args: string): ParsedExportArgs {
   }
 
   const overrides: RolloutExportOverrides = {};
-  const readFlagValue = (index: number): string => tokens[index + 1] ?? '';
   const readOverrides = (startIndex: number): void => {
     for (let i = startIndex; i < tokens.length; i += 1) {
       const token = tokens[i];
-      if (token === '--run-id') overrides.runId = readFlagValue(i);
-      if (token === '--session-id') overrides.sessionId = readFlagValue(i);
-      if (token === '--task-id') overrides.taskId = readFlagValue(i);
-      if (token === '--harness-version') overrides.harnessVersion = readFlagValue(i);
-      if (token === '--heuristic-bundle') overrides.heuristicBundleVersion = readFlagValue(i);
-      if (token === '--policy-version') overrides.policyVersion = readFlagValue(i);
-      if (token === '--repo') overrides.repo = readFlagValue(i);
-      if (token === '--base-commit') overrides.baseCommit = readFlagValue(i);
-      if (token === '--cwd-alias') overrides.cwdAlias = readFlagValue(i);
-      if (token === '--split') {
-        const split = readFlagValue(i);
+      if (tokenMatchesFlag(token, '--run-id')) overrides.runId = readFlagValue(tokens, i, '--run-id');
+      if (tokenMatchesFlag(token, '--session-id')) overrides.sessionId = readFlagValue(tokens, i, '--session-id');
+      if (tokenMatchesFlag(token, '--task-id')) overrides.taskId = readFlagValue(tokens, i, '--task-id');
+      if (tokenMatchesFlag(token, '--harness-version')) overrides.harnessVersion = readFlagValue(tokens, i, '--harness-version');
+      if (tokenMatchesFlag(token, '--heuristic-bundle')) overrides.heuristicBundleVersion = readFlagValue(tokens, i, '--heuristic-bundle');
+      if (tokenMatchesFlag(token, '--policy-version')) overrides.policyVersion = readFlagValue(tokens, i, '--policy-version');
+      if (tokenMatchesFlag(token, '--repo')) overrides.repo = readFlagValue(tokens, i, '--repo');
+      if (tokenMatchesFlag(token, '--base-commit')) overrides.baseCommit = readFlagValue(tokens, i, '--base-commit');
+      if (tokenMatchesFlag(token, '--cwd-alias')) overrides.cwdAlias = readFlagValue(tokens, i, '--cwd-alias');
+      if (tokenMatchesFlag(token, '--split')) {
+        const split = readFlagValue(tokens, i, '--split');
         if (split === 'train' || split === 'dev' || split === 'test' || split === 'held_out' || split === 'shadow') {
           overrides.split = split;
         }
