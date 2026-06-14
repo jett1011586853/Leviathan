@@ -26,6 +26,7 @@ export type HeuristicTrainingResult = {
   trained_failure_classes: string[]
   candidates: HeuristicCandidate[]
   blocked_reasons: string[]
+  excluded_negative_control_rollouts?: string[]
 }
 
 const FAILURE_TO_CANDIDATE_TYPE: Record<string, CandidateHeuristicType> = {
@@ -149,6 +150,34 @@ function cleanRootCause(value: string): string {
   return value.replace(/\s+/g, ' ').trim().slice(0, 240)
 }
 
+function isNegativeControlRootCause(value: string): boolean {
+  const normalized = value.replace(/\s+/g, ' ').trim()
+  return [
+    /\bno actionable failure\b/i,
+    /\btreat as negative\/control\b/i,
+    /\btreat as a negative control\b/i,
+    /\bnegative control\b/i,
+  ].some(pattern => pattern.test(normalized))
+}
+
+function negativeControlTaskIds(rollouts: LeviathanRolloutBundle[]): string[] {
+  return rollouts
+    .filter(
+      rollout =>
+        hasTrainableTaxonomy(rollout) &&
+        isNegativeControlRootCause(rollout.failure.root_cause_summary),
+    )
+    .map(rollout => rollout.run.task_id)
+}
+
+function excludeNegativeControlRollouts(
+  rollouts: LeviathanRolloutBundle[],
+): LeviathanRolloutBundle[] {
+  return rollouts.filter(
+    rollout => !isNegativeControlRootCause(rollout.failure.root_cause_summary),
+  )
+}
+
 function rootCausesForFailureClass(
   rollouts: LeviathanRolloutBundle[],
   failureClass: string,
@@ -176,6 +205,7 @@ function rootCausesForFailureClass(
 export function trainHeuristicCandidatesFromRollouts(
   input: HeuristicTrainingInput,
 ): HeuristicTrainingResult {
+  const excluded_negative_control_rollouts = negativeControlTaskIds(input.rollouts)
   if (hasFinalEvaluationRollout(input.rollouts)) {
     return {
       schema_version: HEURISTIC_TRAINING_SCHEMA_VERSION,
@@ -189,6 +219,9 @@ export function trainHeuristicCandidatesFromRollouts(
       trained_failure_classes: [],
       candidates: [],
       blocked_reasons: ['rollouts.final_evaluation_split_not_trainable'],
+      ...(excluded_negative_control_rollouts.length > 0
+        ? { excluded_negative_control_rollouts }
+        : {}),
     }
   }
 
@@ -205,16 +238,20 @@ export function trainHeuristicCandidatesFromRollouts(
       trained_failure_classes: [],
       candidates: [],
       blocked_reasons: ['rollouts.missing_root_cause_summary'],
+      ...(excluded_negative_control_rollouts.length > 0
+        ? { excluded_negative_control_rollouts }
+        : {}),
     }
   }
 
-  const grouped = groupTrainableTaxonomy(input.rollouts)
+  const trainableRollouts = excludeNegativeControlRollouts(input.rollouts)
+  const grouped = groupTrainableTaxonomy(trainableRollouts)
   const trained_failure_classes = [...grouped.keys()]
   const candidates = trained_failure_classes.map(failureClass =>
     candidateForFailureClass(
       failureClass,
       grouped.get(failureClass) ?? [],
-      rootCausesForFailureClass(input.rollouts, failureClass),
+      rootCausesForFailureClass(trainableRollouts, failureClass),
     ),
   )
   const blocked_reasons =
@@ -232,5 +269,8 @@ export function trainHeuristicCandidatesFromRollouts(
     trained_failure_classes,
     candidates,
     blocked_reasons,
+    ...(excluded_negative_control_rollouts.length > 0
+      ? { excluded_negative_control_rollouts }
+      : {}),
   }
 }

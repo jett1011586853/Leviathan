@@ -1,0 +1,82 @@
+{
+  "schema_version": "leviathan.pipeline_run_summary.v1",
+  "run_id": "train_shadow_001",
+  "pipeline_run_id": "pipeline-run-003",
+  "created_at": "2026-06-14T13:07:35.054Z",
+  "provider_model_id": "mimo-v2.5",
+  "provider_model_update": "none",
+  "status": "needs_more_evidence",
+  "stable_promotion_ready": false,
+  "activation_attempted": false,
+  "reports": {
+    "heuristic_training_status": "candidate_only",
+    "polar_training_status": "candidate_only",
+    "heuristic_promotion_status": "rejected",
+    "polar_promotion_status": "rejected",
+    "learning_bundle_status": "blocked"
+  },
+  "candidate_summary": {
+    "heuristic_status": "candidate_only",
+    "heuristic_candidate_count": 8,
+    "trained_failure_classes": [
+      "model_interaction_failure",
+      "tool_choice_failure",
+      "execution_environment_failure",
+      "code_modification_failure",
+      "verification_failure",
+      "memory_context_failure",
+      "recovery_control_failure",
+      "security_governance_failure"
+    ],
+    "excluded_negative_control_rollouts": [
+      "train_shadow_001_train_025"
+    ],
+    "polar_status": "candidate_only",
+    "polar_update_count": 1,
+    "trained_failure_attributions": [
+      null
+    ]
+  },
+  "promotion_evidence": {
+    "replay_passed": true,
+    "held_out_passed": false,
+    "security_scan_passed": true,
+    "complexity_budget_passed": true,
+    "target_failure_slice_improved": false,
+    "p0_p1_regressions": 1,
+    "token_turn_cost_regression_pct": 0
+  },
+  "rejection_reasons": [
+    "heuristic_promotion.status.rejected",
+    "polar_promotion.status.rejected",
+    "learning_bundle.status.blocked",
+    "learning_bundle.heuristic_report.status.rejected",
+    "learning_bundle.heuristic_report.stable_promotions_allowed",
+    "learning_bundle.polar_report.status.rejected",
+    "learning_bundle.polar_report.stable_promotions_allowed"
+  ],
+  "learning_bundle_status": "blocked",
+  "learning_bundle_blocked_reasons": [
+    "heuristic_report.status.rejected",
+    "heuristic_report.stable_promotions_allowed",
+    "polar_report.status.rejected",
+    "polar_report.stable_promotions_allowed"
+  ],
+  "artifact_hashes": {
+    "heuristic-candidates.json": "a95a740c5a66856fd52c250897e7fc2d72555d936ea74d19a743c91415dec37a",
+    "polar-candidates.json": "721af2a90b7ad5ea122123c9c00e92c30333b714ebb3f400cc7e1a2fc01cf48c",
+    "promotion-snapshot.json": "22c54fde4c2a1598843790d52e4eb2c990bb9595d137e465ae210fe7ed348c57",
+    "heuristic-evidence.json": "548d373ddedcbc87f866cee21d3b14bae6ba252d6f31e28d04db2126ec02d320",
+    "polar-evidence.json": "804c8335dfc92452fe122a7d4e9f0e8081cc5f686bdf8c7a589172346f52c78a",
+    "heuristic-promotion-report.json": "f57b60133f0404b95cbe25ee39a0985e214d53e747250c4932c05248fbe3c0d8",
+    "polar-promotion-report.json": "021e3b7adca2ee169eed4d75cecdf1828bc1fd827c6901294e37ce32130941c5",
+    "learning-bundle.json": "a2c39ccab05ba4cea5250f04d28bfe93eb04bdda6dbc367f8dee9ec085e4e84b",
+    "learning-pipeline-manifest.json": "2362bcced9135f775df610dba7cddb4c49cc3090484703fd27f93bb30c6a21c9"
+  },
+  "next_actions": [
+    "Do not activate learning-bundle.json because stable_promotion_ready=false.",
+    "Patch harness/tool/prompt/recovery policies for the failing held-out slices before the next evaluation.",
+    "Rerun held_out evaluation after candidate policy changes are implemented.",
+    "Only activate a bundle after held_out_passed=true, target_failure_slice_improved=true, and p0_p1_regressions=0."
+  ]
+}

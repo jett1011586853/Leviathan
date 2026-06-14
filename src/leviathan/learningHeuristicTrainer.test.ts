@@ -167,4 +167,38 @@ describe('Leviathan candidate-only heuristic trainer', () => {
       'rollouts.missing_root_cause_summary',
     ])
   })
+
+  test('excludes negative control root-cause summaries from candidate training', () => {
+    const result = trainHeuristicCandidatesFromRollouts({
+      training_run_id: 'train_negative_control',
+      provider_model_id: 'mimo-v2.5',
+      base_heuristic_bundle_version: 'hb:initial',
+      rollouts: [
+        rollout(
+          'negative',
+          ['tool_choice_failure.bad_args'],
+          'train',
+          'Final report found no actionable failure for this taxonomy; treat as negative/control or relabel before training.',
+        ),
+        rollout(
+          'positive',
+          ['verification_failure.hidden_regression'],
+          'train',
+          'The agent claimed success without running the regression test.',
+        ),
+      ],
+    })
+
+    expect(result.status).toBe('candidate_only')
+    expect(result.excluded_negative_control_rollouts).toEqual([
+      'task_negative',
+    ])
+    expect(result.trained_failure_classes).toEqual(['verification_failure'])
+    expect(result.candidates.map(candidate => candidate.id)).toEqual([
+      'candidate_verification_failure_001',
+    ])
+    expect(result.candidates[0]?.learned_guidance).toContain(
+      'Observed root-cause pattern from training rollouts: The agent claimed success without running the regression test.',
+    )
+  })
 })
