@@ -158,6 +158,28 @@ describe('Leviathan active learning runtime context', () => {
     })
   })
 
+  test('runtime prompt omits training evidence root-cause details from active bundles', async () => {
+    await withTempDir(dir => {
+      const bundle = learningBundle()
+      bundle.heuristic_bundle.candidates[0]!.learned_guidance = [
+        'Before emitting a tool call, verify the tool name is present in the current available tool set.',
+        'Observed root-cause pattern from training rollouts: train_shadow_001_held_out_045 used D:\\hl-agent4\\private repo evidence.',
+      ]
+      const bundlePath = writeJson(dir, 'learning-bundle.json', bundle)
+      const statePath = writeJson(dir, 'active-learning.json', activationState(bundlePath))
+
+      const rendered = renderActiveLearningRuntimeContext(
+        loadActiveLearningRuntimeContextFromFile({ state_path: statePath }),
+      )
+
+      expect(rendered).toContain('verify the tool name is present')
+      expect(rendered).not.toContain('Observed root-cause pattern')
+      expect(rendered).not.toContain('train_shadow_001_held_out_045')
+      expect(rendered).not.toContain('D:\\hl-agent4')
+      expect(rendered).not.toContain('private repo evidence')
+    })
+  })
+
   test('does not expose mismatched active state and bundle versions', async () => {
     await withTempDir(dir => {
       const bundlePath = writeJson(

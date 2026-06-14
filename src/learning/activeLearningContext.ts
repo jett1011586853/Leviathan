@@ -3,6 +3,7 @@ import { dirname, isAbsolute, join } from 'node:path'
 
 import type { LearningActivationState } from './learningActivationFiles.js'
 import type { LearningBundle } from './learningBundleFiles.js'
+import { redactText } from './redaction.js'
 import { jsonParse } from '../utils/slowOperations.js'
 
 export const ACTIVE_LEARNING_STATE_PATH_ENV =
@@ -89,7 +90,7 @@ export function loadActiveLearningRuntimeContextFromFile(
         id: candidate.id,
         type: candidate.type,
         source_failure_taxonomy: [...candidate.source_failure_taxonomy],
-        learned_guidance: [...(candidate.learned_guidance ?? [])],
+        learned_guidance: sanitizeGuidance(candidate.learned_guidance ?? []),
         feature_flag: candidate.feature_flag,
       })),
       polar_updates: bundle.polar_harness.updates.map(update => ({
@@ -107,6 +108,18 @@ export function loadActiveLearningRuntimeContextFromFile(
 
 function clean(value: string): string {
   return value.replace(/[\r\n]+/g, ' ').trim().slice(0, 180)
+}
+
+function isTrainingEvidenceGuidance(value: string): boolean {
+  return /^Observed root-cause pattern from training rollouts:/i.test(
+    value.trim(),
+  )
+}
+
+function sanitizeGuidance(values: string[]): string[] {
+  return values
+    .filter(value => !isTrainingEvidenceGuidance(value))
+    .map(value => redactText(value))
 }
 
 function cleanList(values: string[], limit = 8): string {
