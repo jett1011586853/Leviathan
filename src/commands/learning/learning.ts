@@ -253,11 +253,39 @@ const USAGE =
 
 function tokenizeArgs(args: string): string[] {
   const tokens: string[] = []
-  const pattern = /"([^"]*)"|'([^']*)'|(\S+)/g
-  let match: RegExpExecArray | null
+  let current = ''
+  let quote: '"' | "'" | null = null
 
-  while ((match = pattern.exec(args)) !== null) {
-    tokens.push(match[1] ?? match[2] ?? match[3] ?? '')
+  for (let index = 0; index < args.length; index++) {
+    const char = args[index] ?? ''
+
+    if (quote !== null) {
+      if (char === quote) {
+        quote = null
+      } else {
+        current += char
+      }
+      continue
+    }
+
+    if (char === '"' || char === "'") {
+      quote = char
+      continue
+    }
+
+    if (/\s/.test(char)) {
+      if (current.length > 0) {
+        tokens.push(current)
+        current = ''
+      }
+      continue
+    }
+
+    current += char
+  }
+
+  if (current.length > 0) {
+    tokens.push(current)
   }
 
   return tokens

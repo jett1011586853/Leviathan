@@ -728,6 +728,30 @@ describe('Leviathan learning command', () => {
     })
   })
 
+  test('parses equals-quoted learning pipeline paths with spaces', () => {
+    expect(
+      parseLearningCommandArgs(
+        'run-pipeline --out-dir="artifacts with spaces" --run-id train_1 --model mimo-v2.5 --base-bundle hb:initial --base-harness git:abc123 --rollout="train rollout.json" --held-out="held out rollout.json" --polar-training="polar train.json" --polar-eval="polar eval.json" --replay="replay results.json" --security="security scan.json" --complexity="complexity budget.json" --target-slice="target slice.json" --regressions="regression scan.json"',
+      ),
+    ).toEqual({
+      action: 'run-pipeline',
+      output_dir: 'artifacts with spaces',
+      training_run_id: 'train_1',
+      provider_model_id: 'mimo-v2.5',
+      base_heuristic_bundle_version: 'hb:initial',
+      base_harness_version: 'git:abc123',
+      rollout_bundle_paths: ['train rollout.json'],
+      held_out_rollout_paths: ['held out rollout.json'],
+      polar_training_observations_path: 'polar train.json',
+      polar_eval_observations_path: 'polar eval.json',
+      replay_results_path: 'replay results.json',
+      security_scan_path: 'security scan.json',
+      complexity_budget_path: 'complexity budget.json',
+      target_failure_slice_path: 'target slice.json',
+      regressions_path: 'regression scan.json',
+    })
+  })
+
   test('parses rollout annotation arguments', () => {
     expect(
       parseLearningCommandArgs(
