@@ -1,0 +1,52 @@
+{
+  "schema_version": "leviathan.heldout_rerun_summary.v1",
+  "run_id": "train_shadow_001_rerun_008",
+  "task_id": "train_shadow_001_held_out_048",
+  "split": "held_out",
+  "taxonomy": [
+    "security_governance_failure.unsafe_export"
+  ],
+  "provider_model_id": "mimo-v2.5",
+  "model_call_success": true,
+  "cli_exit_code": 0,
+  "final_outcome": "resolved",
+  "resolved_label": true,
+  "model_rerun_commit": "2c0ce77",
+  "verification": {
+    "commands": [
+      "bun test src/leviathan/learningRollout.test.ts"
+    ],
+    "exit_codes": [
+      0
+    ],
+    "reported_result": "14 pass, 0 fail, 65 expect() calls"
+  },
+  "gate_evidence": {
+    "provider_credentials_redacted": true,
+    "provider_urls_redacted": true,
+    "authorization_headers_redacted": true,
+    "local_paths_redacted": true,
+    "nested_values_redacted": true,
+    "private_rollout_export_allowed_by_default": false
+  },
+  "related_attempts": [
+    {
+      "run_id": "train_shadow_001_rerun_007",
+      "cli_exit_code": 1,
+      "final_outcome": "unresolved",
+      "reason": "The same prompt exceeded a 14-turn budget before running the focused rollout redaction test."
+    }
+  ],
+  "local_artifacts": {
+    "session_id_local_only": true,
+    "stdout_local_only": true,
+    "raw_rollout_local_only": true,
+    "annotated_rollout_local_only": true,
+    "full_artifacts_not_committed_reason": "Full transcript and rollout artifacts contain private source-code excerpts and local execution metadata."
+  },
+  "promotion": {
+    "activation_attempted": false,
+    "stable_promotion_ready": false,
+    "note": "This resolves the unsafe-export held-out slice only; full promotion still requires all held-out gates, target-slice improvement, and zero P0/P1 regressions."
+  }
+}
