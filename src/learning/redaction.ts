@@ -1,10 +1,14 @@
 const SECRET_ASSIGNMENT =
   /\b(ANTHROPIC_AUTH_TOKEN|ANTHROPIC_API_KEY|OPENAI_API_KEY|API_KEY|AUTH_TOKEN|TOKEN)\s*=\s*(?:(["'])([^"'\s,;]+)\2|([^\s,;"']+))/gi
 const PROVIDER_URL_ASSIGNMENT =
-  /\b(ANTHROPIC_BASE_URL|OPENAI_BASE_URL|PROVIDER_BASE_URL|BASE_URL)\s*=\s*(?:(["'])(https?:\/\/[^"'\s,;]+)\2|(https?:\/\/[^\s,;"']+))/gi
+  /\b(ANTHROPIC_BASE_URL|ANTHROPICBASEURL|OPENAI_BASE_URL|OPENAIBASEURL|PROVIDER_BASE_URL|PROVIDERBASEURL|BASE_URL|BASEURL)\s*=\s*(?:(["'])(https?:\/\/[^"'\s,;]+)\2|(https?:\/\/[^\s,;"']+))/gi
 
 const BEARER_TOKEN = /\bAuthorization\s*:\s*Bearer\s+[A-Za-z0-9._-]+/gi
 const INLINE_PROVIDER_TOKEN = /\b(tp-[A-Za-z0-9]{20,}|sk-[A-Za-z0-9]{20,})\b/g
+const QUOTED_WINDOWS_HOME_PATH = /(["'])\b[A-Za-z]:\\Users\\([^"']+)\1/g
+const QUOTED_WINDOWS_ABSOLUTE_PATH = /(["'])\b[A-Za-z]:\\(?!Users\\)[^"']+\1/g
+const QUOTED_WINDOWS_HOME_PATH_FORWARD = /(["'])\b[A-Za-z]:\/Users\/([^"']+)\1/g
+const QUOTED_WINDOWS_ABSOLUTE_PATH_FORWARD = /(["'])\b[A-Za-z]:\/(?!Users\/)[^"']+\1/g
 const WINDOWS_HOME_PATH = /\b[A-Za-z]:\\Users\\([^\\\s]+)((?:\\[^\s\\]+)*)/g
 const WINDOWS_ABSOLUTE_PATH = /\b[A-Za-z]:\\(?!Users\\)[^\s]+/g
 const WINDOWS_HOME_PATH_FORWARD = /\b[A-Za-z]:\/Users\/([^/\s]+)((?:\/[^\s/]+)*)/g
@@ -22,9 +26,13 @@ const AUTH_HEADER_KEYS = new Set([
 
 const PROVIDER_URL_KEYS = new Set([
   'anthropic_base_url',
+  'anthropicbaseurl',
   'openai_base_url',
+  'openaibaseurl',
   'provider_base_url',
+  'providerbaseurl',
   'base_url',
+  'baseurl',
 ])
 
 export function redactText(text: string): string {
@@ -39,6 +47,18 @@ export function redactText(text: string): string {
       return quote ? `${key}=${quote}[REDACTED_SECRET]${quote}` : `${key}=[REDACTED_SECRET]`
     })
     .replace(INLINE_PROVIDER_TOKEN, '[REDACTED_SECRET]')
+    .replace(QUOTED_WINDOWS_HOME_PATH, (_match, quote: string) => {
+      return `${quote}$HOME_ALIAS${quote}`
+    })
+    .replace(QUOTED_WINDOWS_ABSOLUTE_PATH, (_match, quote: string) => {
+      return `${quote}$WORKDIR${quote}`
+    })
+    .replace(QUOTED_WINDOWS_HOME_PATH_FORWARD, (_match, quote: string) => {
+      return `${quote}$HOME_ALIAS${quote}`
+    })
+    .replace(QUOTED_WINDOWS_ABSOLUTE_PATH_FORWARD, (_match, quote: string) => {
+      return `${quote}$WORKDIR${quote}`
+    })
     .replace(WINDOWS_HOME_PATH, (_match, _user, rest: string = '') => {
       return `$HOME_ALIAS${rest}`
     })

@@ -122,6 +122,19 @@ describe('Leviathan HL/Polar rollout schema', () => {
     })
   })
 
+  test('redacts provider URL aliases and quoted absolute paths with spaces', () => {
+    const text =
+      'ANTHROPICBASEURL=https://token-plan-cn.example.com/anthropic from "D:\\hl-agent4\\report folder\\file name.md"'
+
+    const redacted = redactText(text)
+
+    expect(redacted).not.toContain('token-plan-cn.example.com')
+    expect(redacted).not.toContain('D:\\hl-agent4')
+    expect(redacted).not.toContain('report folder')
+    expect(redacted).toContain('ANTHROPICBASEURL=[REDACTED_PROVIDER_URL]')
+    expect(redacted).toContain('"$WORKDIR"')
+  })
+
   test('redacts nested values while preserving structure', () => {
     const redacted = redactValue({
       headers: {
