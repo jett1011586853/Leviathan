@@ -1,7 +1,7 @@
 const SECRET_ASSIGNMENT =
-  /\b(ANTHROPIC_AUTH_TOKEN|ANTHROPIC_API_KEY|OPENAI_API_KEY|API_KEY|AUTH_TOKEN|TOKEN)\s*=\s*(?:(["'])([^"'\s,;]+)\2|([^\s,;"']+))/gi
+  /\b(ANTHROPIC_AUTH_TOKEN|ANTHROPIC_API_KEY|OPENAI_API_KEY|API_KEY|AUTH_TOKEN|TOKEN)\s*=(?!=|>)\s*(?:(["'])([^"'\s,;]+)\2|([^\s,;"']+))/g
 const PROVIDER_URL_ASSIGNMENT =
-  /\b(ANTHROPIC_BASE_URL|ANTHROPICBASEURL|OPENAI_BASE_URL|OPENAIBASEURL|PROVIDER_BASE_URL|PROVIDERBASEURL|BASE_URL|BASEURL)\s*=\s*(?:(["'])(https?:\/\/[^"'\s,;]+)\2|(https?:\/\/[^\s,;"']+))/gi
+  /\b(ANTHROPIC_BASE_URL|ANTHROPICBASEURL|OPENAI_BASE_URL|OPENAIBASEURL|PROVIDER_BASE_URL|PROVIDERBASEURL|BASE_URL|BASEURL)\s*=(?!=|>)\s*(?:(["'])(https?:\/\/[^"'\s,;]+)\2|(https?:\/\/[^\s,;"']+))/g
 
 const BEARER_TOKEN = /\bAuthorization\s*:\s*Bearer\s+[A-Za-z0-9._-]+/gi
 const INLINE_PROVIDER_TOKEN = /\b(tp-[A-Za-z0-9]{20,}|sk-[A-Za-z0-9]{20,})\b/g

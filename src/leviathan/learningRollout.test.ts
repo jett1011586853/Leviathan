@@ -135,6 +135,16 @@ describe('Leviathan HL/Polar rollout schema', () => {
     expect(redacted).toContain('"$WORKDIR"')
   })
 
+  test('does not redact ordinary source code token variables', () => {
+    const source =
+      "const token = tokens[index] ?? ''; if (token === flag) return token.slice(1)"
+
+    const redacted = redactText(source)
+
+    expect(redacted).toBe(source)
+    expect(redacted).not.toContain('[REDACTED_SECRET]')
+  })
+
   test('redacts nested values while preserving structure', () => {
     const redacted = redactValue({
       headers: {
