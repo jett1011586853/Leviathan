@@ -13,6 +13,7 @@ import {
   convertLeadingTabsToSpaces,
   readFileSyncCached,
 } from '../../utils/file.js'
+import { assertNoUnresolvedMergeConflictMarkers } from '../../utils/mergeConflictMarkers.js'
 import type { EditInput, FileEdit } from './types.js'
 
 // Some models can't output curly quotes, so we define them as constants here for Leviathan to use
@@ -220,15 +221,19 @@ export function applyEditToFile(
         content.replace(search, () => replace)
 
   if (newString !== '') {
-    return f(originalContent, oldString, newString)
+    const updatedContent = f(originalContent, oldString, newString)
+    assertNoUnresolvedMergeConflictMarkers(updatedContent)
+    return updatedContent
   }
 
   const stripTrailingNewline =
     !oldString.endsWith('\n') && originalContent.includes(oldString + '\n')
 
-  return stripTrailingNewline
+  const updatedContent = stripTrailingNewline
     ? f(originalContent, oldString + '\n', newString)
     : f(originalContent, oldString, newString)
+  assertNoUnresolvedMergeConflictMarkers(updatedContent)
+  return updatedContent
 }
 
 /**

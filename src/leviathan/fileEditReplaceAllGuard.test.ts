@@ -14,4 +14,14 @@ describe('Leviathan FileEdit replace_all guard', () => {
       'omega\nomega\n',
     )
   })
+
+  test('rejects edits that would introduce unresolved merge conflict markers', () => {
+    expect(() =>
+      applyEditToFile(
+        'alpha\nomega\n',
+        'omega',
+        '<<<<<<< HEAD\nomega\n=======\nbeta\n>>>>>>> branch',
+      ),
+    ).toThrow('Cannot write unresolved merge conflict markers')
+  })
 })

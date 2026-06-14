@@ -62,4 +62,18 @@ describe('Leviathan FileWrite line endings', () => {
 
     expect(readFileSync(filePath, 'utf8')).toBe('alpha\nbeta\n')
   })
+
+  test('rejects complete writes that contain unresolved merge conflict markers', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'leviathan-file-write-'))
+    dirs.push(dir)
+    const filePath = join(dir, 'conflicted.txt')
+
+    await expect(
+      runFileWriteTool(
+        filePath,
+        'alpha\n<<<<<<< HEAD\nbeta\n=======\ngamma\n>>>>>>> branch\n',
+      ),
+    ).rejects.toThrow('Cannot write unresolved merge conflict markers')
+    expect(existsSync(filePath)).toBe(false)
+  })
 })

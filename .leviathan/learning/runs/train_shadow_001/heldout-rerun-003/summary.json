@@ -1,0 +1,44 @@
+{
+  "schema_version": "leviathan.heldout_rerun_summary.v1",
+  "run_id": "train_shadow_001_rerun_003",
+  "task_id": "train_shadow_001_held_out_043",
+  "split": "held_out",
+  "taxonomy": [
+    "execution_environment_failure.dependency"
+  ],
+  "provider_model_id": "mimo-v2.5",
+  "model_call_success": true,
+  "cli_exit_code": 0,
+  "final_outcome": "resolved",
+  "resolved_label": true,
+  "model_rerun_commit": "c861838",
+  "verification": {
+    "commands": [
+      "bun test src/leviathan/packageRuntimeMetadata.test.ts --timeout 30000"
+    ],
+    "exit_codes": [
+      0
+    ],
+    "reported_result": "1 pass, 0 fail, 3 expect() calls"
+  },
+  "related_attempts": [
+    {
+      "run_id": "train_shadow_001_rerun_002",
+      "cli_exit_code": 1,
+      "final_outcome": "unresolved",
+      "reason": "The same prompt exceeded an 8-turn budget after recovering from an unavailable Glob tool call."
+    }
+  ],
+  "local_artifacts": {
+    "session_id_local_only": true,
+    "stdout_local_only": true,
+    "raw_rollout_local_only": true,
+    "annotated_rollout_local_only": true,
+    "full_artifacts_not_committed_reason": "Full transcript and rollout artifacts contain private source-code excerpts and local execution metadata."
+  },
+  "promotion": {
+    "activation_attempted": false,
+    "stable_promotion_ready": false,
+    "note": "This resolves the dependency held-out slice under the current run budget; full promotion still requires all held-out gates, target-slice improvement, and zero P0/P1 regressions."
+  }
+}

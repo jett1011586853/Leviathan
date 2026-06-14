@@ -33,6 +33,7 @@ import {
 } from '../../utils/gitDiff.js'
 import { lazySchema } from '../../utils/lazySchema.js'
 import { logError } from '../../utils/log.js'
+import { assertNoUnresolvedMergeConflictMarkers } from '../../utils/mergeConflictMarkers.js'
 import { expandPath } from '../../utils/path.js'
 import {
   checkWritePermissionForTool,
@@ -228,6 +229,7 @@ export const FileWriteTool = buildTool({
   ) {
     const fullFilePath = expandPath(file_path)
     const dir = dirname(fullFilePath)
+    assertNoUnresolvedMergeConflictMarkers(content)
 
     // Discover skills from this file's path (fire-and-forget, non-blocking)
     const cwd = getCwd()
