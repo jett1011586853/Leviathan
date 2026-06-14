@@ -1,0 +1,45 @@
+{
+  "schema_version": "leviathan.heldout_rerun_summary.v1",
+  "run_id": "train_shadow_001_rerun_004",
+  "task_id": "train_shadow_001_held_out_044",
+  "split": "held_out",
+  "taxonomy": [
+    "code_modification_failure.merge_conflict"
+  ],
+  "provider_model_id": "mimo-v2.5",
+  "model_call_success": true,
+  "cli_exit_code": 0,
+  "final_outcome": "resolved",
+  "resolved_label": true,
+  "model_rerun_commit": "e9c9c68",
+  "verification": {
+    "commands": [
+      "bun test src/leviathan/fileEditReplaceAllGuard.test.ts",
+      "bun test src/leviathan/fileWriteLineEndings.test.ts",
+      "bun -e <inline merge conflict marker detection check>"
+    ],
+    "exit_codes": [
+      0,
+      0,
+      0
+    ],
+    "reported_result": "FileEdit: 3 pass, 0 fail; FileWrite: 3 pass, 0 fail; inline marker detection: 5 pass, 0 fail"
+  },
+  "headless_capture_notes": {
+    "stdout_json_final_message": "late_background_task_notification",
+    "transcript_contains_primary_report": true,
+    "reason": "Background search tasks completed after the main evaluation report, so the CLI stdout JSON captured the final late notification rather than the main report text."
+  },
+  "local_artifacts": {
+    "session_id_local_only": true,
+    "stdout_local_only": true,
+    "raw_rollout_local_only": true,
+    "annotated_rollout_local_only": true,
+    "full_artifacts_not_committed_reason": "Full transcript and rollout artifacts contain private source-code excerpts and local execution metadata."
+  },
+  "promotion": {
+    "activation_attempted": false,
+    "stable_promotion_ready": false,
+    "note": "This resolves the merge-conflict held-out slice only; full promotion still requires all held-out gates, target-slice improvement, and zero P0/P1 regressions."
+  }
+}
