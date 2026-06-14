@@ -3,11 +3,16 @@
   "version": "1.0.0",
   "description": "Leviathan AI coding agent",
   "type": "module",
+  "packageManager": "bun@1.3.14",
   "main": "src/entrypoints/cli.tsx",
   "scripts": {
     "build": "bun build src/entrypoints/cli.tsx --outdir ./dist",
     "start": "bun run src/entrypoints/cli.tsx",
+    "test": "bun test src/leviathan --timeout 30000",
     "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "bun": ">=1.3.14"
   },
   "dependencies": {
     "@alcalzone/ansi-tokenize": "^0.3.0",
