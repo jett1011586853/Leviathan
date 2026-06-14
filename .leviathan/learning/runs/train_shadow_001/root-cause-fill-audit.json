@@ -1,0 +1,13 @@
+{
+  "total": 34,
+  "actionable": 30,
+  "negative_or_control": 4,
+  "missing_finding": 0,
+  "negative_paths": [
+    "rollouts/annotated/train/train_shadow_001_train_025.json",
+    "rollouts/annotated/dev/train_shadow_001_dev_033.json",
+    "rollouts/annotated/dev/train_shadow_001_dev_035.json",
+    "rollouts/annotated/dev/train_shadow_001_dev_036.json"
+  ],
+  "missing_paths": []
+}

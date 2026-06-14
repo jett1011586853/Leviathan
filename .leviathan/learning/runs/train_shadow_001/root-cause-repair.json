@@ -1,0 +1,127 @@
+{
+  "schema_version": "leviathan.root_cause_repair_report.v1",
+  "manifest_path": ".leviathan\\learning\\runs\\train_shadow_001\\root-causes-filled-candidate.json",
+  "repaired_count": 34,
+  "skipped_count": 0,
+  "blocked_count": 0,
+  "repaired_files": [
+    "rollouts/annotated/train/train_shadow_001_train_007.json",
+    "rollouts/annotated/train/train_shadow_001_train_008.json",
+    "rollouts/annotated/train/train_shadow_001_train_009.json",
+    "rollouts/annotated/train/train_shadow_001_train_010.json",
+    "rollouts/annotated/train/train_shadow_001_train_011.json",
+    "rollouts/annotated/train/train_shadow_001_train_012.json",
+    "rollouts/annotated/train/train_shadow_001_train_013.json",
+    "rollouts/annotated/train/train_shadow_001_train_014.json",
+    "rollouts/annotated/train/train_shadow_001_train_015.json",
+    "rollouts/annotated/train/train_shadow_001_train_016.json",
+    "rollouts/annotated/train/train_shadow_001_train_017.json",
+    "rollouts/annotated/train/train_shadow_001_train_018.json",
+    "rollouts/annotated/train/train_shadow_001_train_019.json",
+    "rollouts/annotated/train/train_shadow_001_train_020.json",
+    "rollouts/annotated/train/train_shadow_001_train_021.json",
+    "rollouts/annotated/train/train_shadow_001_train_022.json",
+    "rollouts/annotated/train/train_shadow_001_train_023.json",
+    "rollouts/annotated/train/train_shadow_001_train_024.json",
+    "rollouts/annotated/train/train_shadow_001_train_025.json",
+    "rollouts/annotated/train/train_shadow_001_train_026.json",
+    "rollouts/annotated/train/train_shadow_001_train_027.json",
+    "rollouts/annotated/train/train_shadow_001_train_028.json",
+    "rollouts/annotated/train/train_shadow_001_train_029.json",
+    "rollouts/annotated/train/train_shadow_001_train_030.json",
+    "rollouts/annotated/dev/train_shadow_001_dev_031.json",
+    "rollouts/annotated/dev/train_shadow_001_dev_032.json",
+    "rollouts/annotated/dev/train_shadow_001_dev_033.json",
+    "rollouts/annotated/dev/train_shadow_001_dev_034.json",
+    "rollouts/annotated/dev/train_shadow_001_dev_035.json",
+    "rollouts/annotated/dev/train_shadow_001_dev_036.json",
+    "rollouts/annotated/dev/train_shadow_001_dev_037.json",
+    "rollouts/annotated/dev/train_shadow_001_dev_038.json",
+    "rollouts/annotated/dev/train_shadow_001_dev_039.json",
+    "rollouts/annotated/dev/train_shadow_001_dev_040.json"
+  ],
+  "skipped_entries": [],
+  "blocked_entries": [],
+  "status_path": ".leviathan\\learning\\runs\\train_shadow_001\\shadow-status.json",
+  "status": {
+    "schema_version": "leviathan.shadow_learning_status.v1",
+    "run_id": "train_shadow_001",
+    "status": "collecting_rollouts",
+    "provider_model_id": "mimo-v2.5",
+    "provider_model_update": "none",
+    "target_rollout_count": 50,
+    "minimum_trainable_rollouts": 20,
+    "split_plan": {
+      "train": 30,
+      "dev": 10,
+      "held_out": 10
+    },
+    "rollout_counts": {
+      "raw": 50,
+      "annotated": {
+        "train": 30,
+        "dev": 10,
+        "held_out": 10,
+        "total": 50
+      }
+    },
+    "evidence": {
+      "present_files": [
+        "benchmark-splits.json",
+        "complexity-budget.json",
+        "failure-taxonomy.json",
+        "polar-spike-observations.json",
+        "polar-training-observations.json",
+        "regressions.json",
+        "replay-results.json",
+        "reward-design.json",
+        "rollback-incident-plan.json",
+        "security-scan.json",
+        "target-failure-slice.json"
+      ],
+      "missing_files": [],
+      "missing_gates": []
+    },
+    "annotation_quality": {
+      "missing_root_cause_summary": {
+        "train": 0,
+        "dev": 0,
+        "total": 0
+      },
+      "missing_root_cause_files": {
+        "train": [],
+        "dev": []
+      }
+    },
+    "pipeline": {
+      "present_artifacts": [
+        "heuristic-candidates.json",
+        "polar-candidates.json",
+        "promotion-snapshot.json",
+        "heuristic-evidence.json",
+        "polar-evidence.json",
+        "heuristic-promotion-report.json",
+        "polar-promotion-report.json",
+        "learning-bundle.json",
+        "learning-pipeline-manifest.json"
+      ],
+      "missing_artifacts": [],
+      "learning_bundle_present": true,
+      "active_state_present": false
+    },
+    "readiness": {
+      "raw_rollouts_collected": true,
+      "minimum_trainable_rollouts_ready": true,
+      "train_split_ready": true,
+      "dev_split_ready": true,
+      "held_out_split_ready": true,
+      "evidence_files_present": true,
+      "annotation_quality_ready": true,
+      "formal_gates_cleared": true
+    },
+    "ready_for_pipeline": true,
+    "next_actions": [
+      "Run /learning run-pipeline with train rollouts, held-out rollouts, and evidence files."
+    ]
+  }
+}

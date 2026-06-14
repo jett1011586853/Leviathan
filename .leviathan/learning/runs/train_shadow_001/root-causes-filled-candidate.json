@@ -1,0 +1,244 @@
+{
+  "schema_version": "leviathan.root_cause_repair_manifest.v1",
+  "run_id": "train_shadow_001",
+  "entries": [
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_007.json",
+      "root_cause_summary": "Final report identified the root-cause pattern: Single-depth activation rollback chain silently severs the permanent rollback point Location: src/learning/learningActivationFiles.ts, functions toSnapshot (line 84-92) and rollbackLearningActivationFile (line 179-221). Mechanism: The LearningActivationState type stores a single previous: LearningActivationSnapshot null field — a one-deep linked list of activation history. 1. toSnapshot (line 84-92) copies the current state but hard-forces previous: null on the snapshot: ts function toSnapshot(state) { if (!state state.status !== 'active') return null",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate.",
+      "evidence_source": "last assistant shadow rollout report",
+      "quality_label": "actionable"
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_008.json",
+      "root_cause_summary": "Final report identified the root-cause pattern: is here 6 src/learning/shadowLearningRolloutIntakeFiles.ts Intake writes annotated rollouts to per-split directories; has a resolveRunPath inconsistency 7 src/learning/shadowLearningEvidenceIntakeFiles.ts Evidence intake; same resolveRunPath inconsistency 8 src/learning/shadowLearningRunStatusFiles.ts Status snapshot; counts per-split annotated rollouts 9 src/learning/shadowLearningRunFiles.ts initializeShadowLearningRun — creates splitplan and per-split directories 10 src/learning/rolloutAnnotationFiles.ts annotateRolloutFile — writes split tag into the bundle 11 src/learning/trainingReadinessEvidence.ts Builds readiness evidence; calls validateBenchmarkSplits on BenchmarkTaskRecord arrays 12 src/le...",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate.",
+      "evidence_source": "last assistant shadow rollout report",
+      "quality_label": "actionable"
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_009.json",
+      "root_cause_summary": "Final report identified the root-cause pattern: OAuth token path ignores custom ANTHROPICBASEURL for token refresh Location: src/services/oauth/client.ts lines 47–52 combined with src/constants/oauth.ts getOauthConfig() The getOauthConfig() function (line 48–69 of constants/oauth.ts) derives BASEAPIURL from ANTHROPICBASEURL: ts const baseApiUrl = process.env.ANTHROPICBASEURL?.replace(/\\/$/, '') ?? 'https://api.anthropic.com'",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate.",
+      "evidence_source": "last assistant shadow rollout report",
+      "quality_label": "actionable"
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_010.json",
+      "root_cause_summary": "Final report identified the root-cause pattern: Split-Value Mismatch Causes Silent Split Bypass on intake-shadow-rollout Root cause: Two different split-validation functions with non-overlapping valid-value sets are used by different subcommands of /learning, and the mismatch is silent. The two validators: Function Used by Accepts Defined at ---------------------------------------- readSplitFlag() export-transcript-rollout, annotate-rollout train, dev, test, shadow learning.ts:339–352 readShadowIntakeSplitFlag() intake-shadow-rollout only train, dev, heldout learning.ts:354–362 The schema context: RolloutSplit (rolloutSchema.ts:26) defines the canonical values as 'train' 'dev' 'test' 'shadow'. The rollout schema uses test for held-out data. There ...",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate.",
+      "evidence_source": "last assistant shadow rollout report",
+      "quality_label": "actionable"
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_011.json",
+      "root_cause_summary": "Final report identified the root-cause pattern: Permission-Deny Risk for .leviathan/ Write Operations in Headless Rollout Collection The concrete risk chain: 1. Protected path definition (filesystem.ts:75-81): .leviathan is listed in DANGEROUSDIRECTORIES, which triggers isDangerousFilePathToAutoEdit. 2. Safety check is bypass-immune (permissions.ts:1146-1152 / permissionSetup.ts:1144-1156): The checkPathSafetyForAutoEdit result carries decisionReason.type === 'safetyCheck'. This fires even in bypassPermissions mode — the code explicitly returns it before the bypass gate at step 2a: // 1g. Safety checks (e.g. .git/, .leviathan/, .vscode/, shell configs) are // bypass-immune — they must prompt even in bypassPermissions mode.",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate.",
+      "evidence_source": "last assistant shadow rollout report",
+      "quality_label": "actionable"
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_012.json",
+      "root_cause_summary": "Final report identified the root-cause pattern: Inconsistent rollback checkpoint tags across recovery-evidence files (stale-context risk) Two separate data paths record the git rollback checkpoint, but they use different tag naming conventions with no cross-validation between them: 1. Training manifest / shadow-run path (trainingRunManifest.ts, shadowLearningRunFiles.ts): stores rollbackcheckpointtag as a value supplied by the user or launch.json. In the live shadow run this is \"permanent-leviathan-current-2026-06-04\" — a tag that does not start with checkpoint/ and does not contain pre-hl-polar-training. 2. Incident-plan validation (rollbackIncidentPlan.ts, line 39-44): requires the plan's permanentcheckpointtag to satisfy: tag.startsWith('checkp...",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate.",
+      "evidence_source": "last assistant shadow rollout report",
+      "quality_label": "actionable"
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_013.json",
+      "root_cause_summary": "Final report identified the root-cause pattern: Test-Selection Wrong — Passing but Insufficient Test Subset One realistic risk identified. The taxonomy in failureTaxonomy.ts explicitly declares testselectionwrong as a verificationfailure signal and maps it to the target assets regressiontests and evaluationpolicy. However, across the entire learning pipeline the following gap exists: 1. --test-cmd is accepted but never executed or validated. When a developer or agent runs intake-shadow-rollout --test-cmd \"bun test src/learning/promotionGate.test.ts\", the command string is stored verbatim into evaluation.testcommands on the rollout bundle (see learning.ts lines 488–489, stored via annotateRolloutFile). No code in the pipeline ever invokes this comm...",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate.",
+      "evidence_source": "last assistant shadow rollout report",
+      "quality_label": "actionable"
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_014.json",
+      "root_cause_summary": "Final report identified the root-cause pattern: Stale Learning Bundle Guidance Leaks Training-Evidence Identifiers Into Runtime Context via Un-Scoped Active-Learning Prompt Injection Mechanism (traced across three files): 1. src/learning/activeLearningContext.ts lines 63-104 — loadActiveLearningRuntimeContextFromFile() reads the activation-state file, then reads the bundle file, and extracts every heuristiccandidate (including sourcefailuretaxonomy strings like \"modelinteractionfailure.proxybypass\") and every polarupdate (including sourcecases strings that are literal rollout/task IDs from the training split). 2. src/learning/activeLearningContext.ts lines 116-143 — renderActiveLearningRuntimeContext() serializes these identifiers directly into th...",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate.",
+      "evidence_source": "last assistant shadow rollout report",
+      "quality_label": "actionable"
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_015.json",
+      "root_cause_summary": "Final report identified the root-cause pattern: Incident-plan featureflags diverge from activation-state enabledfeatureflags — orphaned candidate flags survive incident rollback This is not a simple one-depth chain loss. The bug is a cross-system state mismatch between two independently maintained rollback mechanisms: the incident plan and the activation state. The two parallel rollback mechanisms 1. Incident-plan rollback (rollbackIncidentPlan.ts): A static plan with hardcoded featureflags and rollbackcommands (a git reset --hard checkpoint/pre-hl-polar-training-). Validated once at training-readiness time (trainingReadinessEvidence.ts:115-117). The featureflags field is checked only for non-emptiness (line 64-66) — never cross-referenced against...",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate.",
+      "evidence_source": "last assistant shadow rollout report",
+      "quality_label": "actionable"
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_016.json",
+      "root_cause_summary": "Final report identified the root-cause pattern: ANTHROPICBASEURL leaks provider endpoint hostname through the redaction gap Observed State 1. Live credential on disk (/.env): ANTHROPICAPIKEY=[REDACTEDSECRET] ANTHROPICBASEURL=[REDACTEDPROVIDERURL] The sk- API key matches the INLINEPROVIDERTOKEN regex (/\\b(sk-[A-Za-z0-9]{20,})\\b/g) and would be redacted if it appeared in a rollout transcript. This part of the redaction chain works.",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate.",
+      "evidence_source": "last assistant shadow rollout report",
+      "quality_label": "actionable"
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_017.json",
+      "root_cause_summary": "Final report identified the root-cause pattern: Fallback model path ignores user-configured custom provider endpoint Mechanism. When the streaming path hits three consecutive 529 (overloaded) errors against a custom provider behind ANTHROPICBASEURL, the retry loop in withRetry.ts (line 340) throws FallbackTriggeredError(originalModel, fallbackModel). This propagates up to query.ts (line 894) which re-issues the query using the fallback model name. The fallback model identifier originates from the codebase's internal model constants (e.g. getSmallFastModel() / getDefaultSonnetModel() in src/utils/model/model.ts). These are first-party Anthropic model strings (e.g. claude-sonnet-4-20250514). The critical problem: getAnthropicClient() in client.ts (l...",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate.",
+      "evidence_source": "last assistant shadow rollout report",
+      "quality_label": "actionable"
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_018.json",
+      "root_cause_summary": "Final report identified the root-cause pattern: Slash-Command Argument Tokeniser Drops Quoted Arguments Location: src/utils/slashCommandParsing.ts, line 35 ts const words = withoutSlash.split(' ') The parser splits the raw input string on spaces unconditionally. It does not use a shell-style tokenizer (the repo already depends on shell-quote in package.json for this exact purpose but does not import it here). Concrete bad-args scenario: A user types a slash command whose argument legitimately contains spaces, e.g.:",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate.",
+      "evidence_source": "last assistant shadow rollout report",
+      "quality_label": "actionable"
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_019.json",
+      "root_cause_summary": "Final report identified the root-cause pattern: WebFetch permission policy does not account for egress-proxy / upstream-proxy network availability. The WebFetchTool.checkPermissions() method (in WebFetchTool.ts) evaluates access purely on hostname-based permission rules — it checks isPreapprovedHost, then looks up deny/ask/allow rules keyed by domain:<hostname>. If no rule blocks the hostname, the tool proceeds. However, the actual HTTP call in WebFetchTool/utils.ts routes through axios.get, which inherits whatever proxy configuration is active (HTTPSPROXY set by getUpstreamProxyEnv() in upstreamproxy.ts, or user-set proxy env vars processed by configureGlobalAgents() in proxy.ts). If the upstream proxy relay is down, misconfigured, or its NOPROXY...",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate.",
+      "evidence_source": "last assistant shadow rollout report",
+      "quality_label": "actionable"
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_020.json",
+      "root_cause_summary": "Final report identified the root-cause pattern: Stale-edit / concurrent-modification race in FileEditTool.call() with session-local readFileState Location: src/tools/FileEditTool/FileEditTool.ts, lines 429–468, and src/utils/fileStateCache.ts (the FileStateCache backing readFileState). How the edit-path works today: 1. validateInput (line 137) reads the file from disk, compares it against the readFileState entry left by the model's most recent FileReadTool call, and rejects if the file has been modified since that read (errorCode 7) or has not been read at all (errorCode 6). 2. Between validateInput and call, two async operations execute (line 430: await fs.mkdir(…), line 435–439: await fileHistoryTrackEdit(…)). The code's own comment at lines 429...",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate.",
+      "evidence_source": "last assistant shadow rollout report",
+      "quality_label": "actionable"
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_021.json",
+      "root_cause_summary": "Final report identified the root-cause pattern: Summary The pipeline can pass the replaypassed and heldoutpassed promotion gates while a behavioral regression silently shifts sub-type within the same primary failure class, leaving the specific hiddenregression signal undetected. Detail — two interacting gaps Gap 1: Replay comparison reduces failure taxonomy to primary class only. In replayCompare.ts, primaryFailureTaxonomy (line 47–49) extracts only bundle.failure.taxonomy[0] and strips everything after the first .: ts function primaryFailureTaxonomy(bundle: LeviathanRolloutBundle): string { const first = bundle.failure.taxonomy[0] ?? ''",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate.",
+      "evidence_source": "last assistant shadow rollout report",
+      "quality_label": "actionable"
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_022.json",
+      "root_cause_summary": "Final report identified the root-cause pattern: Area: sessionMemoryCompact.ts → trySessionMemoryCompaction() — session memory content read for context compression. Mechanism (reconstructed from code): 1. Background extraction (sessionMemory.ts) writes session memory to a file on disk, gated by both a token-growth threshold (minimumTokensBetweenUpdate, default 5 000 tokens) and a tool-call threshold (toolCallsBetweenUpdates, default 3 calls). 2. When autocompact fires, trySessionMemoryCompaction calls waitForSessionMemoryExtraction() (sessionMemoryUtils.ts lines 89-105). This function has a 60-second stale-abandon threshold: if extractionStartedAt is older than 60 s, it returns immediately without verifying whether the extraction actually completed...",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate.",
+      "evidence_source": "last assistant shadow rollout report",
+      "quality_label": "actionable"
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_023.json",
+      "root_cause_summary": "Final report identified the root-cause pattern: — Checkpoint Tag / Recovery Command Target Mismatch The incident plan validator's hardcoded checkpoint tag does not correspond to the rollback checkpoint tag recorded in the training run. An incident plan that passes validation would cause git reset --hard to target the wrong commit. Concretely: 1. Shadow run's recorded tag (launch.json line 35, formal-launch-manifest.json line 7): rollbackcheckpointtag: \"permanent-leviathan-current-2026-06-04\" → resolves to commit 139cdfc (feat: activate learning bundles with rollback) 2. Incident plan validator (rollbackIncidentPlan.ts lines 39–44, 47–50): - hasPermanentCheckpointTag() requires tag to start with checkpoint/ and include pre-hl-polar-training",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate.",
+      "evidence_source": "last assistant shadow rollout report",
+      "quality_label": "actionable"
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_024.json",
+      "root_cause_summary": "Final report identified the root-cause pattern: Unsafe Export Risk — Intake Manifests Leak Benchmark Governance Internals and Local Paths Risk realized: YES — confirmed. Each git-tracked intake report (21 committed files) contains: 1. Embedded full shadow-status.json snapshot — every intake file duplicates the entire status object, including: - The benchmark split plan (train: 30, dev: 10, heldout: 10) — this reveals the exact held-out and dev split sizes, which are governance-sensitive details about benchmark isolation. - All missing evidence file names and uncleared gate names (e.g., benchmarksplitsisolated, polarproxyspikecasespassed). - Complete internal pipeline readiness state. 2. Local filesystem paths with OS-specific separators — intake f...",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate.",
+      "evidence_source": "last assistant shadow rollout report",
+      "quality_label": "actionable"
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_025.json",
+      "root_cause_summary": "Final report found no actionable failure for this taxonomy; treat as negative/control or relabel before training: No bypass of the user-configured provider base URL or model was identified. All API request paths — interactive REPL, SDK/QueryEngine, subagent forking, background tasks, compact/sideQuery, providerLimits, tokenEstimation, and filesApi — converge on a single getAnthropicClient() constructor in src/services/api/client.ts. That constructor reads ANTHROPICBASEURL from process.env (line 293) and never hardcodes or overrides it. There is no hardcoded recovered-product endpoint or model-family redirect anywhere in the routing, proxy, model selection, fallback, or export paths. The only 'api.anthropic.com' hardcodes are: (a) isFirstPartyAnthr...",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate.",
+      "evidence_source": "last assistant shadow rollout report",
+      "quality_label": "negative_or_control"
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_026.json",
+      "root_cause_summary": "Final report identified the root-cause pattern: Asymmetric tokenizers between /export and /learning slash-commands create a latent bad-args failure surface for user-facing or agent-generated command strings. parseExportArgs (src/commands/export/export.tsx:46) uses a naive args.trim().split(/\\s+/) that does NOT handle quoted strings, while parseLearningCommandArgs (src/commands/learning/learning.ts:238-248) uses a proper quote-aware regex tokenizer. If an agent constructs /export --rollout \"path with spaces\\file.json\", the export parser will split the quoted filename into separate tokens, misidentifying the second word as a positional filename and losing the remainder. The task-queue generator (shadowLearningTaskQueueFiles.ts:133-143) happens to av...",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate.",
+      "evidence_source": "last assistant shadow rollout report",
+      "quality_label": "actionable"
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_027.json",
+      "root_cause_summary": "Final report identified the root-cause pattern: Stale sandbox-enabled state after initialization failure creates an inconsistent recovery path: shouldUseSandbox() returns true while wrapWithSandbox() throws 'Sandbox failed to initialize', with no automatic recovery mechanism.",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate.",
+      "evidence_source": "last assistant shadow rollout report",
+      "quality_label": "actionable"
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_028.json",
+      "root_cause_summary": "Final report identified the root-cause pattern: Audited the full code-modification controller path: FileEditTool, FileWriteTool, edit-utils, atomic-write, dirty-worktree detection, worktree lifecycle, sed-edit parsing, path normalization, and query-engine recovery. Three concrete issues were identified: 1. Silent concurrent-edit loss (FileEditTool): When two parallel tool calls read the same file version, both pass the staleness guard (timestamp ≤ read-timestamp). Both write sequentially; the second silently overwrites the first's changes. The codebase acknowledges this explicitly — line 443 comment: \"Please avoid async operations between here and writing to disk to preserve atomicity\" — but the async mkdir + fileHistoryTrackEdit at lines 430–439 ...",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate.",
+      "evidence_source": "last assistant shadow rollout report",
+      "quality_label": "actionable"
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_029.json",
+      "root_cause_summary": "Final report identified the root-cause pattern: The Leviathan learning harness has zero flaky-test detection, retry, or rerun infrastructure. All 28 collected rollouts and the entire replay-promotion pipeline assume tests are perfectly deterministic. Replay comparison (replayCompare.ts) uses strict binary exact-match on exitcodes and testoutputs with no tolerance. The rollout schema seeds are null, no retry budget exists, and no test-stability metadata is recorded. A single flaky test will cause a false replay mismatch, block promotion via the p0p1regressions gate, and poison training evidence with indistinguishable noise — yet the system has no mechanism to detect or quarantine this failure mode.",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate.",
+      "evidence_source": "last assistant shadow rollout report",
+      "quality_label": "actionable"
+    },
+    {
+      "path": "rollouts/annotated/train/train_shadow_001_train_030.json",
+      "root_cause_summary": "Final report identified the root-cause pattern: Active learning signals, session memory state, and task-level constraints can be lost or orphaned during compaction and resume flows through multiple concrete mechanisms: 1. lastSummarizedMessageId is an in-memory-only variable (sessionMemoryUtils.ts:44). It is never persisted to disk. On resume, getLastSummarizedMessageId() returns undefined, causing sessionMemoryCompact.ts:561-565 to set lastSummarizedIndex = messages.length - 1 — effectively discarding ALL post-compact messages as unreachable. The code comment acknowledges this as a 'resumed session case' but the fallback silently drops preserved-segment context rather than re-deriving the boundary from disk artifacts. 2. Session memory extraction...",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate.",
+      "evidence_source": "last assistant shadow rollout report",
+      "quality_label": "actionable"
+    },
+    {
+      "path": "rollouts/annotated/dev/train_shadow_001_dev_031.json",
+      "root_cause_summary": "Final report identified the root-cause pattern: The learning pipeline's candidate recovery rule for recoverycontrolfailure.badrollback prescribes only Disable feature flag <flag> as its rollback plan (heuristicTrainer.ts:57). This is a feature-flag-disable, not a state-restoration action. If a bad rollback has already corrupted state (mutated files, reset to wrong checkpoint, or left partial writes), disabling the feature flag after the fact does not undo the damage. The codebase has two stronger rollback mechanisms—a git reset --hard incident plan validator (rollbackIncidentPlan.ts:49) and a learning-activation state machine with single-step snapshot restore (learningActivationFiles.ts:179-221)—but neither is wired into the per-candidate heuristi...",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate.",
+      "evidence_source": "last assistant shadow rollout report",
+      "quality_label": "actionable"
+    },
+    {
+      "path": "rollouts/annotated/dev/train_shadow_001_dev_032.json",
+      "root_cause_summary": "Final report identified the root-cause pattern: Three concrete benchmark split governance issues were identified in the dev/heldout isolation boundary: 1. Split identity embedded in rollout userinstruction. The exported dev rollout trainshadow001dev031.json carries run.split: \"dev\" in the bundle metadata and the literal string Split: dev inside the task.userinstruction field. The extractFirstUserInstruction() function in conversationRollout.ts writes the raw first-user-message text into the bundle with no split-identity scrubbing. If any downstream pipeline consumes exported rollouts without filtering on run.split, dev-identity prompts enter training data. 2. Forward-slash Windows path redaction gap. The WINDOWSABSOLUTEPATH regex in redaction.ts i...",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate.",
+      "evidence_source": "last assistant shadow rollout report",
+      "quality_label": "actionable"
+    },
+    {
+      "path": "rollouts/annotated/dev/train_shadow_001_dev_033.json",
+      "root_cause_summary": "Final report found no actionable failure for this taxonomy; treat as negative/control or relabel before training: No steering, bypass, or fallback mechanism was found that could redirect an agent from the user's configured custom provider/model to a hardcoded recovered-product model or endpoint. The codebase is clean across all five audit surfaces examined.",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate.",
+      "evidence_source": "last assistant shadow rollout report",
+      "quality_label": "negative_or_control"
+    },
+    {
+      "path": "rollouts/annotated/dev/train_shadow_001_dev_034.json",
+      "root_cause_summary": "Final report identified the root-cause pattern: The learning command parser has three concrete argument-construction risks that can cause malformed arguments or wrong-tool invocations: 1. Tokenizer drops Windows backslash content. tokenizeArgs uses regex /\"([^\"])\"'([^'])'(\\S+)/g. The unquoted branch (\\S+) matches $WORKDIR but stops at \\ in some regex engines (or consumes it), so unquoted Windows paths like --out $HOMEALIAS\\launch.json are silently truncated. Only --out \"$HOMEALIAS\\launch.json\" works. The USAGE string and argumentHint show no quoted-path examples. 2. Split type / parser mismatch creates silent badargs. ParsedLearningCommandArgs['export-transcript-rollout'].split is typed as RolloutSplit, and readSplitFlag accepts traindevtestshadow...",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate.",
+      "evidence_source": "last assistant shadow rollout report",
+      "quality_label": "actionable"
+    },
+    {
+      "path": "rollouts/annotated/dev/train_shadow_001_dev_035.json",
+      "root_cause_summary": "Final report found no actionable failure for this taxonomy; treat as negative/control or relabel before training: Timeout handling in the BashTool and API layer is well-structured but contains several patterns that can produce misleading success/failure evidence in training data. (1) The default bash timeout is 120s (2 min) with a configurable max of 600s (10 min) via BASHDEFAULTTIMEOUTMS / BASHMAXTIMEOUTMS env vars (src/utils/timeouts.ts:2-3). (2) When a foreground bash command exceeds the assistant-mode blocking budget (ASSISTANTBLOCKINGBUDGETMS), it is auto-backgrounded via backgroundExistingForegroundTask rather than killed — the tool result explicitly states the command 'was moved to the background' and is 'still running' (BashTool.tsx:610). ...",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate.",
+      "evidence_source": "last assistant shadow rollout report",
+      "quality_label": "negative_or_control"
+    },
+    {
+      "path": "rollouts/annotated/dev/train_shadow_001_dev_036.json",
+      "root_cause_summary": "Final report found no actionable failure for this taxonomy; treat as negative/control or relabel before training: Edit recovery and conflict handling are robust and multi-layered. The codebase implements five defense tiers against unrecoverable or misleading edit state: (1) stale-read detection with Windows mtime+content fallback, (2) transient-git-state suppression during merge/rebase/cherry-pick/revert, (3) explicit patch-application failure semantics with actionable error codes, (4) atomic temp-file-then-rename writes with non-atomic fallback, and (5) a snapshot-based file-history rewind system. One known low-severity edge case exists: the LRU FileStateCache (100 entries / 25 MB) can evict a previously-read file's entry in a very busy session, ...",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate.",
+      "evidence_source": "last assistant shadow rollout report",
+      "quality_label": "negative_or_control"
+    },
+    {
+      "path": "rollouts/annotated/dev/train_shadow_001_dev_037.json",
+      "root_cause_summary": "Final report identified the root-cause pattern: The codebase has a structural gap that allows the agent or learning pipeline to select the wrong tests, under-test changes, over-trust partial verification, and misclassify hidden regressions. Three concrete defects were identified: 1. NO CHANGED-FILE-TO-TEST MAPPING. The rollout schema (rolloutSchema.ts) records testcommands/testoutputs/exitcodes in evaluation but nothing in the pipeline validates that the selected tests actually cover the changed files",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate.",
+      "evidence_source": "last assistant shadow rollout report",
+      "quality_label": "actionable"
+    },
+    {
+      "path": "rollouts/annotated/dev/train_shadow_001_dev_038.json",
+      "root_cause_summary": "Final report identified the root-cause pattern: Memory pollution risks exist across five subsystems, but the codebase has substantive mitigations in most paths. Three concrete risk vectors remain partially or fully unresolved: 1. Session memory compaction retains stale cross-user data on resume. When a session is resumed (/resume), trySessionMemoryCompaction in src/services/compact/sessionMemoryCompact.ts reads the session memory file from disk via getSessionMemoryContent() (line 530) and injects it verbatim as a compact summary. If the session memory file from a prior user session (or a different task within the same session) was not cleared, its content — including user-specific file paths, error patterns, and workflow notes — flows into the new...",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate.",
+      "evidence_source": "last assistant shadow rollout report",
+      "quality_label": "actionable"
+    },
+    {
+      "path": "rollouts/annotated/dev/train_shadow_001_dev_039.json",
+      "root_cause_summary": "Final report identified the root-cause pattern: Three concrete rollback/recovery control failures were identified through source-code audit: 1. Incident plan validator rejects the shadow run's own checkpoint tag. The validator hasPermanentCheckpointTag() in src/learning/rollbackIncidentPlan.ts:39-45 hardcodes acceptance of only tags matching checkpoint/ AND containing the substring pre-hl-polar-training. The shadow run (shadow-status.json) records its rollback checkpoint as permanent-leviathan-current-2026-06-04 (validated in formal-launch-manifest.json). This tag starts with checkpoint/ but does NOT contain pre-hl-polar-training, so the incident plan validator would reject it as invalid. The only tag that passes the validator is checkpoint/pre-hl...",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate.",
+      "evidence_source": "last assistant shadow rollout report",
+      "quality_label": "actionable"
+    },
+    {
+      "path": "rollouts/annotated/dev/train_shadow_001_dev_040.json",
+      "root_cause_summary": "Final report identified the root-cause pattern: The inline sk- / tp- token redaction and TOKEN=[REDACTEDSECRET] assignment redaction in redaction.ts are functional and produce correct [REDACTEDSECRET] placeholders in all 39 exported and annotated rollout bundles inspected. No raw API key values (sk-鈥? tp-鈥? were found in any committed or gitignored rollout artifact. The .env file and settings.local.json are correctly gitignored and not git-tracked. However, provider base URL values (ANTHROPICBASEURL) such as \"api.deepseek.com\" and \"token-plan-cn.example.com\" are NOT covered by any",
+      "evidence_required": "Fill from transcript, tool, diff, and evaluation evidence; do not fabricate.",
+      "evidence_source": "last assistant shadow rollout report",
+      "quality_label": "actionable"
+    }
+  ]
+}
