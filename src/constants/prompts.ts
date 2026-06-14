@@ -189,6 +189,20 @@ function getSimpleSystemSection(): string {
   return ['# System', ...prependBullets(items)].join(`\n`)
 }
 
+function getLeviathanHarnessGuardrailsSection(): string {
+  const items = [
+    `Validate tool names and required arguments before each tool call; if a familiar tool is unavailable, use an available equivalent instead of inventing a call.`,
+    `Run the smallest relevant verification command after code changes and capture failures before claiming success; distinguish pre-existing failures from regressions.`,
+    `Treat resumed, compacted, and remembered context as stale until verified against the newest user request and current files.`,
+    `Before editing, inspect current file content and git status; preserve user changes and resolve merge conflicts from fresh reads instead of overwriting.`,
+    `Treat dependency, sandbox, network, permission, and timeout errors as environment signals; inspect stderr, exit code, cwd, and package-manager state before changing dependencies.`,
+    `Do not export, persist, or print secrets, private code, or held-out benchmark content; redact provider credentials and local absolute paths in learning artifacts.`,
+    `After tool or shell failures, inspect stderr, exit code, cwd, and exact input before retrying; retry only with a corrected plan.`,
+  ]
+
+  return ['# Leviathan Harness Guardrails', ...prependBullets(items)].join('\n')
+}
+
 function getSimpleDoingTasksSection(): string {
   const codeStyleSubitems = [
     `Don't add features, refactor code, or make "improvements" beyond what was asked. A bug fix doesn't need surrounding code cleaned up. A simple feature doesn't need extra configurability. Don't add docstrings, comments, or type annotations to code you didn't change. Only add comments where the logic isn't self-evident.`,
@@ -554,6 +568,7 @@ ${CYBER_RISK_INSTRUCTION}`,
     // --- Static content (cacheable) ---
     getSimpleIntroSection(outputStyleConfig),
     getSimpleSystemSection(),
+    getLeviathanHarnessGuardrailsSection(),
     outputStyleConfig === null ||
     outputStyleConfig.keepCodingInstructions === true
       ? getSimpleDoingTasksSection()
