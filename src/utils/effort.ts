@@ -5,9 +5,8 @@ import { getFeatureValue_CACHED_MAY_BE_STALE } from 'src/services/analytics/grow
 import { getAPIProvider } from './model/providers.js'
 import { get3PModelCapabilityOverride } from './model/modelSupportOverrides.js'
 import { isEnvTruthy } from './envUtils.js'
-import type { EffortLevel } from 'src/entrypoints/sdk/runtimeTypes.js'
 
-export type { EffortLevel }
+export type EffortLevel = 'low' | 'medium' | 'high' | 'max'
 
 export const EFFORT_LEVELS = [
   'low',
@@ -52,8 +51,15 @@ export function modelSupportsEffort(model: string): boolean {
 }
 
 // @[MODEL LAUNCH]: Add the new model to the allowlist if it supports 'max' effort.
-// Per API docs, 'max' is Opus 4.6 only for public models — other models return an error.
+// Custom gateways are trusted to validate their own deployment capabilities.
 export function modelSupportsMaxEffort(model: string): boolean {
+  if (
+    isEnvTruthy(process.env.LEVIATHAN_CODE_ALWAYS_ENABLE_EFFORT) ||
+    isEnvTruthy(process.env.LEVIATHAN_CODE_ALWAYS_ENABLE_MAX_EFFORT)
+  ) {
+    return true
+  }
+
   const supported3P = get3PModelCapabilityOverride(model, 'max_effort')
   if (supported3P !== undefined) {
     return supported3P
@@ -64,6 +70,12 @@ export function modelSupportsMaxEffort(model: string): boolean {
   }
   // DeepSeek v4 models support max effort (extended thinking)
   if (m.includes('deepseek')) {
+    return true
+  }
+  // Custom Anthropic-compatible gateways are user-controlled. Do not clamp an
+  // explicit /effort max selection just because Leviathan does not recognize
+  // the deployment name.
+  if (getAPIProvider() === 'custom') {
     return true
   }
   if (process.env.USER_TYPE === 'ant' && resolveAntModel(model)) {
@@ -96,25 +108,24 @@ export function parseEffortValue(value: unknown): EffortValue | undefined {
 
 /**
  * Numeric values are model-default only and not persisted.
- * 'max' is session-scoped for external users (ants can persist it).
  * Write sites call this before saving to settings so the Zod schema
  * (which only accepts string levels) never rejects a write.
  */
 export function toPersistableEffort(
   value: EffortValue | undefined,
 ): EffortLevel | undefined {
-  if (value === 'low' || value === 'medium' || value === 'high') {
-    return value
-  }
-  if (value === 'max' && process.env.USER_TYPE === 'ant') {
+  if (
+    value === 'low' ||
+    value === 'medium' ||
+    value === 'high' ||
+    value === 'max'
+  ) {
     return value
   }
   return undefined
 }
 
 export function getInitialEffortSetting(): EffortLevel | undefined {
-  // toPersistableEffort filters 'max' for non-ants on read, so a manually
-  // edited settings.json doesn't leak session-scoped max into a fresh session.
   return toPersistableEffort(getInitialSettings().effortLevel)
 }
 
@@ -167,7 +178,8 @@ export function resolveAppliedEffort(
   }
   const resolved =
     envOverride ?? appStateEffortValue ?? getDefaultEffortForModel(model)
-  // API rejects 'max' on non-Opus-4.6 models — downgrade to 'high'.
+  // Known unsupported models reject 'max'. Custom gateways and known max-capable
+  // models pass through unchanged.
   if (resolved === 'max' && !modelSupportsMaxEffort(model)) {
     return 'high'
   }
@@ -191,7 +203,8 @@ export function getDisplayedEffortLevel(
  * Build the ` with {level} effort` suffix shown in Logo/Spinner.
  * Returns empty string if the user hasn't explicitly set an effort value.
  * Delegates to resolveAppliedEffort() so the displayed level matches what
- * the API actually receives (including max→high clamp for non-Opus models).
+ * the API actually receives, including max-to-high fallback for unsupported
+ * models.
  */
 export function getEffortSuffix(
   model: string,
@@ -238,7 +251,7 @@ export function getEffortLevelDescription(level: EffortLevel): string {
     case 'high':
       return 'Comprehensive implementation with extensive testing and documentation'
     case 'max':
-      return 'Maximum capability with deepest reasoning (Opus 4.6 only)'
+      return 'Maximum reasoning effort for models that expose their deepest thinking mode'
   }
 }
 

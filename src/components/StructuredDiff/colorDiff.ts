@@ -1,8 +1,4 @@
-import {
-  ColorDiff as NativeColorDiff,
-  ColorFile as NativeColorFile,
-  getSyntaxTheme as nativeGetSyntaxTheme,
-} from 'color-diff-napi'
+import { createRequire } from 'node:module'
 import {
   ColorDiff as TypeScriptColorDiff,
   ColorFile as TypeScriptColorFile,
@@ -34,6 +30,17 @@ type ColorModule = {
   ColorFile: ColorFileConstructor
   getSyntaxTheme(themeName: string): SyntaxTheme | null
 }
+type NativeColorModuleCandidate = {
+  ColorDiff?: unknown
+  ColorFile?: unknown
+  getSyntaxTheme?: unknown
+}
+type NativeColorModuleShape = NativeColorModuleCandidate & {
+  default?: NativeColorModuleCandidate
+}
+
+const requireNativeModule = createRequire(import.meta.url)
+let cachedNativeModule: ColorModule | null | undefined
 
 function hasRenderMethod(value: unknown): boolean {
   return (
@@ -43,16 +50,45 @@ function hasRenderMethod(value: unknown): boolean {
   )
 }
 
+function normalizeNativeColorModule(
+  candidate: NativeColorModuleCandidate | undefined,
+): ColorModule | null {
+  if (
+    hasRenderMethod(candidate?.ColorDiff) &&
+    hasRenderMethod(candidate?.ColorFile) &&
+    typeof candidate?.getSyntaxTheme === 'function'
+  ) {
+    return {
+      ColorDiff: candidate.ColorDiff as ColorDiffConstructor,
+      ColorFile: candidate.ColorFile as ColorFileConstructor,
+      getSyntaxTheme: candidate.getSyntaxTheme as ColorModule['getSyntaxTheme'],
+    }
+  }
+  return null
+}
+
+function loadNativeColorModule(): ColorModule | null {
+  if (cachedNativeModule !== undefined) return cachedNativeModule
+
+  try {
+    const nativeModule = requireNativeModule(
+      'color-diff-napi',
+    ) as NativeColorModuleShape
+    cachedNativeModule =
+      normalizeNativeColorModule(nativeModule) ??
+      normalizeNativeColorModule(nativeModule.default)
+  } catch {
+    cachedNativeModule = null
+  }
+
+  return cachedNativeModule
+}
+
 function getColorModule(): ColorModule | null {
   if (getColorModuleUnavailableReason() !== null) return null
 
-  if (hasRenderMethod(NativeColorDiff) && hasRenderMethod(NativeColorFile)) {
-    return {
-      ColorDiff: NativeColorDiff as ColorDiffConstructor,
-      ColorFile: NativeColorFile as ColorFileConstructor,
-      getSyntaxTheme: nativeGetSyntaxTheme as ColorModule['getSyntaxTheme'],
-    }
-  }
+  const nativeModule = loadNativeColorModule()
+  if (nativeModule) return nativeModule
 
   return {
     ColorDiff: TypeScriptColorDiff,

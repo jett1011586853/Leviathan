@@ -74,6 +74,10 @@ import { readFileInRange } from '../../utils/readFileInRange.js'
 import { semanticNumber } from '../../utils/semanticNumber.js'
 import { jsonStringify } from '../../utils/slowOperations.js'
 import { BASH_TOOL_NAME } from '../BashTool/toolName.js'
+import {
+  assertImageWithinByteLimit,
+  MAX_IMAGE_BYTES,
+} from './imageReadLimits.js'
 import { getDefaultFileReadingLimits } from './limits.js'
 import {
   DESCRIPTION,
@@ -1097,8 +1101,10 @@ async function callInner(
 export async function readImageWithTokenBudget(
   filePath: string,
   maxTokens: number = getDefaultFileReadingLimits().maxTokens,
-  maxBytes?: number,
+  maxBytes: number = MAX_IMAGE_BYTES,
 ): Promise<ImageResult> {
+  await assertImageWithinByteLimit(filePath, maxBytes)
+
   // Read file ONCE — capped to maxBytes to avoid OOM on huge files
   const imageBuffer = await getFsImplementation().readFileBytes(
     filePath,

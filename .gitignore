@@ -7,8 +7,9 @@ node_modules/
 !.env.example
 
 # Local Leviathan/legacy workspace state
-.leviathan/settings.local.json
-.claude/settings.local.json
+.leviathan/
+.claude/
+leviathan.md
 
 # Logs and diagnostics
 *.log
@@ -28,4 +29,5 @@ test_ink.ts
 
 # Build output
 dist/
+dist-startup/
 coverage/

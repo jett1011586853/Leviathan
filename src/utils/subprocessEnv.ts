@@ -57,9 +57,9 @@ const GHA_SUBPROCESS_SCRUB = [
  * spawning subprocesses (Bash tool, shell snapshot, MCP stdio servers, LSP
  * servers, shell hooks).
  *
- * Gated on LEVIATHAN_CODE_SUBPROCESS_ENV_SCRUB for compatibility. Leviathan actions set this
- * automatically when `allowed_non_write_users` is configured — the flag that
- * exposes a workflow to untrusted content (prompt injection surface).
+ * Sensitive variables are scrubbed by default. Advanced users can explicitly
+ * opt out with LEVIATHAN_CODE_DISABLE_SUBPROCESS_ENV_SCRUB=true when they need
+ * raw parent env inheritance for local debugging.
  */
 // Registered by init.ts after the upstreamproxy module is dynamically imported
 // in CCR sessions. Stays undefined in non-CCR startups so we never pull in the
@@ -83,7 +83,7 @@ export function subprocessEnv(): NodeJS.ProcessEnv {
   // CCR containers.
   const proxyEnv = _getUpstreamProxyEnv?.() ?? {}
 
-  if (!isEnvTruthy(process.env.LEVIATHAN_CODE_SUBPROCESS_ENV_SCRUB)) {
+  if (isEnvTruthy(process.env.LEVIATHAN_CODE_DISABLE_SUBPROCESS_ENV_SCRUB)) {
     return Object.keys(proxyEnv).length > 0
       ? { ...process.env, ...proxyEnv }
       : process.env

@@ -49,11 +49,17 @@ describe('Leviathan instruction files', () => {
   test('session context composes Leviathan instruction content', () => {
     const context = source('context.ts')
     const memory = source('utils/leviathanmd.ts')
+    const commands = source('commands.ts')
+    const installationCommand = source('commands/leviathan/index.ts')
 
     expect(context).toContain('getLeviathanMds')
     expect(context).toContain('LEVIATHAN_CODE_DISABLE_LEVIATHAN_MDS')
     expect(context).not.toContain('LEVIATHAN_CODE_DISABLE_CLAUDE_MDS')
     expect(memory).toContain('getLeviathanMds')
+    expect(memory).toContain('getInstallationLeviathanMdPath()')
+    expect(commands).toContain("import leviathan from './commands/leviathan/index.js'")
+    expect(commands).toContain('leviathan,')
+    expect(installationCommand).toContain("name: 'leviathan'")
   })
 
   test('instruction safety and diagnostic UI presents Leviathan filenames', () => {

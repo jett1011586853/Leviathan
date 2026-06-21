@@ -20,6 +20,7 @@ import {
   getSettingsFilePathForSource,
   getUseAutoModeDuringPlan,
   hasAutoModeOptIn,
+  hasSkipDangerousModePermissionPrompt,
 } from '../settings/settings.js'
 import {
   type PermissionMode,
@@ -936,9 +937,13 @@ export async function initializeToolPermissionContext({
   const settings = getSettings_DEPRECATED() || {}
   const settingsDisableBypassPermissionsMode =
     settings.permissions?.disableBypassPermissionsMode === 'disable'
+  const hasInteractiveBypassOptIn =
+    process.env.LEVIATHAN_CODE_ENTRYPOINT === 'cli' &&
+    hasSkipDangerousModePermissionPrompt()
   const isBypassPermissionsModeAvailable =
     (permissionMode === 'bypassPermissions' ||
-      allowDangerouslySkipPermissions) &&
+      allowDangerouslySkipPermissions ||
+      hasInteractiveBypassOptIn) &&
     !growthBookDisableBypassPermissionsMode &&
     !settingsDisableBypassPermissionsMode
 

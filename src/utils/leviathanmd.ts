@@ -2,9 +2,10 @@
  * Files are loaded in the following order:
  *
  * 1. Managed memory (LEVIATHAN.md) - Global instructions for all users
- * 2. User memory (~/.leviathan/LEVIATHAN.md) - Private global instructions
- * 3. Project memory (LEVIATHAN.md and .leviathan/rules/*.md) - Checked-in instructions
- * 4. Local memory (LEVIATHAN.local.md) - Private project-specific instructions
+ * 2. Installation memory (<install-root>/leviathan.md) - Cross-workspace preferences
+ * 3. User memory (~/.leviathan/LEVIATHAN.md) - Private global instructions
+ * 4. Project memory (LEVIATHAN.md and .leviathan/rules/*.md) - Checked-in instructions
+ * 5. Local memory (LEVIATHAN.local.md) - Private project-specific instructions
  *
  * Files are loaded in reverse order of priority, i.e. the latest files are highest priority
  * with the model paying more attention to them.
@@ -49,6 +50,7 @@ import {
 import { truncateEntrypointContent } from '../memdir/memdir.js'
 import { getAutoMemEntrypoint, isAutoMemoryEnabled } from '../memdir/paths.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/analytics/growthbook.js'
+import { getInstallationLeviathanMdPath } from '../leviathan/installationInstructions.js'
 import {
   getCurrentProjectConfig,
   hasSeenExternalLeviathanMdIncludesWarning,
@@ -843,6 +845,17 @@ export const getMemoryFiles = memoize(
       })),
     )
 
+    // Installation-wide preferences are independent of the active workspace.
+    // Treat them as user memory so existing priority and formatting rules apply.
+    result.push(
+      ...(await processMemoryFile(
+        getInstallationLeviathanMdPath(),
+        'User',
+        processedPaths,
+        true,
+      )),
+    )
+
     // Process User file (only if userSettings is enabled)
     if (isSettingSourceEnabled('userSettings')) {
       result.push(
@@ -1606,10 +1619,11 @@ export async function shouldShowLeviathanMdExternalIncludesWarning(): Promise<bo
  */
 export function isMemoryFilePath(filePath: string): boolean {
   const name = basename(filePath)
+  const normalizedName = name.toLowerCase()
 
   if (
-    name === 'LEVIATHAN.md' ||
-    name === 'LEVIATHAN.local.md' ||
+    normalizedName === 'leviathan.md' ||
+    normalizedName === 'leviathan.local.md' ||
     name === 'CLAUDE.md' ||
     name === 'CLAUDE.local.md'
   ) {

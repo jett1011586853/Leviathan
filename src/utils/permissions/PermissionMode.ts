@@ -64,8 +64,8 @@ const PERMISSION_MODE_CONFIG: Partial<
     external: 'acceptEdits',
   },
   bypassPermissions: {
-    title: 'Bypass Permissions',
-    shortTitle: 'Bypass',
+    title: 'Full Access',
+    shortTitle: 'Full Access',
     symbol: '⏵⏵',
     color: 'error',
     external: 'bypassPermissions',
