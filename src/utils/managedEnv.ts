@@ -1,7 +1,8 @@
 import { isRemoteManagedSettingsEligible } from '../services/remoteManagedSettings/syncCache.js'
 import { clearCACertsCache } from './caCerts.js'
 import { getGlobalConfig } from './config.js'
-import { isEnvTruthy } from './envUtils.js'
+import { isBareMode, isEnvTruthy } from './envUtils.js'
+import { applySavedModelSlot } from './model/modelSlots.js'
 import {
   isProviderManagedEnvVar,
   SAFE_ENV_VARS,
@@ -175,6 +176,13 @@ export function applySafeConfigEnvironmentVariables(): void {
       process.env[key] = value
     }
   }
+
+  // A user-selected model slot is the final provider override for normal
+  // interactive sessions. Reapply it after settings.env so stale provider
+  // defaults cannot replace the active slot during startup.
+  if (!isBareMode()) {
+    applySavedModelSlot()
+  }
 }
 
 /**
@@ -188,6 +196,10 @@ export function applyConfigEnvironmentVariables(): void {
   Object.assign(process.env, filterSettingsEnv(getGlobalConfig().env))
 
   Object.assign(process.env, filterSettingsEnv(getSettings_DEPRECATED()?.env))
+
+  if (!isBareMode()) {
+    applySavedModelSlot()
+  }
 
   // Clear caches so agents are rebuilt with the new env vars
   clearCACertsCache()

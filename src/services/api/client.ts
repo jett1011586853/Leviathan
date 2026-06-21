@@ -287,9 +287,10 @@ export async function getAnthropicClient({
     return new AnthropicVertex(vertexArgs) as unknown as Anthropic
   }
 
+  const authToken = process.env.ANTHROPIC_AUTH_TOKEN || null
   const clientConfig: ConstructorParameters<typeof Anthropic>[0] = {
-    apiKey: apiKey || getAnthropicApiKey(),
-    authToken: process.env.ANTHROPIC_AUTH_TOKEN || null,
+    apiKey: authToken ? null : apiKey || getAnthropicApiKey(),
+    authToken,
     ...(process.env.ANTHROPIC_BASE_URL && {
       baseURL: process.env.ANTHROPIC_BASE_URL,
     }),

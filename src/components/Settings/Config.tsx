@@ -17,6 +17,7 @@ import { logEvent, type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPAT
 import { ThemePicker } from '../ThemePicker.js';
 import { useAppState, useSetAppState, useAppStateStore } from '../../state/AppState.js';
 import { ModelPicker } from '../ModelPicker.js';
+import { ModelSlotPicker } from '../ModelSlotPicker.js';
 import { modelDisplayString, isOpus1mMergeEnabled } from '../../utils/model/model.js';
 import { isBilledAsExtraUsage } from '../../utils/extraUsage.js';
 import { LeviathanMdExternalIncludesDialog } from '../LeviathanMdExternalIncludesDialog.js';
@@ -1329,7 +1330,7 @@ export function Config({
             </Text>
           </Box>
         </> : showSubmenu === 'Model' ? <>
-          <ModelPicker initial={mainLoopModel} onSelect={(model_0, _effort) => {
+          <ModelSlotPicker initial={mainLoopModel} onSelect={(model_0, _effort) => {
         isDirty.current = true;
         onChangeMainModelConfig(model_0);
         setShowSubmenu(null);

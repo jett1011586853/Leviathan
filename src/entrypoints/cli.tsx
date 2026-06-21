@@ -59,6 +59,13 @@ async function main(): Promise<void> {
     profileCheckpoint
   } = await import('../utils/startupProfiler.js');
   profileCheckpoint('cli_entry');
+  if (!args.includes('--bare') && !process.env.LEVIATHAN_CODE_SIMPLE) {
+    const {
+      applySavedModelSlot
+    } = await import('../utils/model/modelSlots.js');
+    applySavedModelSlot();
+    profileCheckpoint('cli_model_slot_applied');
+  }
   const rejectLegacyAccountFeature = async (): Promise<void> => {
     const {
       LEGACY_ACCOUNT_FEATURE_NOTICE

@@ -90,7 +90,11 @@ describe('Leviathan custom model freedom', () => {
     expect(auth).toContain('if (apiKeyEnv && !isManagedOAuthContext())')
     expect(auth).toContain('if (!apiKeyEnv && process.env.ANTHROPIC_AUTH_TOKEN)')
     expect(auth).not.toContain('normalizeApiKeyForConfig(apiKeyEnv)')
-    expect(client).toContain('authToken: process.env.ANTHROPIC_AUTH_TOKEN || null')
+    expect(client).toContain(
+      'const authToken = process.env.ANTHROPIC_AUTH_TOKEN || null',
+    )
+    expect(client).toContain('apiKey: authToken ? null : apiKey || getAnthropicApiKey()')
+    expect(client).toContain('authToken,')
     expect(client).toContain('baseURL: process.env.ANTHROPIC_BASE_URL')
     expect(client).toContain('process.env.LEVIATHAN_AGENT_SDK_CLIENT_APP')
     expect(client).toContain("'X-Leviathan-Code-Session-Id'")
