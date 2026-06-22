@@ -2,10 +2,9 @@ import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 
 function source(relativePath: string): string {
-  return readFileSync(new URL(`../${relativePath}`, import.meta.url), 'utf8').split(
-    '//# sourceMappingURL=',
-    1,
-  )[0]
+  return readFileSync(new URL(`../${relativePath}`, import.meta.url), 'utf8')
+    .replace(/\r\n/g, '\n')
+    .split('//# sourceMappingURL=', 1)[0]
 }
 
 describe('Leviathan product account boundary', () => {
