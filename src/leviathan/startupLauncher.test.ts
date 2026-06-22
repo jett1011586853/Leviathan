@@ -34,4 +34,14 @@ describe('Leviathan fast startup launcher', () => {
     expect(launcher).toContain('@LeviathanArgs')
     expect(launcher).not.toContain('Get-ChildItem')
   })
+
+  test('PowerShell command installer updates a marked profile block', () => {
+    const installer = source('scripts/install-leviathan-command.ps1')
+
+    expect(installer).toContain('# >>> Leviathan CLI >>>')
+    expect(installer).toContain('# <<< Leviathan CLI <<<')
+    expect(installer).toContain("Join-Path $PSScriptRoot 'start-leviathan.ps1'")
+    expect(installer).toContain('Set-Alias -Name leviathan')
+    expect(installer).toContain('[regex]::Replace')
+  })
 })
