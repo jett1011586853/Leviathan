@@ -9,6 +9,27 @@ function source(relativePath: string): string {
 }
 
 describe('Leviathan public distribution', () => {
+  test('declares every optional provider imported by the standalone runtime', () => {
+    const packageJson = JSON.parse(source('package.json')) as {
+      dependencies?: Record<string, string>
+    }
+    const dependencies = packageJson.dependencies ?? {}
+
+    for (const packageName of [
+      '@anthropic-ai/bedrock-sdk',
+      '@anthropic-ai/foundry-sdk',
+      '@anthropic-ai/mcpb',
+      '@anthropic-ai/vertex-sdk',
+      '@aws-sdk/client-bedrock',
+      '@aws-sdk/client-bedrock-runtime',
+      '@aws-sdk/client-sts',
+      '@aws-sdk/credential-provider-node',
+      '@azure/identity',
+    ]) {
+      expect(dependencies[packageName]).toBeString()
+    }
+  })
+
   test('builds a standalone Windows executable with bytecode', () => {
     const packageJson = JSON.parse(source('package.json')) as {
       scripts?: Record<string, string>
