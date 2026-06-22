@@ -40,50 +40,56 @@ Leviathan is an independent project and is not affiliated with Anthropic or any 
 - **Persistent sessions**: continue the latest conversation in a workspace or select an earlier session to resume.
 - **Reusable personal instructions**: `/leviathan` creates an installation-level `leviathan.md` that is loaded into future sessions.
 - **Agent tooling**: file operations, shell commands, MCP, skills, hooks, subagents, session compaction, and structured tool rendering.
-- **Fast launcher**: the global command uses a cached startup bundle and rebuilds it only when sources change.
+- **One-line installation**: install a standalone Windows executable without cloning the repository or installing Bun.
+- **Automatic stable updates**: downloads checksum-verified releases in the background and applies them on the next launch.
 
 ## Requirements
 
 - Windows 10 or Windows 11
 - PowerShell 5.1 or newer
-- [Bun](https://bun.sh/) 1.3 or newer
-- Git
 - An Anthropic-compatible provider endpoint and credential
 
-## Quick Start
+Git and [Bun](https://bun.sh/) are required only when developing from source.
+
+## One-Line Installation
 
 ```powershell
-git clone https://github.com/jett1011586853/Leviathan.git
-cd Leviathan
-bun install --frozen-lockfile
-bun run start
+irm https://raw.githubusercontent.com/jett1011586853/Leviathan/main/install.ps1 | iex
 ```
 
-After the interface opens, run `/model`, choose one of the five slots, and enter:
-
-1. Provider base URL
-2. Exact provider model ID
-3. API key or auth token
-
-The credential is hidden in the UI and stored through Leviathan's local secure-storage interface. It is not written to the repository.
-
-## Install the Global Command
-
-From the cloned repository, run:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\install-leviathan-command.ps1
-. $PROFILE
-```
-
-You can then start Leviathan from any workspace:
+Then open any workspace and run:
 
 ```powershell
 cd D:\path\to\your-project
 leviathan
 ```
 
-The current directory becomes the active workspace.
+The installer downloads the latest stable standalone executable, verifies its SHA-256 checksum, installs it under `%LOCALAPPDATA%\Leviathan`, and adds the `leviathan` command to the user PATH.
+
+After Leviathan opens, run `/model`, choose one of the five slots, and enter:
+
+1. Provider base URL
+2. Exact provider model ID
+3. API key or auth token
+
+The credential is hidden in the UI and stored through Leviathan's local secure-storage interface. It is not written to the repository. The directory where you run `leviathan` becomes the active workspace.
+
+## Automatic Updates
+
+The installed launcher checks GitHub stable releases in a hidden background process at most once every six hours. A downloaded update is SHA-256 verified, staged separately, and applied before the next session starts. The previous executable is retained as `leviathan.previous.exe` for recovery.
+
+Force an immediate update check with:
+
+```powershell
+leviathan update
+```
+
+Disable automatic checks when you need a fully offline environment:
+
+```powershell
+$env:LEVIATHAN_DISABLE_AUTO_UPDATE="1"
+leviathan
+```
 
 ## Model Configuration
 
@@ -139,17 +145,20 @@ Keep secrets out of instruction files. The local `leviathan.md` file is intentio
 ## Development
 
 ```powershell
+git clone https://github.com/jett1011586853/Leviathan.git
+cd Leviathan
 bun install --frozen-lockfile
 bun run test
 bun run build
 bun run build:startup
+bun run build:release
 ```
 
 Project layout:
 
 ```text
 src/          CLI, TUI, agent runtime, tools, and provider integration
-scripts/      startup and PowerShell command installation
+scripts/      source launcher, installed launcher, and automatic updater
 docs/         design and implementation notes
 .github/      CI workflow
 ```

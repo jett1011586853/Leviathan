@@ -30,4 +30,5 @@ test_ink.ts
 # Build output
 dist/
 dist-startup/
+dist-release/
 coverage/
