@@ -27,6 +27,22 @@ type PasteHandlerProps = {
   ) => void
 }
 
+export function shouldDeferPaste(
+  hasPasteHandler: boolean,
+  inputLength: number,
+  pastePending: boolean,
+  hasImageFilePath: boolean,
+  isFromPaste: boolean,
+): boolean {
+  return (
+    hasPasteHandler &&
+    (inputLength > PASTE_THRESHOLD ||
+      pastePending ||
+      hasImageFilePath ||
+      isFromPaste)
+  )
+}
+
 export function usePasteHandler({
   onPaste,
   onInput,
@@ -216,11 +232,6 @@ export function usePasteHandler({
     // The keypress parser sets isPasted=true for content within bracketed paste.
     const isFromPaste = event.keypress.isPasted
 
-    // If this is pasted content, set isPasting state for UI feedback
-    if (isFromPaste) {
-      setIsPasting(true)
-    }
-
     // Handle large pastes (>PASTE_THRESHOLD chars)
     // Usually we get one or two input characters at a time. If we
     // get more than the threshold, the user has probably pasted.
@@ -250,14 +261,16 @@ export function usePasteHandler({
     }
 
     // Check if we should handle as paste (from bracketed paste, large input, or continuation)
-    const shouldHandleAsPaste =
-      onPaste &&
-      (input.length > PASTE_THRESHOLD ||
-        pastePendingRef.current ||
-        hasImageFilePath ||
-        isFromPaste)
+    const shouldHandleAsPaste = shouldDeferPaste(
+      Boolean(onPaste),
+      input.length,
+      pastePendingRef.current,
+      hasImageFilePath,
+      isFromPaste,
+    )
 
     if (shouldHandleAsPaste) {
+      setIsPasting(true)
       pastePendingRef.current = true
       setPasteState(({ chunks, timeoutId }) => {
         return {
@@ -268,7 +281,7 @@ export function usePasteHandler({
       return
     }
     onInput(input, key)
-    if (input.length > 10) {
+    if (isFromPaste || input.length > 10) {
       // Ensure that setIsPasting is turned off on any other multicharacter
       // input, because the stdin buffer may chunk at arbitrary points and split
       // the closing escape sequence if the input length is too long for the
