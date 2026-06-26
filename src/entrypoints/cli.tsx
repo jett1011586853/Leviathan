@@ -9,7 +9,7 @@ process.env.COREPACK_ENABLE_AUTO_PIN = '0';
 if (typeof MACRO === 'undefined') {
   Object.defineProperty(globalThis, 'MACRO', {
     value: {
-      VERSION: process.env.LEVIATHAN_CODE_VERSION ?? '1.0.2',
+      VERSION: process.env.LEVIATHAN_CODE_VERSION ?? '1.0.3',
       BUILD_TIME: process.env.LEVIATHAN_CODE_BUILD_TIME ?? 'dev',
       VERSION_CHANGELOG: '',
     },
