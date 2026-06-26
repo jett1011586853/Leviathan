@@ -23,10 +23,18 @@ function contextWithMode(mode: 'default' | 'bypassPermissions') {
 }
 
 describe('Leviathan Computer Use tool', () => {
-  test('is registered as a built-in Windows tool', () => {
+  test('is gated by the Computer Use feature switch', () => {
     const tools = getTools(getEmptyToolPermissionContext())
     const hasComputerUse = tools.some(tool => tool.name === COMPUTER_USE_TOOL_NAME)
-    expect(hasComputerUse).toBe(getPlatform() === 'windows')
+    expect(hasComputerUse).toBe(false)
+
+    const enabledTools = getTools(getEmptyToolPermissionContext(), {
+      includeComputerUseTools: true,
+    })
+    const hasEnabledComputerUse = enabledTools.some(
+      tool => tool.name === COMPUTER_USE_TOOL_NAME,
+    )
+    expect(hasEnabledComputerUse).toBe(getPlatform() === 'windows')
   })
 
   test('asks for permission by default and allows full access mode', async () => {

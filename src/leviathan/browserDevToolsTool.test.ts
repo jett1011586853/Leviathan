@@ -22,9 +22,18 @@ function contextWithMode(mode: 'default' | 'bypassPermissions') {
 }
 
 describe('Leviathan Browser DevTools tool', () => {
-  test('is registered as a built-in tool', () => {
+  test('is gated by the Computer Use feature switch', () => {
     const tools = getTools(getEmptyToolPermissionContext())
     expect(tools.some(tool => tool.name === BROWSER_DEVTOOLS_TOOL_NAME)).toBe(
+      false,
+    )
+
+    const enabledTools = getTools(getEmptyToolPermissionContext(), {
+      includeComputerUseTools: true,
+    })
+    expect(
+      enabledTools.some(tool => tool.name === BROWSER_DEVTOOLS_TOOL_NAME),
+    ).toBe(
       true,
     )
   })

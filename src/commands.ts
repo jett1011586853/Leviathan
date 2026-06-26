@@ -11,6 +11,7 @@ import copy from './commands/copy/index.js'
 import commitPushPr from './commands/commit-push-pr.js'
 import compact from './commands/compact/index.js'
 import config from './commands/config/index.js'
+import computer from './commands/computer/index.js'
 import { context, contextNonInteractive } from './commands/context/index.js'
 import cost from './commands/cost/index.js'
 import diff from './commands/diff/index.js'
@@ -214,6 +215,7 @@ const COMMANDS = memoize((): Command[] => [
   color,
   compact,
   config,
+  computer,
   copy,
   context,
   contextNonInteractive,

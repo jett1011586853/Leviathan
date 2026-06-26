@@ -107,6 +107,9 @@ export type AppState = DeepImmutable<{
   // (CompanionSprite in REPL.tsx) can read their own focused state.
   footerSelection: FooterItem | null
   toolPermissionContext: ToolPermissionContext
+  // Session-scoped gate for desktop/browser automation tools. Defaults off so
+  // ComputerUse and BrowserDevTools only become available after /computer use.
+  computerUseEnabled: boolean
   spinnerTip?: string
   // Agent name from --agent CLI flag or settings (for logo display)
   agent: string | undefined
@@ -501,6 +504,7 @@ export function getDefaultAppState(): AppState {
       ...getEmptyToolPermissionContext(),
       mode: initialMode,
     },
+    computerUseEnabled: false,
     agent: undefined,
     agentDefinitions: { activeAgents: [], allAgents: [] },
     fileHistory: {

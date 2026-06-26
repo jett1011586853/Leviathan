@@ -139,6 +139,7 @@ import { isEnvTruthy } from './utils/envUtils.js'
 import { isPowerShellToolEnabled } from './utils/shell/shellToolUtils.js'
 import { isAgentSwarmsEnabled } from './utils/agentSwarmsEnabled.js'
 import { isWorktreeModeEnabled } from './utils/worktreeModeEnabled.js'
+import { filterComputerUseFeatureTools } from './utils/computerUseFeature.js'
 import {
   REPL_TOOL_NAME,
   REPL_ONLY_TOOLS,
@@ -161,6 +162,10 @@ export const TOOL_PRESETS = ['default'] as const
 
 export type ToolPreset = (typeof TOOL_PRESETS)[number]
 
+type ToolAssemblyOptions = {
+  includeComputerUseTools?: boolean
+}
+
 export function parseToolPreset(preset: string): ToolPreset | null {
   const presetString = preset.toLowerCase()
   if (!TOOL_PRESETS.includes(presetString as ToolPreset)) {
@@ -176,7 +181,7 @@ export function parseToolPreset(preset: string): ToolPreset | null {
  * @returns Array of tool names
  */
 export function getToolsForDefaultPreset(): string[] {
-  const tools = getAllBaseTools()
+  const tools = filterComputerUseFeatureTools(getAllBaseTools(), false)
   const isEnabled = tools.map(tool => tool.isEnabled())
   return tools.filter((_, i) => isEnabled[i]).map(tool => tool.name)
 }
@@ -268,7 +273,10 @@ export function filterToolsByDenyRules<
   return tools.filter(tool => !getDenyRuleForTool(permissionContext, tool))
 }
 
-export const getTools = (permissionContext: ToolPermissionContext): Tools => {
+export const getTools = (
+  permissionContext: ToolPermissionContext,
+  options: ToolAssemblyOptions = {},
+): Tools => {
   // Simple mode: only Bash, Read, and Edit tools
   if (isEnvTruthy(process.env.LEVIATHAN_CODE_SIMPLE)) {
     // --bare + REPL mode: REPL wraps Bash/Read/Edit/etc inside the VM, so
@@ -304,7 +312,10 @@ export const getTools = (permissionContext: ToolPermissionContext): Tools => {
     SYNTHETIC_OUTPUT_TOOL_NAME,
   ])
 
-  const tools = getAllBaseTools().filter(tool => !specialTools.has(tool.name))
+  const tools = filterComputerUseFeatureTools(
+    getAllBaseTools(),
+    options.includeComputerUseTools === true,
+  ).filter(tool => !specialTools.has(tool.name))
 
   // Filter out tools that are denied by the deny rules
   let allowedTools = filterToolsByDenyRules(tools, permissionContext)
@@ -345,8 +356,9 @@ export const getTools = (permissionContext: ToolPermissionContext): Tools => {
 export function assembleToolPool(
   permissionContext: ToolPermissionContext,
   mcpTools: Tools,
+  options: ToolAssemblyOptions = {},
 ): Tools {
-  const builtInTools = getTools(permissionContext)
+  const builtInTools = getTools(permissionContext, options)
 
   // Filter out MCP tools that are in the deny list
   const allowedMcpTools = filterToolsByDenyRules(mcpTools, permissionContext)
@@ -383,7 +395,8 @@ export function assembleToolPool(
 export function getMergedTools(
   permissionContext: ToolPermissionContext,
   mcpTools: Tools,
+  options: ToolAssemblyOptions = {},
 ): Tools {
-  const builtInTools = getTools(permissionContext)
+  const builtInTools = getTools(permissionContext, options)
   return [...builtInTools, ...mcpTools]
 }

@@ -590,6 +590,7 @@ export function REPL({
   // Agent definition is state so /resume can update it mid-session
   const [mainThreadAgentDefinition, setMainThreadAgentDefinition] = useState(initialMainThreadAgentDefinition);
   const toolPermissionContext = useAppState(s => s.toolPermissionContext);
+  const computerUseEnabled = useAppState(s => s.computerUseEnabled);
   const verbose = useAppState(s => s.verbose);
   const mcp = useAppState(s => s.mcp);
   const plugins = useAppState(s => s.plugins);
@@ -667,7 +668,9 @@ export function REPL({
   // /brief mid-session leaves the stale tool list (no SendUserMessage) and
   // the model emits plain text the brief filter hides.
   const isBriefOnly = useAppState(s => s.isBriefOnly);
-  const localTools = useMemo(() => getTools(toolPermissionContext), [toolPermissionContext, proactiveActive, isBriefOnly]);
+  const localTools = useMemo(() => getTools(toolPermissionContext, {
+    includeComputerUseTools: computerUseEnabled
+  }), [toolPermissionContext, computerUseEnabled, proactiveActive, isBriefOnly]);
   useKickOffCheckAndDisableBypassPermissionsIfNeeded();
   useKickOffCheckAndDisableAutoModeIfNeeded();
   const [dynamicMcpConfig, setDynamicMcpConfig] = useState<Record<string, ScopedMcpServerConfig> | undefined>(initialDynamicMcpConfig);
@@ -2265,7 +2268,9 @@ export function REPL({
     // for mid-query tool list updates.
     const computeTools = () => {
       const state = store.getState();
-      const assembled = assembleToolPool(state.toolPermissionContext, state.mcp.tools);
+      const assembled = assembleToolPool(state.toolPermissionContext, state.mcp.tools, {
+        includeComputerUseTools: state.computerUseEnabled
+      });
       const merged = mergeAndFilterTools(combinedInitialTools, assembled, state.toolPermissionContext.mode);
       if (!mainThreadAgentDefinition) return merged;
       return resolveAgentTools(mainThreadAgentDefinition, merged, false, true).resolvedTools;
