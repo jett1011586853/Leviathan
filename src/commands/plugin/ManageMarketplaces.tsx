@@ -11,6 +11,7 @@ import { Box, Text, useInput } from '../../ink.js';
 import { useKeybinding, useKeybindings } from '../../keybindings/useKeybinding.js';
 import type { LoadedPlugin } from '../../types/plugin.js';
 import { count } from '../../utils/array.js';
+import { LEVIATHAN_STATUS_MARK } from '../../leviathan/branding.js';
 import { shouldSkipPluginAutoupdate } from '../../utils/config.js';
 import { errorMessage } from '../../utils/errors.js';
 import { clearAllCaches } from '../../utils/plugins/cacheUtils.js';
@@ -711,9 +712,9 @@ export function ManageMarketplaces({
               <Box flexDirection="column" flexGrow={1}>
                 <Box flexDirection="row" gap={1}>
                   <Text bold strikethrough={state.pendingRemove} dimColor={state.pendingRemove}>
-                    {state.name === 'leviathan-plugins-official' && <Text color="claude">✻ </Text>}
+                    {state.name === 'leviathan-plugins-official' && <Text color="leviathan">{LEVIATHAN_STATUS_MARK} </Text>}
                     {state.name}
-                    {state.name === 'leviathan-plugins-official' && <Text color="claude"> ✻</Text>}
+                    {state.name === 'leviathan-plugins-official' && <Text color="leviathan"> {LEVIATHAN_STATUS_MARK}</Text>}
                   </Text>
                   {indicators.length > 0 && <Text color="warning">[{indicators.join(', ')}]</Text>}
                 </Box>

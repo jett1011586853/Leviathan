@@ -6,6 +6,7 @@ import { useKeybindings } from '../keybindings/useKeybinding.js';
 import { getGlobalConfig, saveGlobalConfig } from '../utils/config.js';
 import { env } from '../utils/env.js';
 import { getTerminalIdeType, type IDEExtensionInstallationStatus, isJetBrainsIde, toIDEDisplayName } from '../utils/ide.js';
+import { LEVIATHAN_STATUS_MARK } from '../leviathan/branding.js';
 import { Dialog } from './design-system/Dialog.js';
 interface Props {
   onDone: () => void;
@@ -63,7 +64,7 @@ export function IdeOnboardingDialog(t0) {
   const mentionShortcut = env.platform === "darwin" ? "Cmd+Option+K" : "Ctrl+Alt+K";
   let t5;
   if ($[7] === Symbol.for("react.memo_cache_sentinel")) {
-    t5 = <Text color="claude">✻ </Text>;
+    t5 = <Text color="leviathan">{LEVIATHAN_STATUS_MARK} </Text>;
     $[7] = t5;
   } else {
     t5 = $[7];

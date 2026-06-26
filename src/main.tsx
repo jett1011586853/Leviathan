@@ -2364,7 +2364,7 @@ async function run(): Promise<CommanderCommand> {
     logManagedSettings();
 
     // Register PID file for concurrent-session detection (~/.leviathan/sessions/)
-    // and fire multi-clauding telemetry. Lives here (not init.ts) so only the
+    // and fire parallel-session telemetry. Lives here (not init.ts) so only the
     // REPL path registers  - not subcommands like `leviathan doctor`. Chained:
     // count must run after register's write completes or it misses our own file.
     void registerSession().then(registered => {

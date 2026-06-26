@@ -1,10 +1,11 @@
+import { LEVIATHAN_STATUS_MARK } from '../leviathan/branding.js'
 import { env } from '../utils/env.js'
 
 // The former is better vertically aligned, but isn't usually supported on Windows/Linux
 export const BLACK_CIRCLE = env.platform === 'darwin' ? '⏺' : '●'
 export const BULLET_OPERATOR = '∙'
-export const TEARDROP_ASTERISK = '✻'
-export const UP_ARROW = '\u2191' // ↑ - used for opus 1m merge notice
+export const TEARDROP_ASTERISK = LEVIATHAN_STATUS_MARK
+export const UP_ARROW = '\u2191'
 export const DOWN_ARROW = '\u2193' // ↓ - used for scroll hint
 export const LIGHTNING_BOLT = '↯' // \u21af - used for fast mode indicator
 export const EFFORT_LOW = '○' // \u25cb - effort level: low

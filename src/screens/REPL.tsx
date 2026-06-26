@@ -65,7 +65,7 @@ import type { SSHSession } from '../ssh/createSSHSession.js';
 import { useMoreRight } from '../moreright/useMoreRight.js';
 import { SpinnerWithVerb, BriefIdleStatus, type SpinnerMode } from '../components/Spinner.js';
 import { getSystemPrompt } from '../constants/prompts.js';
-import { PRODUCT_NAME } from '../leviathan/branding.js';
+import { LEVIATHAN_STATUS_MARK, PRODUCT_NAME } from '../leviathan/branding.js';
 import { buildEffectiveSystemPrompt } from '../utils/systemPrompt.js';
 import { getSystemContext, getUserContext } from '../context.js';
 import { getMemoryFiles } from '../utils/leviathanmd.js';
@@ -445,7 +445,7 @@ function TranscriptSearchBar({
     </Box>;
 }
 const TITLE_ANIMATION_FRAMES = ['⠂', '⠐'];
-const TITLE_STATIC_PREFIX = '✳';
+const TITLE_STATIC_PREFIX = LEVIATHAN_STATUS_MARK;
 const TITLE_ANIMATION_INTERVAL_MS = 960;
 
 /**

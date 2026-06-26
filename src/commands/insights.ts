@@ -255,7 +255,7 @@ type SessionMeta = {
   lines_removed: number
   files_modified: number
   message_hours: number[]
-  user_message_timestamps: string[] // ISO timestamps for multi-clauding detection
+  user_message_timestamps: string[] // ISO timestamps for parallel-session detection
 }
 
 type SessionFacets = {
@@ -318,8 +318,8 @@ type AggregatedData = {
   days_active: number
   messages_per_day: number
   message_hours: number[] // Hour of day for each user message (for time of day chart)
-  // Parallel Leviathan use stats (matching Python reference)
-  multi_clauding: {
+  // Parallel Leviathan use stats
+  parallel_sessions: {
     overlap_events: number
     sessions_involved: number
     user_messages_during: number
@@ -486,7 +486,7 @@ function extractToolStats(log: LogOption): {
   linesRemoved: number
   filesModified: Set<string>
   messageHours: number[]
-  userMessageTimestamps: string[] // ISO timestamps for multi-clauding detection
+  userMessageTimestamps: string[] // ISO timestamps for parallel-session detection
 } {
   const toolCounts: Record<string, number> = {}
   const languages: Record<string, number> = {}
@@ -507,7 +507,7 @@ function extractToolStats(log: LogOption): {
   let linesRemoved = 0
   const filesModified = new Set<string>()
   const messageHours: number[] = []
-  const userMessageTimestamps: string[] = [] // For multi-clauding detection
+  const userMessageTimestamps: string[] = [] // For parallel-session detection
   let usesMcp = false
   let usesWebSearch = false
   let usesWebFetch = false
@@ -611,13 +611,13 @@ function extractToolStats(log: LogOption): {
 
       // Only track message hours and response times for actual human messages
       if (isHumanMessage) {
-        // Track message hour for time-of-day analysis and timestamp for multi-clauding
+        // Track message hour for time-of-day analysis and parallel-session detection
         if (msgTimestamp) {
           try {
             const msgDate = new Date(msgTimestamp)
             const hour = msgDate.getHours() // Local hour 0-23
             messageHours.push(hour)
-            // Collect timestamp for multi-clauding detection (matching Python)
+            // Collect timestamp for parallel-session detection
             userMessageTimestamps.push(msgTimestamp)
           } catch {
             // Skip invalid timestamps
@@ -1056,11 +1056,11 @@ RESPOND WITH ONLY A VALID JSON OBJECT matching this schema:
 }
 
 /**
- * Detects multi-clauding (using multiple Leviathan sessions concurrently).
+ * Detects parallel Leviathan use across multiple concurrent sessions.
  * Uses a sliding window to find the pattern: session1 -> session2 -> session1
  * within a 30-minute window.
  */
-export function detectMultiClauding(
+export function detectParallelSessions(
   sessions: Array<{
     session_id: string
     user_message_timestamps: string[]
@@ -1186,8 +1186,8 @@ function aggregateData(
     days_active: 0,
     messages_per_day: 0,
     message_hours: [],
-    // Parallel Leviathan use stats (matching Python reference)
-    multi_clauding: {
+    // Parallel Leviathan use stats
+    parallel_sessions: {
       overlap_events: 0,
       sessions_involved: 0,
       user_messages_during: 0,
@@ -1318,7 +1318,7 @@ function aggregateData(
   // Store message hours for time-of-day chart
   result.message_hours = allMessageHours
 
-  result.multi_clauding = detectMultiClauding(sessions)
+  result.parallel_sessions = detectParallelSessions(sessions)
 
   return result
 }
@@ -2551,11 +2551,11 @@ function generateHtmlReport(
       </div>
     </div>
 
-    <!-- Parallel Leviathan use Section (matching Python reference) -->
+    <!-- Parallel Leviathan use Section -->
     <div class="chart-card" style="margin: 24px 0;">
-      <div class="chart-title">Multi-Clauding (Parallel Sessions)</div>
+      <div class="chart-title">Parallel Leviathan Sessions</div>
       ${
-        data.multi_clauding.overlap_events === 0
+        data.parallel_sessions.overlap_events === 0
           ? `
         <p style="font-size: 14px; color: #64748b; padding: 8px 0;">
           No parallel session usage detected. You typically work with one Leviathan session at a time.
@@ -2564,15 +2564,15 @@ function generateHtmlReport(
           : `
         <div style="display: flex; gap: 24px; margin: 12px 0;">
           <div style="text-align: center;">
-            <div style="font-size: 24px; font-weight: 700; color: #7c3aed;">${data.multi_clauding.overlap_events}</div>
+            <div style="font-size: 24px; font-weight: 700; color: #7c3aed;">${data.parallel_sessions.overlap_events}</div>
             <div style="font-size: 11px; color: #64748b; text-transform: uppercase;">Overlap Events</div>
           </div>
           <div style="text-align: center;">
-            <div style="font-size: 24px; font-weight: 700; color: #7c3aed;">${data.multi_clauding.sessions_involved}</div>
+            <div style="font-size: 24px; font-weight: 700; color: #7c3aed;">${data.parallel_sessions.sessions_involved}</div>
             <div style="font-size: 11px; color: #64748b; text-transform: uppercase;">Sessions Involved</div>
           </div>
           <div style="text-align: center;">
-            <div style="font-size: 24px; font-weight: 700; color: #7c3aed;">${data.total_messages > 0 ? Math.round((100 * data.multi_clauding.user_messages_during) / data.total_messages) : 0}%</div>
+            <div style="font-size: 24px; font-weight: 700; color: #7c3aed;">${data.total_messages > 0 ? Math.round((100 * data.parallel_sessions.user_messages_during) / data.total_messages) : 0}%</div>
             <div style="font-size: 11px; color: #64748b; text-transform: uppercase;">Of Messages</div>
           </div>
         </div>

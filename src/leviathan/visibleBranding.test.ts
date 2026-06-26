@@ -218,7 +218,9 @@ describe('Leviathan visible branding', () => {
     const repl = source('screens/REPL.tsx')
     const main = source('main.tsx')
 
-    expect(repl).toContain("import { PRODUCT_NAME } from '../leviathan/branding.js'")
+    expect(repl).toContain(
+      "import { LEVIATHAN_STATUS_MARK, PRODUCT_NAME } from '../leviathan/branding.js'",
+    )
     expect(repl).not.toContain("?? 'donk'")
     expect(repl).not.toContain('Claude is waiting for your input')
     expect(repl).not.toContain('donk has been suspended')

@@ -7,6 +7,7 @@ import { formatCreditAmount, getCachedReferrerReward } from '../../services/api/
 import type { LogOption } from '../../types/logs.js';
 import { getCwd } from '../../utils/cwd.js';
 import { formatRelativeTimeAgo } from '../../utils/format.js';
+import { LEVIATHAN_STATUS_MARK } from '../../leviathan/branding.js';
 import type { FeedConfig, FeedLine } from './Feed.js';
 export function createRecentActivityFeed(activities: LogOption[]): FeedConfig {
   const lines: FeedLine[] = activities.map(log => {
@@ -80,7 +81,7 @@ export function createGuestPassesFeed(): FeedConfig {
     customContent: {
       content: <>
           <Box marginY={1}>
-            <Text color="leviathan">[✻] [✻] [✻]</Text>
+            <Text color="leviathan">[{LEVIATHAN_STATUS_MARK}] [{LEVIATHAN_STATUS_MARK}] [{LEVIATHAN_STATUS_MARK}]</Text>
           </Box>
           <Text dimColor>{subtitle}</Text>
         </>,

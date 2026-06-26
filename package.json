@@ -1,13 +1,13 @@
 {
   "name": "leviathan",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Leviathan AI coding agent",
   "type": "module",
   "main": "src/entrypoints/cli.tsx",
   "scripts": {
     "build": "bun build --target=bun --packages=external src/entrypoints/cli.tsx --outdir ./dist",
     "build:startup": "bun build --target=bun --packages=external --minify src/entrypoints/cli.tsx --outdir ./dist-startup",
-    "build:release": "bun build --compile --minify --bytecode --target=bun-windows-x64 --external \"@opentelemetry/exporter-*\" --external modifiers-napi src/entrypoints/cli.tsx --outfile ./dist-release/leviathan.exe",
+    "build:release": "bun build --compile --minify --bytecode --target=bun-windows-x64 --windows-icon=./assets/leviathan-icon.ico --windows-title=Leviathan --windows-publisher=Leviathan --windows-description=\"Leviathan AI coding agent\" --external \"@opentelemetry/exporter-*\" --external modifiers-napi src/entrypoints/cli.tsx --outfile ./dist-release/leviathan.exe",
     "start": "bun run src/entrypoints/cli.tsx",
     "typecheck": "tsc --noEmit",
     "test": "bun test src"

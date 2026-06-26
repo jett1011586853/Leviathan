@@ -17,3 +17,16 @@ export const LEVIATHAN_PIXEL_WHALE = [
   ' \u2580\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2580\u2588\u2588\u2588\u2580 ',
   '   \u2580\u2580\u2588\u2588\u2588\u2580   \u2580\u2580   ',
 ] as const
+
+export const LEVIATHAN_STATUS_MARK = '<\u2588>'
+
+export const LEVIATHAN_INLINE_WHALE_FRAMES = [
+  '<\u2588> ',
+  ' <\u2588>',
+  '<\u2588>~',
+  ' <\u2588>',
+] as const
+
+export const LEVIATHAN_INLINE_WHALE_REDUCED = '<\u2588>'
+
+export const LEVIATHAN_INLINE_WHALE_WIDTH = 4

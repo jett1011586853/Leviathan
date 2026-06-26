@@ -15,7 +15,7 @@ type Props = {
   leaderVerb?: string;
   /** Leader's token count (when leader is actively processing) */
   leaderTokenCount?: number;
-  /** Leader's idle status text (when leader is idle, e.g. "✻ Idle for 3s") */
+  /** Leader's idle status text (when leader is idle, e.g. "<█> Idle for 3s") */
   leaderIdleText?: string;
 };
 export function TeammateSpinnerTree(t0) {

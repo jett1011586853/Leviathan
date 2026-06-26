@@ -26,6 +26,7 @@ import {
   hasAccessToIDEExtensionDiffFeature,
 } from '../utils/ide.js'
 import { WindowsToWSLConverter } from '../utils/idePathConversion.js'
+import { LEVIATHAN_STATUS_MARK } from '../leviathan/branding.js'
 import { logError } from '../utils/log.js'
 import { getPlatform } from '../utils/platform.js'
 
@@ -60,7 +61,7 @@ export function useDiffInIDE({
 
   const sha = useMemo(() => randomUUID().slice(0, 6), [])
   const tabName = useMemo(
-    () => `✻ [Leviathan] ${basename(filePath)} (${sha}) ⧉`,
+    () => `${LEVIATHAN_STATUS_MARK} [Leviathan] ${basename(filePath)} (${sha})`,
     [filePath, sha],
   )
 

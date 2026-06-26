@@ -31,6 +31,7 @@ import { getEffortSuffix } from '../utils/effort.js';
 import { getMainLoopModel } from '../utils/model/model.js';
 import { getViewedTeammateTask } from '../state/selectors.js';
 import { TEARDROP_ASTERISK } from '../constants/figures.js';
+import { LEVIATHAN_INLINE_WHALE_REDUCED, LEVIATHAN_INLINE_WHALE_WIDTH } from '../leviathan/branding.js';
 import figures from 'figures';
 import { getCurrentTurnTokenBudget, getTurnOutputTokens } from '../bootstrap/state.js';
 import { TeammateSpinnerTree } from './Spinner/TeammateSpinnerTree.js';
@@ -512,14 +513,14 @@ export function Spinner() {
   if (reducedMotion) {
     let t0;
     if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
-      t0 = <Text color="text">●</Text>;
+      t0 = <Text color="text">{LEVIATHAN_INLINE_WHALE_REDUCED}</Text>;
       $[0] = t0;
     } else {
       t0 = $[0];
     }
     let t1;
     if ($[1] !== ref) {
-      t1 = <Box ref={ref} flexWrap="wrap" height={1} width={2}>{t0}</Box>;
+      t1 = <Box ref={ref} flexWrap="wrap" height={1} width={LEVIATHAN_INLINE_WHALE_WIDTH}>{t0}</Box>;
       $[1] = ref;
       $[2] = t1;
     } else {
@@ -539,7 +540,7 @@ export function Spinner() {
   }
   let t2;
   if ($[5] !== ref || $[6] !== t1) {
-    t2 = <Box ref={ref} flexWrap="wrap" height={1} width={2}>{t1}</Box>;
+    t2 = <Box ref={ref} flexWrap="wrap" height={1} width={LEVIATHAN_INLINE_WHALE_WIDTH}>{t1}</Box>;
     $[5] = ref;
     $[6] = t1;
     $[7] = t2;

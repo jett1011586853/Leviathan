@@ -59,6 +59,32 @@ describe('Leviathan hard-cut entry points', () => {
     expect(animatedMascot).not.toContain('Clawd')
   })
 
+  test('startup status UI uses Leviathan whale branding instead of recovered glyphs', () => {
+    const branding = source('leviathan/branding.ts')
+    const figures = source('constants/figures.ts')
+    const spinnerUtils = source('components/Spinner/utils.ts')
+    const spinnerGlyph = source('components/Spinner/SpinnerGlyph.tsx')
+    const spinnerVerbs = source('constants/spinnerVerbs.ts')
+    const opusNotice = source('components/LogoV2/Opus1mMergeNotice.tsx')
+    const feedConfigs = source('components/LogoV2/feedConfigs.tsx')
+
+    expect(branding).toContain('LEVIATHAN_INLINE_WHALE_FRAMES')
+    expect(branding).toContain('LEVIATHAN_STATUS_MARK')
+    expect(figures).toContain('TEARDROP_ASTERISK = LEVIATHAN_STATUS_MARK')
+    expect(spinnerUtils).toContain('LEVIATHAN_INLINE_WHALE_FRAMES')
+    expect(spinnerGlyph).toContain('LEVIATHAN_INLINE_WHALE_WIDTH')
+    expect(feedConfigs).toContain('LEVIATHAN_STATUS_MARK')
+    expect(spinnerVerbs).not.toContain('Clauding')
+    expect(opusNotice).toContain('return false')
+    expect(opusNotice).not.toContain('Opus now defaults')
+
+    for (const recoveredGlyph of ['✻', '✽', '✶', '✳', '✢']) {
+      expect(`${spinnerUtils}\n${spinnerGlyph}\n${feedConfigs}`).not.toContain(
+        recoveredGlyph,
+      )
+    }
+  })
+
   test('deep link entry point uses the Leviathan protocol', () => {
     expect(DEEP_LINK_PROTOCOL).toBe('leviathan-cli')
     expect(buildDeepLink({ query: 'hello' })).toStartWith(

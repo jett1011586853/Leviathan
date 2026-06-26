@@ -32,13 +32,19 @@ describe('Leviathan public distribution', () => {
 
   test('builds a standalone Windows executable with bytecode', () => {
     const packageJson = JSON.parse(source('package.json')) as {
+      version?: string
       scripts?: Record<string, string>
     }
+    const cliEntrypoint = source('src/entrypoints/cli.tsx')
     const releaseBuild = packageJson.scripts?.['build:release'] ?? ''
 
+    expect(cliEntrypoint).toContain(`VERSION: process.env.LEVIATHAN_CODE_VERSION ?? '${packageJson.version}'`)
     expect(releaseBuild).toContain('--compile')
     expect(releaseBuild).toContain('--bytecode')
     expect(releaseBuild).toContain('--target=bun-windows-x64')
+    expect(releaseBuild).toContain('--windows-icon=./assets/leviathan-icon.ico')
+    expect(releaseBuild).toContain('--windows-title=Leviathan')
+    expect(releaseBuild).toContain('--windows-description="Leviathan AI coding agent"')
     expect(releaseBuild).toContain('dist-release/leviathan.exe')
   })
 
