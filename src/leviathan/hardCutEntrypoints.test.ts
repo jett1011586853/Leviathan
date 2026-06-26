@@ -70,6 +70,11 @@ describe('Leviathan hard-cut entry points', () => {
 
     expect(branding).toContain('LEVIATHAN_INLINE_WHALE_FRAMES')
     expect(branding).toContain('LEVIATHAN_STATUS_MARK')
+    expect(branding).toContain(
+      "LEVIATHAN_STATUS_MARK = '\\u25d6\\u2588\\u2588\\u2588>'",
+    )
+    expect(branding).toContain('LEVIATHAN_INLINE_WHALE_WIDTH = 6')
+    expect(branding).not.toContain("LEVIATHAN_STATUS_MARK = '<\\u2588>'")
     expect(figures).toContain('TEARDROP_ASTERISK = LEVIATHAN_STATUS_MARK')
     expect(spinnerUtils).toContain('LEVIATHAN_INLINE_WHALE_FRAMES')
     expect(spinnerGlyph).toContain('LEVIATHAN_INLINE_WHALE_WIDTH')
