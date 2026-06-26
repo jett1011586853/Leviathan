@@ -8,8 +8,14 @@ export function getToolUseSummary(
   input: Partial<ComputerUseInput> | undefined,
 ): string | null {
   if (!input?.action) return null
-  if (input.action === 'screenshot' && input.hwnd) {
-    return `screenshot ${input.hwnd}`
+  if (
+    (input.action === 'screenshot' || input.action === 'get_window_state') &&
+    input.hwnd
+  ) {
+    return `${input.action} ${input.hwnd}`
+  }
+  if (input.action === 'sequence') {
+    return `sequence ${input.steps?.length ?? 0} steps`
   }
   if (
     ['click', 'double_click', 'right_click', 'scroll'].includes(input.action) &&
@@ -48,6 +54,22 @@ export function renderToolResultMessage(
     )
   }
 
+  if (output.state?.screenshots[0]) {
+    const screenshot = output.state.screenshots[0]
+    return (
+      <MessageResponse height={1}>
+        <Text dimColor>
+          Window state captured and sent to Leviathan ({screenshot.width}x
+          {screenshot.height}
+          {screenshot.scale < 1
+            ? `, scaled from ${screenshot.originalWidth}x${screenshot.originalHeight}`
+            : ''}
+          {output.latencyMs !== undefined ? `, ${output.latencyMs} ms` : ''})
+        </Text>
+      </MessageResponse>
+    )
+  }
+
   return (
     <Box flexDirection="column">
       <OutputLine content={summarizeOutput(output)} verbose={verbose} />
@@ -56,6 +78,20 @@ export function renderToolResultMessage(
 }
 
 function summarizeOutput(output: ComputerUseOutput): string {
+  const suffix =
+    output.latencyMs !== undefined ? ` (${output.latencyMs} ms)` : ''
+  if (output.apps) {
+    const rows = output.apps.flatMap(app =>
+      app.windows.map(window => {
+        const bounds = `${window.bounds.x},${window.bounds.y} ${window.bounds.width}x${window.bounds.height}`
+        const blocked = window.blockedReason ? ` [blocked: ${window.blockedReason}]` : ''
+        return `${app.displayName}  ${window.hwnd}  ${bounds}  ${window.title}${blocked}`
+      }),
+    )
+    return rows.length
+      ? `Running apps${suffix}:\n${rows.join('\n')}`
+      : `No running apps with visible windows found${suffix}.`
+  }
   if (output.windows) {
     const rows = output.windows.map(window => {
       const bounds = `${window.bounds.x},${window.bounds.y} ${window.bounds.width}x${window.bounds.height}`
@@ -63,12 +99,17 @@ function summarizeOutput(output: ComputerUseOutput): string {
       return `${window.hwnd}  ${window.processName}  ${bounds}  ${window.title}${blocked}`
     })
     return rows.length
-      ? `Visible windows:\n${rows.join('\n')}`
-      : 'No visible windows found.'
+      ? `Visible windows${suffix}:\n${rows.join('\n')}`
+      : `No visible windows found${suffix}.`
+  }
+  if (output.steps) {
+    return `${output.message}${suffix}\n${output.steps
+      .map((step, index) => `${index + 1}. ${step.action}: ${step.message}`)
+      .join('\n')}`
   }
   if (output.window) {
     const window = output.window
-    return `${output.message}\n${window.hwnd} ${window.processName} ${window.title}`
+    return `${output.message}${suffix}\n${window.hwnd} ${window.processName} ${window.title}`
   }
-  return output.message
+  return `${output.message}${suffix}`
 }

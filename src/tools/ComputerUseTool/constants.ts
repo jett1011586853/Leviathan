@@ -1,7 +1,10 @@
 export const COMPUTER_USE_TOOL_NAME = 'ComputerUse'
 
 export const COMPUTER_USE_ACTIONS = [
+  'list_apps',
   'list_windows',
+  'get_window',
+  'get_window_state',
   'screenshot',
   'activate_window',
   'click',
@@ -11,6 +14,7 @@ export const COMPUTER_USE_ACTIONS = [
   'press_key',
   'scroll',
   'drag',
+  'sequence',
   'wait',
 ] as const
 

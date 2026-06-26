@@ -21,23 +21,24 @@ import {
   runWindowsComputerUse,
   type ComputerUseInput,
   type ComputerUseOutput,
+  type ComputerUseScreenshot,
 } from './windowsComputerUse.js'
 
-const inputSchema = lazySchema(() =>
-  z.strictObject({
-    action: z.enum(COMPUTER_USE_ACTIONS).describe('Computer Use action to run.'),
+const inputSchema = lazySchema(() => {
+  const stepSchema = z.strictObject({
+    action: z.enum(COMPUTER_USE_ACTIONS).describe('Computer Use step action to run.'),
     hwnd: z
       .string()
       .optional()
-      .describe('Target window handle returned by list_windows.'),
+      .describe('Target window handle returned by list_apps or list_windows.'),
     x: z
       .number()
       .optional()
-      .describe('X coordinate. With hwnd this is window-relative; otherwise absolute screen coordinate.'),
+      .describe('X coordinate in the latest screenshot for this hwnd; absolute screen coordinate when hwnd is omitted.'),
     y: z
       .number()
       .optional()
-      .describe('Y coordinate. With hwnd this is window-relative; otherwise absolute screen coordinate.'),
+      .describe('Y coordinate in the latest screenshot for this hwnd; absolute screen coordinate when hwnd is omitted.'),
     to_x: z.number().optional().describe('Drag target X coordinate.'),
     to_y: z.number().optional().describe('Drag target Y coordinate.'),
     text: z.string().optional().describe('Literal text for type_text.'),
@@ -53,7 +54,7 @@ const inputSchema = lazySchema(() =>
     scroll_y: z
       .number()
       .optional()
-      .describe('Vertical scroll delta. Positive scrolls down; negative scrolls up.'),
+      .describe('Vertical scroll delta. Positive scrolls down; negative scroll_y scrolls up.'),
     duration_ms: z
       .number()
       .int()
@@ -68,8 +69,79 @@ const inputSchema = lazySchema(() =>
       .max(2400)
       .optional()
       .describe('Maximum screenshot width or height before downscaling. Defaults to 1400.'),
-  }),
-)
+    include_screenshot: z
+      .boolean()
+      .optional()
+      .describe('For get_window_state, include a screenshot. Defaults to true.'),
+    include_text: z
+      .boolean()
+      .optional()
+      .describe('For get_window_state, include a bounded accessibility tree. Defaults to false.'),
+  })
+
+  return z.strictObject({
+    action: z.enum(COMPUTER_USE_ACTIONS).describe('Computer Use action to run.'),
+    hwnd: z
+      .string()
+      .optional()
+      .describe('Target window handle returned by list_apps or list_windows.'),
+    x: z
+      .number()
+      .optional()
+      .describe('X coordinate in the latest screenshot for this hwnd; absolute screen coordinate when hwnd is omitted.'),
+    y: z
+      .number()
+      .optional()
+      .describe('Y coordinate in the latest screenshot for this hwnd; absolute screen coordinate when hwnd is omitted.'),
+    to_x: z.number().optional().describe('Drag target X coordinate.'),
+    to_y: z.number().optional().describe('Drag target Y coordinate.'),
+    text: z.string().optional().describe('Literal text for type_text.'),
+    key: z
+      .string()
+      .optional()
+      .describe('Key or shortcut for press_key, such as Enter, Ctrl+A, Alt+F4, or Shift+Tab.'),
+    button: z
+      .enum(['left', 'right', 'middle'])
+      .optional()
+      .describe('Mouse button for click actions.'),
+    scroll_x: z.number().optional().describe('Horizontal scroll delta.'),
+    scroll_y: z
+      .number()
+      .optional()
+      .describe('Vertical scroll delta. Positive scroll_y scrolls down; negative scroll_y scrolls up.'),
+    duration_ms: z
+      .number()
+      .int()
+      .min(0)
+      .max(30_000)
+      .optional()
+      .describe('Duration for wait, in milliseconds.'),
+    max_image_dimension: z
+      .number()
+      .int()
+      .min(320)
+      .max(2400)
+      .optional()
+      .describe('Maximum screenshot width or height before downscaling. Defaults to 1400.'),
+    include_screenshot: z
+      .boolean()
+      .optional()
+      .describe('For get_window_state, include a screenshot. Defaults to true.'),
+    include_text: z
+      .boolean()
+      .optional()
+      .describe('For get_window_state, include a bounded accessibility tree. Defaults to false.'),
+    steps: z
+      .array(stepSchema)
+      .max(20)
+      .optional()
+      .describe('For sequence, stable Computer Use steps to run in one backend call. Steps inherit the top-level hwnd when omitted.'),
+    screenshot_after: z
+      .boolean()
+      .optional()
+      .describe('For sequence, capture get_window_state after all steps.'),
+  })
+})
 
 const windowSchema = z.object({
   hwnd: z.string(),
@@ -85,29 +157,62 @@ const windowSchema = z.object({
   blockedReason: z.string().optional(),
 })
 
-const outputSchema = lazySchema(() =>
-  z.object({
+const outputSchema = lazySchema(() => {
+  const screenshotSchema = z.object({
+    dataUrl: z.string(),
+    mediaType: z.literal('image/png'),
+    width: z.number(),
+    height: z.number(),
+    originalWidth: z.number(),
+    originalHeight: z.number(),
+    originX: z.number(),
+    originY: z.number(),
+    scale: z.number(),
+    coordinateSpace: z.literal('screenshot').optional(),
+    hwnd: z.string().optional(),
+  })
+  const appSchema = z.object({
+    id: z.string(),
+    displayName: z.string(),
+    isRunning: z.boolean(),
+    windows: z.array(windowSchema),
+  })
+  const stateSchema = z.object({
+    window: windowSchema,
+    screenshots: z.array(screenshotSchema),
+    accessibility: z
+      .object({
+        tree: z.string(),
+        focused_element: z.string().optional(),
+        selected_text: z.string().optional(),
+        selected_elements: z.array(z.string()).optional(),
+        document_text: z.string().optional(),
+      })
+      .nullable(),
+  })
+
+  return z.object({
     ok: z.boolean(),
     action: z.enum(COMPUTER_USE_ACTIONS),
     message: z.string(),
+    backend: z.literal('persistent-powershell').optional(),
+    latencyMs: z.number().optional(),
+    apps: z.array(appSchema).optional(),
     windows: z.array(windowSchema).optional(),
     window: windowSchema.optional(),
-    screenshot: z
-      .object({
-        dataUrl: z.string(),
-        mediaType: z.literal('image/png'),
-        width: z.number(),
-        height: z.number(),
-        originalWidth: z.number(),
-        originalHeight: z.number(),
-        originX: z.number(),
-        originY: z.number(),
-        scale: z.number(),
-        hwnd: z.string().optional(),
-      })
+    screenshot: screenshotSchema.optional(),
+    state: stateSchema.optional(),
+    steps: z
+      .array(
+        z.object({
+          ok: z.boolean(),
+          action: z.enum(COMPUTER_USE_ACTIONS),
+          message: z.string(),
+        }),
+      )
       .optional(),
-  }),
-)
+  })
+})
 
 type InputSchema = ReturnType<typeof inputSchema>
 type OutputSchema = ReturnType<typeof outputSchema>
@@ -139,7 +244,23 @@ function actionNeedsCoordinates(action: ComputerUseAction): boolean {
 }
 
 function actionNeedsHwnd(action: ComputerUseAction): boolean {
-  return action === 'activate_window'
+  return ['activate_window', 'get_window', 'get_window_state'].includes(action)
+}
+
+function isReadOnlyAction(action: ComputerUseAction | undefined): boolean {
+  return [
+    'list_apps',
+    'list_windows',
+    'get_window',
+    'get_window_state',
+    'screenshot',
+  ].includes(action ?? '')
+}
+
+function containsForbiddenKeyChord(key: string | undefined): boolean {
+  return /(^|[+_\-\s])(win|windows|meta|super|cmd|command|os)([+_\-\s]|$)/i.test(
+    key ?? '',
+  )
 }
 
 export const ComputerUseTool = buildTool({
@@ -158,7 +279,7 @@ export const ComputerUseTool = buildTool({
   },
   getToolUseSummary,
   getActivityDescription(input) {
-    const summary = getToolUseSummary(input)
+    const summary = getToolUseSummary(input as Partial<ComputerUseInput>)
     return summary ? `Using computer: ${summary}` : 'Using computer'
   },
   get inputSchema(): InputSchema {
@@ -170,8 +291,8 @@ export const ComputerUseTool = buildTool({
   isEnabled() {
     return getPlatform() === 'windows'
   },
-  isReadOnly(input?: Partial<ComputerUseInput>) {
-    return input?.action === 'list_windows' || input?.action === 'screenshot'
+  isReadOnly(input) {
+    return isReadOnlyAction((input as Partial<ComputerUseInput>).action)
   },
   toAutoClassifierInput(input) {
     return `${input.action}${input.hwnd ? ` hwnd=${input.hwnd}` : ''}`
@@ -229,7 +350,7 @@ export const ComputerUseTool = buildTool({
     if (actionNeedsHwnd(input.action) && !input.hwnd) {
       return {
         result: false,
-        message: `${input.action} requires hwnd from list_windows.`,
+        message: `${input.action} requires hwnd from list_apps or list_windows.`,
         errorCode: 2,
       }
     }
@@ -267,6 +388,36 @@ export const ComputerUseTool = buildTool({
         errorCode: 6,
       }
     }
+    if (input.action === 'press_key' && containsForbiddenKeyChord(input.key)) {
+      return {
+        result: false,
+        message: 'Computer Use does not allow Windows/Meta key shortcuts.',
+        errorCode: 7,
+      }
+    }
+    if (input.action === 'sequence') {
+      if (!input.steps?.length) {
+        return {
+          result: false,
+          message: 'sequence requires at least one step.',
+          errorCode: 8,
+        }
+      }
+      if (input.steps.some(step => step.action === 'sequence')) {
+        return {
+          result: false,
+          message: 'nested sequence actions are not supported.',
+          errorCode: 9,
+        }
+      }
+      if (input.steps.some(step => step.action === 'press_key' && containsForbiddenKeyChord(step.key))) {
+        return {
+          result: false,
+          message: 'Computer Use does not allow Windows/Meta key shortcuts.',
+          errorCode: 10,
+        }
+      }
+    }
     return { result: true }
   },
   async prompt() {
@@ -286,9 +437,8 @@ export const ComputerUseTool = buildTool({
     toolUseID: string,
   ): ToolResultBlockParam {
     const text = outputForModel(output)
-    const parsedImage = output.screenshot
-      ? parseDataUri(output.screenshot.dataUrl)
-      : null
+    const screenshot = getPrimaryScreenshot(output)
+    const parsedImage = screenshot ? parseDataUri(screenshot.dataUrl) : null
     if (parsedImage) {
       return {
         tool_use_id: toolUseID,
@@ -312,17 +462,32 @@ export const ComputerUseTool = buildTool({
       content: text,
     }
   },
-} satisfies ToolDef<z.infer<InputSchema>, z.infer<OutputSchema>>)
+} satisfies ToolDef<InputSchema, z.infer<OutputSchema>>)
+
+function getPrimaryScreenshot(
+  output: ComputerUseOutput,
+): ComputerUseScreenshot | undefined {
+  return output.screenshot ?? output.state?.screenshots?.[0]
+}
 
 function outputForModel(output: ComputerUseOutput): string {
-  const safeOutput = output.screenshot
-    ? {
-        ...output,
-        screenshot: {
+  const safeOutput = {
+    ...output,
+    screenshot: output.screenshot
+      ? {
           ...output.screenshot,
           dataUrl: '[image attached]',
-        },
-      }
-    : output
+        }
+      : undefined,
+    state: output.state
+      ? {
+          ...output.state,
+          screenshots: output.state.screenshots.map(screenshot => ({
+            ...screenshot,
+            dataUrl: '[image attached]',
+          })),
+        }
+      : undefined,
+  }
   return JSON.stringify(safeOutput, null, 2)
 }

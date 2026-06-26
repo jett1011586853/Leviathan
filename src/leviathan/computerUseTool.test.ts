@@ -51,22 +51,24 @@ describe('Leviathan Computer Use tool', () => {
   })
 
   test('returns screenshots as model-visible image blocks without exposing data URI text', () => {
+    const screenshot = {
+      dataUrl:
+        'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAFgwJ/lZ3w7QAAAABJRU5ErkJggg==',
+      mediaType: 'image/png' as const,
+      width: 1,
+      height: 1,
+      originalWidth: 1,
+      originalHeight: 1,
+      originX: 0,
+      originY: 0,
+      scale: 1,
+      coordinateSpace: 'screenshot' as const,
+    }
     const output = {
       ok: true,
       action: 'screenshot' as const,
       message: 'Captured screenshot.',
-      screenshot: {
-        dataUrl:
-          'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAFgwJ/lZ3w7QAAAABJRU5ErkJggg==',
-        mediaType: 'image/png' as const,
-        width: 1,
-        height: 1,
-        originalWidth: 1,
-        originalHeight: 1,
-        originX: 0,
-        originY: 0,
-        scale: 1,
-      },
+      screenshot,
     }
 
     const block = ComputerUseTool.mapToolResultToToolResultBlockParam(
@@ -76,6 +78,29 @@ describe('Leviathan Computer Use tool', () => {
     expect(Array.isArray(block.content)).toBe(true)
     expect(JSON.stringify(block.content)).toContain('"type":"image"')
     expect(JSON.stringify(block.content)).not.toContain(output.screenshot.dataUrl)
+
+    const stateBlock = ComputerUseTool.mapToolResultToToolResultBlockParam(
+      {
+        ok: true,
+        action: 'get_window_state',
+        message: 'Captured window state.',
+        state: {
+          screenshots: [screenshot],
+          accessibility: null,
+          window: {
+            hwnd: '1',
+            title: 'Test',
+            processName: 'test',
+            processId: 1,
+            bounds: { x: 0, y: 0, width: 1, height: 1 },
+          },
+        },
+      },
+      'toolu_state',
+    )
+    expect(Array.isArray(stateBlock.content)).toBe(true)
+    expect(JSON.stringify(stateBlock.content)).toContain('"type":"image"')
+    expect(JSON.stringify(stateBlock.content)).not.toContain(screenshot.dataUrl)
   })
 
   test('does not depend on recovered private computer-use packages', () => {
