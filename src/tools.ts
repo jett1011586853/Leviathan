@@ -9,6 +9,7 @@ import { FileWriteTool } from './tools/FileWriteTool/FileWriteTool.js'
 import { GlobTool } from './tools/GlobTool/GlobTool.js'
 import { NotebookEditTool } from './tools/NotebookEditTool/NotebookEditTool.js'
 import { WebFetchTool } from './tools/WebFetchTool/WebFetchTool.js'
+import { ComputerUseTool } from './tools/ComputerUseTool/ComputerUseTool.js'
 import { TaskStopTool } from './tools/TaskStopTool/TaskStopTool.js'
 import { BriefTool } from './tools/BriefTool/BriefTool.js'
 // Dead code elimination: conditional import for ant-only tools
@@ -204,6 +205,7 @@ export function getAllBaseTools(): Tools {
     WebFetchTool,
     TodoWriteTool,
     WebSearchTool,
+    ComputerUseTool,
     TaskStopTool,
     AskUserQuestionTool,
     SkillTool,
