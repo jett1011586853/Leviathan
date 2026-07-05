@@ -17,6 +17,21 @@ export function getToolUseSummary(
   if (input.action === 'sequence') {
     return `sequence ${input.steps?.length ?? 0} steps`
   }
+  if (input.action?.startsWith('vscode_')) {
+    if (input.action === 'vscode_open_file' && input.file) {
+      return `${input.action} ${input.file}${input.line ? `:${input.line}` : ''}`
+    }
+    if (input.action === 'vscode_run_command' && input.command) {
+      return `${input.action} ${input.command}`
+    }
+    if (input.action === 'vscode_open' && (input.path || input.paths?.[0])) {
+      return `${input.action} ${input.path ?? input.paths?.[0]}`
+    }
+    if (input.action === 'vscode_type_text') {
+      return `${input.action} ${input.file ?? 'active editor'} (${input.text?.length ?? 0} chars)`
+    }
+    return input.action
+  }
   if (
     ['click', 'double_click', 'right_click', 'scroll'].includes(input.action) &&
     input.x !== undefined &&
@@ -106,6 +121,24 @@ function summarizeOutput(output: ComputerUseOutput): string {
     return `${output.message}${suffix}\n${output.steps
       .map((step, index) => `${index + 1}. ${step.action}: ${step.message}`)
       .join('\n')}`
+  }
+  if (output.vscode) {
+    const commandLine = [output.vscode.executable, ...output.vscode.args].join(' ')
+    const stdout = output.vscode.stdout.trim()
+    const stderr = output.vscode.stderr.trim()
+    const details = [
+      commandLine,
+      output.vscode.uri ? `uri: ${output.vscode.uri}` : '',
+      output.vscode.typedCharacters !== undefined
+        ? `typed: ${output.vscode.typedCharacters} chars`
+        : '',
+      output.vscode.autoIndentDisabled
+        ? `autoIndent: disabled${output.vscode.autoIndentRestored ? ', restored' : ''}`
+        : '',
+      stdout ? `stdout:\n${stdout}` : '',
+      stderr ? `stderr:\n${stderr}` : '',
+    ].filter(Boolean)
+    return `${output.message}${suffix}\n${details.join('\n')}`
   }
   if (output.window) {
     const window = output.window

@@ -28,6 +28,29 @@ type ComputerUseCommonInput = {
   max_image_dimension?: number
   include_screenshot?: boolean
   include_text?: boolean
+  path?: string
+  paths?: string[]
+  file?: string
+  left_file?: string
+  right_file?: string
+  line?: number
+  column?: number
+  command?: string
+  command_args?: unknown[]
+  url?: string
+  prompt?: string
+  extension_id?: string
+  force?: boolean
+  pre_release?: boolean
+  show_versions?: boolean
+  new_window?: boolean
+  reuse_window?: boolean
+  profile?: string
+  timeout_ms?: number
+  typing_delay_ms?: number
+  disable_auto_indent?: boolean
+  restore_auto_indent?: boolean
+  vscode_settings_path?: string
 }
 
 export type ComputerUseStep = ComputerUseCommonInput & {
@@ -100,6 +123,20 @@ export type ComputerUseOutput = {
     action: ComputerUseAction
     message: string
   }>
+  vscode?: {
+    executable: string
+    args: string[]
+    exitCode: number
+    stdout: string
+    stderr: string
+    uri?: string
+    version?: string
+    extensions?: string[]
+    typedCharacters?: number
+    autoIndentDisabled?: boolean
+    autoIndentRestored?: boolean
+    settingsPath?: string
+  }
 }
 
 type PendingRequest = {
@@ -402,6 +439,9 @@ public static class LeviathanUser32 {
   [DllImport("user32.dll")]
   public static extern bool IsWindowVisible(IntPtr hWnd);
 
+  [DllImport("user32.dll")]
+  public static extern IntPtr GetForegroundWindow();
+
   [DllImport("user32.dll", SetLastError = true)]
   public static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
 
@@ -528,6 +568,14 @@ function Get-WindowInfo {
     $info.blockedReason = $blockedReason
   }
   return [pscustomobject]$info
+}
+
+function Get-ActiveWindowHandle {
+  $hwnd = [LeviathanUser32]::GetForegroundWindow()
+  if ($hwnd -eq [IntPtr]::Zero) {
+    throw 'No foreground window is available.'
+  }
+  return $hwnd
 }
 
 function Assert-WindowSafe {
@@ -888,6 +936,27 @@ function Invoke-ComputerAction {
         action = $action
         message = 'Listed visible windows.'
         windows = @(List-Windows)
+      }
+    }
+    'get_active_window' {
+      $activeHwnd = Get-ActiveWindowHandle
+      return [ordered]@{
+        ok = $true
+        action = $action
+        message = 'Refreshed active window.'
+        window = (Get-WindowInfo $activeHwnd)
+      }
+    }
+    'get_active_window_state' {
+      $activeHwnd = Get-ActiveWindowHandle
+      Add-Member -InputObject $Payload -NotePropertyName hwnd -NotePropertyValue (([Int64]$activeHwnd).ToString()) -Force
+      $state = Get-WindowState $Payload
+      return [ordered]@{
+        ok = $true
+        action = $action
+        message = 'Captured active window state.'
+        window = $state.window
+        state = $state
       }
     }
     'get_window' {

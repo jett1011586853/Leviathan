@@ -2762,6 +2762,7 @@ async function run(): Promise<CommanderCommand> {
       footerSelection: null,
       toolPermissionContext: effectiveToolPermissionContext,
       computerUseEnabled: false,
+      browserUseEnabled: false,
       agent: mainThreadAgentDefinition?.agentType,
       agentDefinitions,
       mcp: {

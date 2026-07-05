@@ -57,19 +57,50 @@ const inputSchema = lazySchema(() =>
     selector: z
       .string()
       .optional()
-      .describe('CSS selector for click or type_text. Prefer selectors returned by snapshot.'),
-    text: z.string().optional().describe('Text for type_text.'),
+      .describe('CSS selector for click, type_text, or stream_type_text. Prefer selectors returned by snapshot. stream_type_text can auto-detect code editors when omitted.'),
+    text: z.string().optional().describe('Text for type_text or stream_type_text.'),
+    typing_delay_ms: z
+      .number()
+      .int()
+      .min(0)
+      .max(1000)
+      .optional()
+      .describe('For stream_type_text, delay between visible character insertions. Defaults to 200 ms.'),
+    clear: z
+      .boolean()
+      .optional()
+      .describe('For stream_type_text, clear the focused editor before typing. Defaults to true.'),
+    question: z
+      .string()
+      .optional()
+      .describe('Question to send to ChatGPT for ask_chatgpt. Keep it concise and omit secrets.'),
     key: z
       .string()
       .optional()
       .describe('Simple key for press_key, such as Enter, Tab, Escape, Backspace, Delete, Left, Right, Up, Down.'),
+    cdp_method: z
+      .string()
+      .optional()
+      .describe('Raw Chrome DevTools Protocol method for cdp_send, such as Runtime.evaluate, Network.getCookies, or Target.getTargets.'),
+    cdp_params: z
+      .record(z.string(), z.unknown())
+      .optional()
+      .describe('Raw Chrome DevTools Protocol params object for cdp_send. Defaults to {}.'),
+    cdp_target: z
+      .enum(['tab', 'browser'])
+      .optional()
+      .describe('Target for cdp_send. "tab" sends to the selected page target; "browser" sends to the browser-level DevTools endpoint. Defaults to tab.'),
+    cdp_session_id: z
+      .string()
+      .optional()
+      .describe('Optional flattened CDP sessionId for cdp_send after Target.attachToTarget.'),
     timeout_ms: z
       .number()
       .int()
       .min(500)
-      .max(60_000)
+      .max(180_000)
       .optional()
-      .describe('Action timeout in milliseconds. Defaults to 10000.'),
+      .describe('Action timeout in milliseconds. Defaults to 10000, except ask_chatgpt which may wait longer for a response.'),
     user_data_dir: z
       .string()
       .optional()
@@ -123,6 +154,14 @@ const outputSchema = lazySchema(() =>
         mediaType: z.literal('image/png'),
       })
       .optional(),
+    chatgpt: z
+      .object({
+        question: z.string(),
+        answer: z.string(),
+        url: z.string(),
+        tabId: z.string(),
+      })
+      .optional(),
   }),
 )
 
@@ -152,6 +191,16 @@ function isReadOnlyAction(action: BrowserDevToolsAction | undefined): boolean {
   return ['connect', 'list_tabs', 'snapshot', 'screenshot'].includes(
     action ?? '',
   )
+}
+
+function permissionMessage(action: BrowserDevToolsAction): string {
+  if (action === 'cdp_send') {
+    return 'Allow Leviathan to use full Chrome DevTools Protocol (CDP) access in the connected Browser Use session. Full CDP access can inspect and control sensitive browser internals.'
+  }
+  if (action === 'ask_chatgpt') {
+    return 'Allow Leviathan to send a question to ChatGPT through Browser Use and read the response as external guidance.'
+  }
+  return `Leviathan requested permission to use Browser DevTools (${action}).`
 }
 
 export const BrowserDevToolsTool = buildTool({
@@ -184,7 +233,8 @@ export const BrowserDevToolsTool = buildTool({
   },
   async checkPermissions(input, context): Promise<PermissionDecision> {
     const action = input.action
-    const permissionContext = context.getAppState().toolPermissionContext
+    const appState = context.getAppState()
+    const permissionContext = appState.toolPermissionContext
 
     if (permissionContext.mode === 'bypassPermissions') {
       return { behavior: 'allow', updatedInput: input }
@@ -217,9 +267,16 @@ export const BrowserDevToolsTool = buildTool({
       }
     }
 
+    if (appState.browserUseEnabled === true) {
+      return {
+        behavior: 'allow',
+        updatedInput: input,
+      }
+    }
+
     return {
       behavior: 'ask',
-      message: `Leviathan requested permission to use Browser DevTools (${action}).`,
+      message: permissionMessage(action),
       updatedInput: input,
       suggestions: buildSuggestions(action),
     }
@@ -246,11 +303,35 @@ export const BrowserDevToolsTool = buildTool({
         errorCode: 3,
       }
     }
+    if (input.action === 'stream_type_text' && input.text === undefined) {
+      return {
+        result: false,
+        message: 'stream_type_text requires text.',
+        errorCode: 7,
+      }
+    }
     if (input.action === 'press_key' && !input.key) {
       return {
         result: false,
         message: 'press_key requires key.',
         errorCode: 4,
+      }
+    }
+    if (input.action === 'cdp_send' && !input.cdp_method) {
+      return {
+        result: false,
+        message: 'cdp_send requires cdp_method.',
+        errorCode: 5,
+      }
+    }
+    if (
+      input.action === 'ask_chatgpt' &&
+      !(input.question ?? input.text)?.trim()
+    ) {
+      return {
+        result: false,
+        message: 'ask_chatgpt requires question.',
+        errorCode: 6,
       }
     }
     return { result: true }

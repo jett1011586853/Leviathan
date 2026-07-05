@@ -9,9 +9,11 @@ import { parseDataUri } from '../BashTool/utils.js'
 import {
   COMPUTER_USE_ACTIONS,
   COMPUTER_USE_TOOL_NAME,
+  isVSCodeComputerUseAction,
   type ComputerUseAction,
 } from './constants.js'
 import { getPrompt } from './prompt.js'
+import { runVSCodeComputerUse } from './vscodeComputerUse.js'
 import {
   getToolUseSummary,
   renderToolResultMessage,
@@ -140,6 +142,110 @@ const inputSchema = lazySchema(() => {
       .boolean()
       .optional()
       .describe('For sequence, capture get_window_state after all steps.'),
+    path: z
+      .string()
+      .optional()
+      .describe('Path for vscode_open, vscode_add_folder, vscode_remove_folder, or extension VSIX path. Relative paths resolve from the workspace.'),
+    paths: z
+      .array(z.string())
+      .max(20)
+      .optional()
+      .describe('Paths for vscode_open. Relative paths resolve from the workspace.'),
+    file: z
+      .string()
+      .optional()
+      .describe('File path for vscode_open_file. Relative paths resolve from the workspace.'),
+    left_file: z
+      .string()
+      .optional()
+      .describe('Left file for vscode_open_diff. Relative paths resolve from the workspace.'),
+    right_file: z
+      .string()
+      .optional()
+      .describe('Right file for vscode_open_diff. Relative paths resolve from the workspace.'),
+    line: z
+      .number()
+      .int()
+      .min(1)
+      .optional()
+      .describe('1-based line number for vscode_open_file.'),
+    column: z
+      .number()
+      .int()
+      .min(1)
+      .optional()
+      .describe('1-based column number for vscode_open_file.'),
+    command: z
+      .string()
+      .optional()
+      .describe('VSCode command id for vscode_run_command, such as workbench.action.showCommands.'),
+    command_args: z
+      .array(z.unknown())
+      .max(20)
+      .optional()
+      .describe('JSON-serializable argument array for vscode_run_command.'),
+    url: z
+      .string()
+      .optional()
+      .describe('vscode:// or vscode-insiders:// URI for vscode_open_uri.'),
+    prompt: z
+      .string()
+      .optional()
+      .describe('Prompt text for vscode_chat.'),
+    extension_id: z
+      .string()
+      .optional()
+      .describe('Extension id for vscode_install_extension or vscode_uninstall_extension, such as ms-python.python.'),
+    force: z
+      .boolean()
+      .optional()
+      .describe('For vscode_install_extension, force install/update.'),
+    pre_release: z
+      .boolean()
+      .optional()
+      .describe('For vscode_install_extension, install pre-release version.'),
+    show_versions: z
+      .boolean()
+      .optional()
+      .describe('For vscode_list_extensions, include extension versions.'),
+    new_window: z
+      .boolean()
+      .optional()
+      .describe('For VSCode open actions, open a new window.'),
+    reuse_window: z
+      .boolean()
+      .optional()
+      .describe('For VSCode open actions, reuse the active window. Defaults to true.'),
+    profile: z
+      .string()
+      .optional()
+      .describe('Optional VSCode profile name for open actions.'),
+    timeout_ms: z
+      .number()
+      .int()
+      .min(500)
+      .max(180_000)
+      .optional()
+      .describe('Timeout for VSCode native actions. Defaults to 15000.'),
+    typing_delay_ms: z
+      .number()
+      .int()
+      .min(0)
+      .max(1000)
+      .optional()
+      .describe('For vscode_type_text, delay between simulated keystrokes. Defaults to 4 ms.'),
+    disable_auto_indent: z
+      .boolean()
+      .optional()
+      .describe('For vscode_type_text, temporarily disable VSCode auto indentation and format-on-type before typing. Defaults to true.'),
+    restore_auto_indent: z
+      .boolean()
+      .optional()
+      .describe('For vscode_type_text, restore the previous VSCode settings after typing. Defaults to true.'),
+    vscode_settings_path: z
+      .string()
+      .optional()
+      .describe('Optional settings.json path to edit while disabling auto indentation for vscode_type_text.'),
   })
 })
 
@@ -211,6 +317,22 @@ const outputSchema = lazySchema(() => {
         }),
       )
       .optional(),
+    vscode: z
+      .object({
+        executable: z.string(),
+        args: z.array(z.string()),
+        exitCode: z.number(),
+        stdout: z.string(),
+        stderr: z.string(),
+        uri: z.string().optional(),
+        version: z.string().optional(),
+        extensions: z.array(z.string()).optional(),
+        typedCharacters: z.number().optional(),
+        autoIndentDisabled: z.boolean().optional(),
+        autoIndentRestored: z.boolean().optional(),
+        settingsPath: z.string().optional(),
+      })
+      .optional(),
   })
 })
 
@@ -251,9 +373,14 @@ function isReadOnlyAction(action: ComputerUseAction | undefined): boolean {
   return [
     'list_apps',
     'list_windows',
+    'get_active_window',
+    'get_active_window_state',
     'get_window',
     'get_window_state',
     'screenshot',
+    'vscode_version',
+    'vscode_status',
+    'vscode_list_extensions',
   ].includes(action ?? '')
 }
 
@@ -374,10 +501,13 @@ export const ComputerUseTool = buildTool({
         errorCode: 4,
       }
     }
-    if (input.action === 'type_text' && input.text === undefined) {
+    if (
+      (input.action === 'type_text' || input.action === 'vscode_type_text') &&
+      input.text === undefined
+    ) {
       return {
         result: false,
-        message: 'type_text requires text.',
+        message: `${input.action} requires text.`,
         errorCode: 5,
       }
     }
@@ -410,11 +540,35 @@ export const ComputerUseTool = buildTool({
           errorCode: 9,
         }
       }
+      if (input.steps.some(step => isVSCodeComputerUseAction(step.action))) {
+        return {
+          result: false,
+          message: 'VSCode native actions cannot be nested inside sequence.',
+          errorCode: 11,
+        }
+      }
       if (input.steps.some(step => step.action === 'press_key' && containsForbiddenKeyChord(step.key))) {
         return {
           result: false,
           message: 'Computer Use does not allow Windows/Meta key shortcuts.',
           errorCode: 10,
+        }
+      }
+    }
+    if (isVSCodeComputerUseAction(input.action)) {
+      const missingField = getMissingVSCodeField(input as ComputerUseInput)
+      if (missingField) {
+        return {
+          result: false,
+          message: `${input.action} requires ${missingField}.`,
+          errorCode: 12,
+        }
+      }
+      if (input.action === 'vscode_open_uri' && !isAllowedVSCodeUri(input.url)) {
+        return {
+          result: false,
+          message: 'vscode_open_uri only accepts vscode:// or vscode-insiders:// URIs.',
+          errorCode: 13,
         }
       }
     }
@@ -426,10 +580,17 @@ export const ComputerUseTool = buildTool({
   renderToolUseMessage,
   renderToolResultMessage,
   async call(input, context) {
-    const output = await runWindowsComputerUse(
-      input as ComputerUseInput,
-      context.abortController.signal,
+    const output = isVSCodeComputerUseAction(
+      (input as ComputerUseInput).action,
     )
+      ? await runVSCodeComputerUse(
+          input as ComputerUseInput,
+          context.abortController.signal,
+        )
+      : await runWindowsComputerUse(
+          input as ComputerUseInput,
+          context.abortController.signal,
+        )
     return { data: output }
   },
   mapToolResultToToolResultBlockParam(
@@ -490,4 +651,33 @@ function outputForModel(output: ComputerUseOutput): string {
       : undefined,
   }
   return JSON.stringify(safeOutput, null, 2)
+}
+
+function getMissingVSCodeField(input: ComputerUseInput): string | null {
+  switch (input.action) {
+    case 'vscode_open_file':
+      return input.file ? null : 'file'
+    case 'vscode_open_diff':
+      if (!input.left_file) return 'left_file'
+      return input.right_file ? null : 'right_file'
+    case 'vscode_add_folder':
+    case 'vscode_remove_folder':
+      return input.path ? null : 'path'
+    case 'vscode_run_command':
+      return input.command ? null : 'command'
+    case 'vscode_open_uri':
+      return input.url ? null : 'url'
+    case 'vscode_chat':
+      return input.prompt ? null : 'prompt'
+    case 'vscode_install_extension':
+      return input.extension_id || input.path ? null : 'extension_id'
+    case 'vscode_uninstall_extension':
+      return input.extension_id ? null : 'extension_id'
+    default:
+      return null
+  }
+}
+
+function isAllowedVSCodeUri(url: string | undefined): boolean {
+  return /^vscode(?:-insiders)?:\/\//i.test(url?.trim() ?? '')
 }

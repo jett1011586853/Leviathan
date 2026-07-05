@@ -163,6 +163,7 @@ export async function resumeAgentBackground({
     ? toolUseContext.options.tools
     : assembleToolPool(workerPermissionContext, appState.mcp.tools, {
         includeComputerUseTools: appState.computerUseEnabled,
+        includeBrowserUseTools: appState.browserUseEnabled,
       })
 
   const runAgentParams: Parameters<typeof runAgent>[0] = {

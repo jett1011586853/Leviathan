@@ -10,8 +10,11 @@ export const BROWSER_DEVTOOLS_ACTIONS = [
   'snapshot',
   'click',
   'type_text',
+  'stream_type_text',
   'press_key',
   'screenshot',
+  'cdp_send',
+  'ask_chatgpt',
   'close_tab',
 ] as const
 

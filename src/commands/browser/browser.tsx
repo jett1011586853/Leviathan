@@ -9,34 +9,34 @@ import type {
   LocalJSXCommandOnDone,
 } from '../../types/command.js'
 
-type ComputerUseChoice = 'off' | 'on'
+type BrowserUseChoice = 'off' | 'on'
 
 const ENABLED_MESSAGE =
-  'Computer Use enabled for this session. ComputerUse desktop and VSCode native actions are now available to Leviathan.'
+  'Browser Use enabled for this session. BrowserDevTools full Chrome DevTools Protocol actions are now available to Leviathan.'
 const DISABLED_MESSAGE =
-  'Computer Use disabled for this session. ComputerUse desktop and VSCode native actions are hidden from Leviathan.'
-const UNCHANGED_MESSAGE = 'Computer Use settings unchanged.'
-const USAGE_MESSAGE = 'Usage: /computer use [on|off]'
+  'Browser Use disabled for this session. BrowserDevTools actions are hidden from Leviathan.'
+const UNCHANGED_MESSAGE = 'Browser Use settings unchanged.'
+const USAGE_MESSAGE = 'Usage: /browser use [on|off]'
 
 function completionMessage(enabled: boolean): string {
   return enabled ? ENABLED_MESSAGE : DISABLED_MESSAGE
 }
 
-function setComputerUseEnabled(
+function setBrowserUseEnabled(
   context: LocalJSXCommandContext,
   enabled: boolean,
 ): void {
   context.setAppState(prev =>
-    prev.computerUseEnabled === enabled
+    prev.browserUseEnabled === enabled
       ? prev
       : {
           ...prev,
-          computerUseEnabled: enabled,
+          browserUseEnabled: enabled,
         },
   )
 }
 
-function parseDirectChoice(args: string): ComputerUseChoice | null | undefined {
+function parseDirectChoice(args: string): BrowserUseChoice | null | undefined {
   const parts = args.toLowerCase().trim().split(/\s+/).filter(Boolean)
   if (parts.length === 0) return undefined
 
@@ -48,22 +48,22 @@ function parseDirectChoice(args: string): ComputerUseChoice | null | undefined {
   return null
 }
 
-function ComputerUseToggleDialog({
+function BrowserUseToggleDialog({
   onDone,
 }: {
   onDone: LocalJSXCommandOnDone
 }): React.ReactNode {
-  const enabled = useAppState((state: AppState) => state.computerUseEnabled)
+  const enabled = useAppState((state: AppState) => state.browserUseEnabled)
   const setAppState = useSetAppState()
 
-  const applyChoice = (choice: ComputerUseChoice) => {
+  const applyChoice = (choice: BrowserUseChoice) => {
     const nextEnabled = choice === 'on'
     setAppState(prev =>
-      prev.computerUseEnabled === nextEnabled
+      prev.browserUseEnabled === nextEnabled
         ? prev
         : {
             ...prev,
-            computerUseEnabled: nextEnabled,
+            browserUseEnabled: nextEnabled,
           },
     )
     onDone(completionMessage(nextEnabled), { display: 'system' })
@@ -77,27 +77,28 @@ function ComputerUseToggleDialog({
     {
       label: 'Close',
       value: 'off' as const,
-      description: 'Hide ComputerUse desktop and VSCode native actions from Leviathan.',
+      description: 'Hide BrowserDevTools CDP actions from Leviathan.',
     },
     {
       label: 'Enable',
       value: 'on' as const,
-      description: 'Enable desktop and VSCode automation tools this session.',
+      description: 'Enable full Chrome DevTools Protocol browser control this session.',
     },
   ]
 
   return (
     <Dialog
-      title="Computer Use"
+      title="Browser Use"
       subtitle={`Current status: ${enabled ? 'enabled' : 'disabled'}`}
       color="permission"
       onCancel={handleCancel}
     >
       <Box flexDirection="column" gap={1}>
         <Text>
-          This controls the ComputerUse desktop and VSCode native tool family.
-          Keep it disabled for normal coding sessions, and enable it only
-          when you want Leviathan to operate desktop apps or VSCode itself.
+          This controls BrowserDevTools only. When enabled, Leviathan can use
+          Chrome DevTools Protocol to inspect and control connected Chromium
+          browsers, including sensitive browser internals such as storage,
+          network state, targets, downloads, and permissions.
         </Text>
         <Select
           defaultValue="off"
@@ -125,10 +126,10 @@ export async function call(
 
   if (choice !== undefined) {
     const enabled = choice === 'on'
-    setComputerUseEnabled(context, enabled)
+    setBrowserUseEnabled(context, enabled)
     onDone(completionMessage(enabled), { display: 'system' })
     return null
   }
 
-  return <ComputerUseToggleDialog onDone={onDone} />
+  return <BrowserUseToggleDialog onDone={onDone} />
 }

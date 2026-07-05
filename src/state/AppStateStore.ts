@@ -107,9 +107,12 @@ export type AppState = DeepImmutable<{
   // (CompanionSprite in REPL.tsx) can read their own focused state.
   footerSelection: FooterItem | null
   toolPermissionContext: ToolPermissionContext
-  // Session-scoped gate for desktop/browser automation tools. Defaults off so
-  // ComputerUse and BrowserDevTools only become available after /computer use.
+  // Session-scoped gate for desktop/VSCode automation tools. Defaults off so
+  // ComputerUse only becomes available after /computer use.
   computerUseEnabled: boolean
+  // Session-scoped gate for Chrome DevTools Protocol browser automation.
+  // Defaults off so BrowserDevTools only becomes available after /browser use.
+  browserUseEnabled: boolean
   spinnerTip?: string
   // Agent name from --agent CLI flag or settings (for logo display)
   agent: string | undefined
@@ -505,6 +508,7 @@ export function getDefaultAppState(): AppState {
       mode: initialMode,
     },
     computerUseEnabled: false,
+    browserUseEnabled: false,
     agent: undefined,
     agentDefinitions: { activeAgents: [], allAgents: [] },
     fileHistory: {

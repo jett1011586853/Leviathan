@@ -1,11 +1,13 @@
 import { feature } from 'bun:bundle'
 import { registerBatchSkill } from './batch.js'
+import { registerChatGptRescueTeamSkill } from './chatgptRescueTeam.js'
 import { registerDebugSkill } from './debug.js'
 import { registerKeybindingsSkill } from './keybindings.js'
 import { registerLoremIpsumSkill } from './loremIpsum.js'
 import { registerProviderApiSkill } from './providerApi.js'
 import { registerRememberSkill } from './remember.js'
 import { registerSimplifySkill } from './simplify.js'
+import { registerSkillCreatorSkill } from './skillCreator.js'
 import { registerSkillifySkill } from './skillify.js'
 import { registerStuckSkill } from './stuck.js'
 import { registerUpdateConfigSkill } from './updateConfig.js'
@@ -27,11 +29,13 @@ export function initBundledSkills(): void {
   registerDebugSkill()
   registerProviderApiSkill()
   registerLoremIpsumSkill()
+  registerSkillCreatorSkill()
   registerSkillifySkill()
   registerRememberSkill()
   registerSimplifySkill()
   registerBatchSkill()
   registerStuckSkill()
+  registerChatGptRescueTeamSkill()
   if (feature('KAIROS') || feature('KAIROS_DREAM')) {
     /* eslint-disable @typescript-eslint/no-require-imports */
     const { registerDreamSkill } = require('./dream.js')

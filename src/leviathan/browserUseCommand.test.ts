@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { call } from '../commands/computer/computer.js'
+import { call } from '../commands/browser/browser.js'
 import type { LocalJSXCommandContext } from '../types/command.js'
 import { getDefaultAppState, type AppState } from '../state/AppStateStore.js'
 
@@ -22,23 +22,22 @@ function createCommandContext() {
   }
 }
 
-describe('/computer use command', () => {
+describe('/browser use command', () => {
   test('defaults the feature gate to disabled', () => {
-    expect(getDefaultAppState().computerUseEnabled).toBe(false)
     expect(getDefaultAppState().browserUseEnabled).toBe(false)
   })
 
-  test('can enable and disable ComputerUse directly without changing Browser Use', async () => {
+  test('can enable and disable BrowserDevTools directly without changing Computer Use', async () => {
     const harness = createCommandContext()
 
     await call(harness.onDone, harness.context, 'use on')
-    expect(harness.getAppState().computerUseEnabled).toBe(true)
-    expect(harness.getAppState().browserUseEnabled).toBe(false)
+    expect(harness.getAppState().browserUseEnabled).toBe(true)
+    expect(harness.getAppState().computerUseEnabled).toBe(false)
     expect(harness.messages.at(-1)).toContain('enabled')
 
     await call(harness.onDone, harness.context, 'use off')
-    expect(harness.getAppState().computerUseEnabled).toBe(false)
     expect(harness.getAppState().browserUseEnabled).toBe(false)
+    expect(harness.getAppState().computerUseEnabled).toBe(false)
     expect(harness.messages.at(-1)).toContain('disabled')
   })
 
@@ -46,7 +45,7 @@ describe('/computer use command', () => {
     const harness = createCommandContext()
 
     await call(harness.onDone, harness.context, 'status')
-    expect(harness.getAppState().computerUseEnabled).toBe(false)
-    expect(harness.messages.at(-1)).toContain('/computer use')
+    expect(harness.getAppState().browserUseEnabled).toBe(false)
+    expect(harness.messages.at(-1)).toContain('/browser use')
   })
 })

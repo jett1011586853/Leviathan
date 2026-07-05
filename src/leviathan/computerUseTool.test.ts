@@ -3,7 +3,15 @@ import { readFileSync } from 'node:fs'
 import { getEmptyToolPermissionContext, type ToolUseContext } from '../Tool.js'
 import { getTools } from '../tools.js'
 import { ComputerUseTool } from '../tools/ComputerUseTool/ComputerUseTool.js'
-import { COMPUTER_USE_TOOL_NAME } from '../tools/ComputerUseTool/constants.js'
+import {
+  COMPUTER_USE_TOOL_NAME,
+  isVSCodeComputerUseAction,
+} from '../tools/ComputerUseTool/constants.js'
+import { BROWSER_DEVTOOLS_TOOL_NAME } from '../tools/BrowserDevToolsTool/constants.js'
+import {
+  buildVSCodeCommandUri,
+  buildVSCodePlan,
+} from '../tools/ComputerUseTool/vscodeComputerUse.js'
 import { getPlatform } from '../utils/platform.js'
 
 function source(relativePath: string): string {
@@ -34,7 +42,11 @@ describe('Leviathan Computer Use tool', () => {
     const hasEnabledComputerUse = enabledTools.some(
       tool => tool.name === COMPUTER_USE_TOOL_NAME,
     )
+    const hasBrowserDevTools = enabledTools.some(
+      tool => tool.name === BROWSER_DEVTOOLS_TOOL_NAME,
+    )
     expect(hasEnabledComputerUse).toBe(getPlatform() === 'windows')
+    expect(hasBrowserDevTools).toBe(false)
   })
 
   test('asks for permission by default and allows full access mode', async () => {
@@ -122,5 +134,99 @@ describe('Leviathan Computer Use tool', () => {
     expect(files).not.toContain('@oai/sky')
     expect(files).not.toContain('claude')
     expect(files).not.toContain('Claude')
+  })
+
+  test('exposes VSCode native actions through the gated Computer Use tool', async () => {
+    const prompt = await ComputerUseTool.prompt()
+    expect(prompt).toContain('get_active_window')
+    expect(prompt).toContain('get_active_window_state')
+    expect(prompt).toContain('vscode_open_file')
+    expect(prompt).toContain('vscode_run_command')
+    expect(prompt).toContain('vscode_type_text')
+    expect(prompt).toContain('vscode_install_extension')
+    expect(isVSCodeComputerUseAction('vscode_status')).toBe(true)
+    expect(isVSCodeComputerUseAction('click')).toBe(false)
+  })
+
+  test('exposes active-window capture through the Windows backend', () => {
+    const constants = source('tools/ComputerUseTool/constants.ts')
+    const backend = source('tools/ComputerUseTool/windowsComputerUse.ts')
+
+    expect(constants).toContain("'get_active_window'")
+    expect(constants).toContain("'get_active_window_state'")
+    expect(backend).toContain('GetForegroundWindow')
+    expect(backend).toContain("'get_active_window'")
+    expect(backend).toContain("'get_active_window_state'")
+  })
+
+  test('validates VSCode native action inputs before execution', async () => {
+    const missingFile = await ComputerUseTool.validateInput({
+      action: 'vscode_open_file',
+    })
+    expect(missingFile.result).toBe(false)
+    expect(
+      missingFile.result === false ? missingFile.message : '',
+    ).toContain('file')
+
+    const invalidUri = await ComputerUseTool.validateInput({
+      action: 'vscode_open_uri',
+      url: 'https://example.com',
+    })
+    expect(invalidUri.result).toBe(false)
+    expect(
+      invalidUri.result === false ? invalidUri.message : '',
+    ).toContain('vscode://')
+
+    const missingManualText = await ComputerUseTool.validateInput({
+      action: 'vscode_type_text',
+    })
+    expect(missingManualText.result).toBe(false)
+    expect(
+      missingManualText.result === false ? missingManualText.message : '',
+    ).toContain('text')
+
+    const validCommand = await ComputerUseTool.validateInput({
+      action: 'vscode_run_command',
+      command: 'workbench.action.showCommands',
+    })
+    expect(validCommand.result).toBe(getPlatform() === 'windows')
+  })
+
+  test('builds deterministic VSCode CLI and URI plans', () => {
+    const openPlan = buildVSCodePlan({
+      action: 'vscode_open_file',
+      file: 'src/main.tsx',
+      line: 12,
+      column: 3,
+    })
+    expect(openPlan.kind).toBe('cli')
+    expect(openPlan.kind === 'cli' ? openPlan.args : []).toContain('--goto')
+    expect(
+      openPlan.kind === 'cli'
+        ? openPlan.args.some(arg => arg.endsWith('src\\main.tsx:12:3') || arg.endsWith('src/main.tsx:12:3'))
+        : false,
+    ).toBe(true)
+
+    const uri = buildVSCodeCommandUri('workbench.action.showCommands', [
+      { query: 'format' },
+    ])
+    expect(uri).toContain('vscode://command/workbench.action.showCommands')
+    expect(uri).toContain('%7B%22query%22%3A%22format%22%7D')
+
+    const commandPlan = buildVSCodePlan({
+      action: 'vscode_run_command',
+      command: 'workbench.action.showCommands',
+    })
+    expect(commandPlan.kind).toBe('uri')
+  })
+
+  test('VSCode manual typing disables auto indentation while sending keys', () => {
+    const sourceText = source('tools/ComputerUseTool/vscodeComputerUse.ts')
+
+    expect(sourceText).toContain('vscode_type_text')
+    expect(sourceText).toContain('editor.autoIndent')
+    expect(sourceText).toContain('editor.formatOnType')
+    expect(sourceText).toContain('SendKeys')
+    expect(sourceText).toContain('restore_auto_indent')
   })
 })

@@ -139,7 +139,10 @@ import { isEnvTruthy } from './utils/envUtils.js'
 import { isPowerShellToolEnabled } from './utils/shell/shellToolUtils.js'
 import { isAgentSwarmsEnabled } from './utils/agentSwarmsEnabled.js'
 import { isWorktreeModeEnabled } from './utils/worktreeModeEnabled.js'
-import { filterComputerUseFeatureTools } from './utils/computerUseFeature.js'
+import {
+  filterBrowserUseFeatureTools,
+  filterComputerUseFeatureTools,
+} from './utils/computerUseFeature.js'
 import {
   REPL_TOOL_NAME,
   REPL_ONLY_TOOLS,
@@ -164,6 +167,7 @@ export type ToolPreset = (typeof TOOL_PRESETS)[number]
 
 type ToolAssemblyOptions = {
   includeComputerUseTools?: boolean
+  includeBrowserUseTools?: boolean
 }
 
 export function parseToolPreset(preset: string): ToolPreset | null {
@@ -181,7 +185,10 @@ export function parseToolPreset(preset: string): ToolPreset | null {
  * @returns Array of tool names
  */
 export function getToolsForDefaultPreset(): string[] {
-  const tools = filterComputerUseFeatureTools(getAllBaseTools(), false)
+  const tools = filterBrowserUseFeatureTools(
+    filterComputerUseFeatureTools(getAllBaseTools(), false),
+    false,
+  )
   const isEnabled = tools.map(tool => tool.isEnabled())
   return tools.filter((_, i) => isEnabled[i]).map(tool => tool.name)
 }
@@ -312,10 +319,15 @@ export const getTools = (
     SYNTHETIC_OUTPUT_TOOL_NAME,
   ])
 
-  const tools = filterComputerUseFeatureTools(
-    getAllBaseTools(),
-    options.includeComputerUseTools === true,
-  ).filter(tool => !specialTools.has(tool.name))
+  const featureFilteredTools = filterBrowserUseFeatureTools(
+    filterComputerUseFeatureTools(
+      getAllBaseTools(),
+      options.includeComputerUseTools === true,
+    ),
+    options.includeBrowserUseTools === true,
+  )
+
+  const tools = featureFilteredTools.filter(tool => !specialTools.has(tool.name))
 
   // Filter out tools that are denied by the deny rules
   let allowedTools = filterToolsByDenyRules(tools, permissionContext)

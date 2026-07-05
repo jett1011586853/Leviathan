@@ -9,6 +9,8 @@ import type { BrowserDevToolsAction } from './constants.js'
 const DEFAULT_HOST = '127.0.0.1'
 const DEFAULT_PORT = 9222
 const DEFAULT_TIMEOUT_MS = 10_000
+const CHATGPT_URL = 'https://chatgpt.com/'
+const CHATGPT_RESPONSE_TIMEOUT_MS = 600_000
 
 export type BrowserDevToolsInput = {
   action: BrowserDevToolsAction
@@ -20,7 +22,14 @@ export type BrowserDevToolsInput = {
   expression?: string
   selector?: string
   text?: string
+  typing_delay_ms?: number
+  clear?: boolean
+  question?: string
   key?: string
+  cdp_method?: string
+  cdp_params?: Record<string, unknown>
+  cdp_target?: 'tab' | 'browser'
+  cdp_session_id?: string
   timeout_ms?: number
   user_data_dir?: string
 }
@@ -64,6 +73,34 @@ export type BrowserDevToolsOutput = {
     }>
   }
   screenshot?: BrowserDevToolsScreenshot
+  chatgpt?: {
+    question: string
+    answer: string
+    url: string
+    tabId: string
+  }
+}
+
+type ChatGptPageState = {
+  ok?: boolean
+  reason?: string
+  title?: string
+  url?: string
+  composerFound?: boolean
+  loginRequired?: boolean
+  assistantCount?: number
+  userCount?: number
+  messageCount?: number
+  lastAssistantText?: string
+  rawLastAssistantText?: string
+  isGenerating?: boolean
+  pendingAnswer?: boolean
+  pendingReason?: string
+  pageText?: string
+  elapsedMs?: number
+  stableMs?: number
+  timedOut?: boolean
+  syncStrategy?: string
 }
 
 type CdpResponse = {
@@ -172,6 +209,38 @@ export async function runBrowserDevTools(
           result,
         }
       })
+    case 'stream_type_text':
+      return withTab(input, signal, async (client, tab) => {
+        const text = input.text ?? ''
+        const typingDelayMs = input.typing_delay_ms ?? 200
+        const focusResult = (await evaluate(
+          client,
+          buildFocusStreamTargetExpression(input.selector),
+          input.timeout_ms,
+        )) as Record<string, unknown>
+        if (input.clear !== false) {
+          await clearFocusedEditor(client)
+        }
+        const streamedCharacters = await streamInsertText(
+          client,
+          text,
+          typingDelayMs,
+          signal,
+        )
+        return {
+          ok: true,
+          action: input.action,
+          message: `Streamed ${streamedCharacters} characters into the browser editor.`,
+          tab,
+          result: {
+            ...focusResult,
+            streamedCharacters,
+            textLength: text.length,
+            typingDelayMs,
+            clearedBeforeTyping: input.clear !== false,
+          },
+        }
+      })
     case 'press_key':
       return withTab(input, signal, async (client, tab) => {
         await pressKey(client, required(input.key, 'key'))
@@ -203,6 +272,10 @@ export async function runBrowserDevTools(
           },
         }
       })
+    case 'cdp_send':
+      return sendRawCdp(input, signal)
+    case 'ask_chatgpt':
+      return askChatGpt(input, signal)
     case 'close_tab':
       return closeTab(input, signal)
     default:
@@ -336,6 +409,216 @@ async function closeTab(
   }
 }
 
+async function askChatGpt(
+  input: BrowserDevToolsInput,
+  signal?: AbortSignal,
+): Promise<BrowserDevToolsOutput> {
+  const question = required(input.question ?? input.text, 'question').trim()
+  if (!question) throw new Error('question is required.')
+
+  if (!(await canConnect(input, signal))) {
+    await launchBrowser(
+      {
+        ...input,
+        action: 'launch_browser',
+        url: CHATGPT_URL,
+      },
+      signal,
+    )
+  }
+
+  const tab = await getOrOpenChatGptTab(input, signal)
+  if (!tab.webSocketDebuggerUrl) {
+    throw new Error(`Tab ${tab.id} does not expose a DevTools websocket URL.`)
+  }
+
+  const client = await CdpClient.connect(tab.webSocketDebuggerUrl, signal)
+  try {
+    await client.send('Page.enable')
+    await waitForReadyState(client, input.timeout_ms)
+
+    const activeState = (await evaluate(
+      client,
+      CHATGPT_STATE_EXPRESSION,
+      input.timeout_ms,
+    )) as ChatGptPageState
+    if (isChatGptPending(activeState)) {
+      const answer = await waitForChatGptAnswer(
+        client,
+        activeState,
+        input.timeout_ms ?? CHATGPT_RESPONSE_TIMEOUT_MS,
+        signal,
+      )
+      if (!hasUsableChatGptAnswer(answer, activeState)) {
+        return {
+          ok: false,
+          action: input.action,
+          message:
+            'ChatGPT is still generating a previous answer. Leviathan did not submit a new question.',
+          endpoint: getEndpoint(input),
+          tab,
+          result: {
+            ...answer,
+            submittedNewQuestion: false,
+          },
+        }
+      }
+      return {
+        ok: true,
+        action: input.action,
+        message:
+          'Captured the existing pending ChatGPT response. No new question was submitted.',
+        endpoint: getEndpoint(input),
+        tab,
+        chatgpt: {
+          question: '[existing pending ChatGPT request]',
+          answer: answer.lastAssistantText,
+          url: answer.url ?? tab.url,
+          tabId: tab.id,
+        },
+        result: {
+          title: answer.title,
+          url: answer.url,
+          assistantCount: answer.assistantCount,
+          syncStrategy: answer.syncStrategy,
+          elapsedMs: answer.elapsedMs,
+          stableMs: answer.stableMs,
+          submittedNewQuestion: false,
+        },
+      }
+    }
+
+    const before = (await evaluate(
+      client,
+      buildPrepareChatGptQuestionExpression(),
+      input.timeout_ms,
+    )) as ChatGptPageState
+
+    if (!before.composerFound) {
+      return {
+        ok: false,
+        action: input.action,
+        message: before.loginRequired
+          ? 'ChatGPT is open but requires login or user attention before Leviathan can ask a question.'
+          : 'ChatGPT is open but the prompt composer was not found.',
+        endpoint: getEndpoint(input),
+        tab,
+        result: before,
+      }
+    }
+
+    await client.send(
+      'Input.insertText',
+      { text: question },
+      input.timeout_ms,
+    )
+    await delay(250, signal)
+
+    const submitted = (await evaluate(
+      client,
+      CHATGPT_SUBMIT_EXPRESSION,
+      input.timeout_ms,
+    )) as { submitted?: boolean; reason?: string }
+    if (!submitted.submitted) {
+      await pressKey(client, 'Enter')
+    }
+
+    const answer = await waitForChatGptAnswer(
+      client,
+      before,
+      input.timeout_ms ?? CHATGPT_RESPONSE_TIMEOUT_MS,
+      signal,
+    )
+
+    if (!hasUsableChatGptAnswer(answer, before)) {
+      return {
+        ok: false,
+        action: input.action,
+        message: isChatGptPending(answer)
+          ? 'ChatGPT is still generating. Leviathan did not receive a final answer.'
+          : 'ChatGPT did not return a readable answer before timeout.',
+        endpoint: getEndpoint(input),
+        tab,
+        result: answer,
+      }
+    }
+
+    return {
+      ok: true,
+      action: input.action,
+      message: 'Asked ChatGPT through Browser Use and captured its response as external guidance.',
+      endpoint: getEndpoint(input),
+      tab,
+      chatgpt: {
+        question,
+        answer: answer.lastAssistantText,
+        url: answer.url ?? tab.url,
+        tabId: tab.id,
+      },
+      result: {
+        title: answer.title,
+        url: answer.url,
+        assistantCount: answer.assistantCount,
+        syncStrategy: answer.syncStrategy,
+        elapsedMs: answer.elapsedMs,
+        stableMs: answer.stableMs,
+      },
+    }
+  } finally {
+    client.close()
+  }
+}
+
+async function sendRawCdp(
+  input: BrowserDevToolsInput,
+  signal?: AbortSignal,
+): Promise<BrowserDevToolsOutput> {
+  const method = required(input.cdp_method, 'cdp_method')
+  const params = input.cdp_params ?? {}
+  const target = input.cdp_target ?? 'tab'
+
+  if (target === 'browser') {
+    const webSocketDebuggerUrl = await getBrowserWebSocketDebuggerUrl(
+      input,
+      signal,
+    )
+    const client = await CdpClient.connect(webSocketDebuggerUrl, signal)
+    try {
+      const result = await client.send(
+        method,
+        params,
+        input.timeout_ms,
+        input.cdp_session_id,
+      )
+      return {
+        ok: true,
+        action: input.action,
+        message: `Sent browser-level CDP command ${method}.`,
+        endpoint: getEndpoint(input),
+        result,
+      }
+    } finally {
+      client.close()
+    }
+  }
+
+  return withTab(input, signal, async (client, tab) => {
+    const result = await client.send(
+      method,
+      params,
+      input.timeout_ms,
+      input.cdp_session_id,
+    )
+    return {
+      ok: true,
+      action: input.action,
+      message: `Sent tab-level CDP command ${method}.`,
+      tab,
+      result,
+    }
+  })
+}
+
 async function withTab(
   input: BrowserDevToolsInput,
   signal: AbortSignal | undefined,
@@ -375,11 +658,140 @@ async function getTargetTab(
   return tab
 }
 
+async function getOrOpenChatGptTab(
+  input: BrowserDevToolsInput,
+  signal?: AbortSignal,
+): Promise<BrowserDevToolsTab> {
+  let tabs = await listTabs(input, signal)
+  const existing = tabs.find(isChatGptTab)
+  if (existing) return existing
+
+  const created = await newTab(
+    {
+      ...input,
+      action: 'new_tab',
+      url: CHATGPT_URL,
+    },
+    signal,
+  )
+  await delay(500, signal)
+  tabs = await listTabs(input, signal)
+  return (
+    tabs.find(tab => tab.id === created.tab?.id) ??
+    tabs.find(isChatGptTab) ??
+    created.tab ??
+    getTargetTab(input, signal)
+  )
+}
+
+function isChatGptTab(tab: BrowserDevToolsTab): boolean {
+  try {
+    const host = new URL(tab.url).hostname.toLowerCase()
+    return (
+      host === 'chatgpt.com' ||
+      host.endsWith('.chatgpt.com') ||
+      host === 'chat.openai.com'
+    )
+  } catch {
+    return false
+  }
+}
+
+async function waitForChatGptAnswer(
+  client: CdpClient,
+  before: ChatGptPageState,
+  timeoutMs: number,
+  signal?: AbortSignal,
+): Promise<ChatGptPageState> {
+  const observerState = (await evaluate(
+    client,
+    buildChatGptResponseObserverExpression(before, timeoutMs),
+    timeoutMs + 2_000,
+  ).catch(() => null)) as ChatGptPageState | null
+  if (
+    observerState?.lastAssistantText &&
+    !observerState.timedOut &&
+    !isChatGptPending(observerState)
+  ) {
+    return observerState
+  }
+
+  const deadline = Date.now() + timeoutMs
+  let lastText = ''
+  let stableCount = 0
+  let lastState: ChatGptPageState = observerState ?? {}
+  const beforeAssistantCount = before.assistantCount ?? 0
+  const beforeText = normalizeChatGptText(before.lastAssistantText ?? '')
+  const startedAt = Date.now()
+
+  while (Date.now() < deadline) {
+    const state = (await evaluate(
+      client,
+      CHATGPT_STATE_EXPRESSION,
+      5_000,
+    )) as ChatGptPageState
+    lastState = state
+
+    const answer = (state.lastAssistantText ?? '').trim()
+    const assistantCount = state.assistantCount ?? 0
+    const hasNewAnswer =
+      answer &&
+      (assistantCount > beforeAssistantCount ||
+        normalizeChatGptText(answer) !== beforeText)
+    if (hasNewAnswer) {
+      if (isChatGptPending(state)) {
+        await delay(250, signal)
+        continue
+      }
+      if (answer === lastText) {
+        stableCount += 1
+      } else {
+        stableCount = 0
+        lastText = answer
+      }
+
+      if (stableCount >= 1) {
+        return {
+          ...state,
+          syncStrategy: 'polling-fallback',
+          elapsedMs: Date.now() - startedAt,
+        }
+      }
+    }
+
+    await delay(250, signal)
+  }
+
+  return {
+    ...lastState,
+    timedOut: true,
+    syncStrategy: lastState.syncStrategy ?? 'polling-timeout',
+    elapsedMs: Date.now() - startedAt,
+  }
+}
+
 async function listTabs(
   input: BrowserDevToolsInput,
   signal?: AbortSignal,
 ): Promise<BrowserDevToolsTab[]> {
   return getJson<BrowserDevToolsTab[]>(`${getEndpoint(input)}/json/list`, signal)
+}
+
+async function getBrowserWebSocketDebuggerUrl(
+  input: BrowserDevToolsInput,
+  signal?: AbortSignal,
+): Promise<string> {
+  const version = await getJson<Record<string, unknown>>(
+    `${getEndpoint(input)}/json/version`,
+    signal,
+  )
+  const websocketUrl = version.webSocketDebuggerUrl
+  if (typeof websocketUrl !== 'string' || !websocketUrl) {
+    throw new Error(
+      'Browser DevTools endpoint did not expose browser-level webSocketDebuggerUrl.',
+    )
+  }
+  return websocketUrl
 }
 
 async function evaluate(
@@ -538,9 +950,15 @@ class CdpClient {
     method: string,
     params: Record<string, unknown> = {},
     timeoutMs = DEFAULT_TIMEOUT_MS,
+    sessionId?: string,
   ): Promise<unknown> {
     const id = this.nextID++
-    const payload = JSON.stringify({ id, method, params })
+    const payload = JSON.stringify({
+      id,
+      method,
+      params,
+      ...(sessionId ? { sessionId } : {}),
+    })
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         this.pending.delete(id)
@@ -763,6 +1181,404 @@ function buildTypeTextExpression(selector: string, text: string): string {
     return { selector, tag: element.tagName, textLength: text.length };
   })()`
 }
+
+function buildFocusStreamTargetExpression(selector?: string): string {
+  return `(() => {
+    const requestedSelector = ${selector ? jsString(selector) : 'null'};
+    const visible = element => {
+      if (!element) return false;
+      const style = getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return style.visibility !== 'hidden' &&
+        style.display !== 'none' &&
+        rect.width > 0 &&
+        rect.height > 0;
+    };
+    const editableChild = element => element?.querySelector?.([
+      'textarea.inputarea',
+      'textarea.ace_text-input',
+      '.cm-content[contenteditable="true"]',
+      '.CodeMirror textarea',
+      'textarea',
+      'input',
+      '[contenteditable="true"]',
+      '[role="textbox"]'
+    ].join(','));
+    const selectors = [
+      requestedSelector,
+      '.monaco-editor textarea.inputarea',
+      '.monaco-editor textarea',
+      '.cm-content[contenteditable="true"]',
+      '.CodeMirror textarea',
+      '.ace_text-input',
+      'textarea',
+      '[contenteditable="true"]',
+      '[role="textbox"]'
+    ].filter(Boolean);
+    let target = null;
+    let matchedSelector = '';
+    for (const candidate of selectors) {
+      const element = document.querySelector(candidate);
+      if (!element) continue;
+      target = editableChild(element) || element;
+      matchedSelector = candidate;
+      break;
+    }
+    if (!target) {
+      const active = document.activeElement;
+      if (active && active !== document.body) {
+        target = editableChild(active) || active;
+        matchedSelector = 'document.activeElement';
+      }
+    }
+    if (!target) {
+      throw new Error('No stream_type_text target found. Provide selector for the code editor.');
+    }
+    target.scrollIntoView({ block: 'center', inline: 'center' });
+    const rect = target.getBoundingClientRect();
+    const x = rect.left + Math.min(rect.width / 2, 24);
+    const y = rect.top + Math.min(rect.height / 2, 24);
+    target.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, clientX: x, clientY: y }));
+    target.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, clientX: x, clientY: y }));
+    target.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: x, clientY: y }));
+    if (typeof target.focus === 'function') target.focus();
+    return {
+      selector: matchedSelector,
+      tag: target.tagName.toLowerCase(),
+      className: String(target.className || ''),
+      role: target.getAttribute('role') || '',
+      ariaLabel: target.getAttribute('aria-label') || '',
+      contentEditable: target.getAttribute('contenteditable') || '',
+      activeTag: document.activeElement ? document.activeElement.tagName.toLowerCase() : ''
+    };
+  })()`
+}
+
+async function clearFocusedEditor(client: CdpClient): Promise<void> {
+  const isMac = process.platform === 'darwin'
+  const modifierKey = isMac ? 'Meta' : 'Control'
+  const modifierCode = isMac ? 'MetaLeft' : 'ControlLeft'
+  const modifierValue = isMac ? 4 : 2
+  const modifierVirtualKey = isMac ? 91 : 17
+  await client.send('Input.dispatchKeyEvent', {
+    type: 'keyDown',
+    key: modifierKey,
+    code: modifierCode,
+    windowsVirtualKeyCode: modifierVirtualKey,
+    nativeVirtualKeyCode: modifierVirtualKey,
+    modifiers: modifierValue,
+  })
+  await client.send('Input.dispatchKeyEvent', {
+    type: 'keyDown',
+    key: 'a',
+    code: 'KeyA',
+    windowsVirtualKeyCode: 65,
+    nativeVirtualKeyCode: 65,
+    modifiers: modifierValue,
+  })
+  await client.send('Input.dispatchKeyEvent', {
+    type: 'keyUp',
+    key: 'a',
+    code: 'KeyA',
+    windowsVirtualKeyCode: 65,
+    nativeVirtualKeyCode: 65,
+    modifiers: modifierValue,
+  })
+  await client.send('Input.dispatchKeyEvent', {
+    type: 'keyUp',
+    key: modifierKey,
+    code: modifierCode,
+    windowsVirtualKeyCode: modifierVirtualKey,
+    nativeVirtualKeyCode: modifierVirtualKey,
+  })
+  await pressKey(client, 'Backspace')
+}
+
+async function streamInsertText(
+  client: CdpClient,
+  text: string,
+  typingDelayMs: number,
+  signal?: AbortSignal,
+): Promise<number> {
+  const characters = Array.from(text.replace(/\r\n/g, '\n'))
+  for (const character of characters) {
+    await client.send('Input.insertText', { text: character })
+    if (typingDelayMs > 0) {
+      await delay(typingDelayMs, signal)
+    }
+  }
+  return characters.length
+}
+
+const CHATGPT_PAGE_STATE_HELPERS = `
+  const normalizeLeviathanText = text => String(text || '').replace(/\\s+/g, ' ').trim();
+  const isLeviathanThinkingText = text => /^(?:chatgpt\\s*(?:says|said|\\u8bf4)?[:\\uff1a]?\\s*)?(?:pro\\s*)?(?:thinking|reasoning|working|generating|\\u601d\\u8003\\u4e2d|\\u6b63\\u5728\\u601d\\u8003|\\u6b63\\u5728\\u751f\\u6210)(?:[.\\u3002\\u2026\\s]*)$/i.test(normalizeLeviathanText(text));
+  const textOf = element => (element?.innerText || element?.textContent || '').trim();
+  const candidateMessages = [...document.querySelectorAll([
+    '[data-message-author-role]',
+    '[data-testid*="conversation-turn"]',
+    '[data-testid*="message"]',
+    'article',
+    '[role="article"]'
+  ].join(','))];
+  const assistantElements = candidateMessages.filter(element => {
+    const role = element.getAttribute('data-message-author-role') || '';
+    if (role === 'assistant') return true;
+    if (role === 'user') return false;
+    const label = [
+      element.getAttribute('aria-label') || '',
+      element.getAttribute('data-testid') || '',
+      element.className || ''
+    ].join(' ');
+    return /assistant|response|answer|model/i.test(label);
+  });
+  const rawAssistantMessages = assistantElements.map(textOf).filter(Boolean);
+  const assistantMessages = rawAssistantMessages.filter(text => !isLeviathanThinkingText(text));
+  const rawLastAssistantText = rawAssistantMessages.at(-1) || '';
+  const userCount = candidateMessages.filter(element =>
+    element.getAttribute('data-message-author-role') === 'user'
+  ).length;
+  const isGenerating = isLeviathanThinkingText(rawLastAssistantText) ||
+    !!document.querySelector('button[data-testid="stop-button"]') ||
+    !![...document.querySelectorAll('button')].find(button =>
+      /stop|cancel|停止/i.test([
+        button.getAttribute('aria-label') || '',
+        button.getAttribute('data-testid') || '',
+        button.innerText || '',
+        button.textContent || ''
+      ].join(' '))
+    ) ||
+    !!document.querySelector('[aria-busy="true"], [data-testid*="loading"], [data-testid*="spinner"]');
+  const getLeviathanChatGptState = () => ({
+    title: document.title,
+    url: location.href,
+    assistantCount: assistantMessages.length,
+    userCount,
+    messageCount: candidateMessages.length,
+    lastAssistantText: assistantMessages.at(-1) || '',
+    rawLastAssistantText,
+    isGenerating,
+    pendingAnswer: isGenerating || (!!rawLastAssistantText && !assistantMessages.at(-1)),
+    pendingReason: isGenerating ? 'generating' : ''
+  });
+`
+
+function normalizeChatGptText(value: string): string {
+  return value.replace(/\s+/g, ' ').trim()
+}
+
+function isChatGptThinkingText(value: string | undefined): boolean {
+  const normalized = normalizeChatGptText(value ?? '')
+  if (!normalized) return false
+  return /^(?:chatgpt\s*(?:says|said|说)?[:：]?\s*)?(?:pro\s*)?(?:thinking|reasoning|working|generating|\u601d\u8003\u4e2d|\u6b63\u5728\u601d\u8003|\u6b63\u5728\u751f\u6210)(?:[.。…\s]*)$/i.test(
+    normalized,
+  )
+}
+
+function isChatGptPending(state: ChatGptPageState): boolean {
+  return (
+    state.pendingAnswer === true ||
+    state.isGenerating === true ||
+    isChatGptThinkingText(state.rawLastAssistantText) ||
+    (!!state.rawLastAssistantText && !state.lastAssistantText)
+  )
+}
+
+function hasUsableChatGptAnswer(
+  state: ChatGptPageState,
+  before: ChatGptPageState,
+): boolean {
+  const answer = normalizeChatGptText(state.lastAssistantText ?? '')
+  if (!answer || state.timedOut || isChatGptPending(state)) return false
+  const beforeAnswer = normalizeChatGptText(before.lastAssistantText ?? '')
+  return (
+    (state.assistantCount ?? 0) > (before.assistantCount ?? 0) ||
+    answer !== beforeAnswer
+  )
+}
+
+function buildChatGptResponseObserverExpression(
+  before: ChatGptPageState,
+  timeoutMs: number,
+): string {
+  return `(() => new Promise(resolve => {
+    ${CHATGPT_PAGE_STATE_HELPERS}
+    const beforeAssistantCount = ${before.assistantCount ?? 0};
+    const beforeText = ${jsString(normalizeChatGptText(before.lastAssistantText ?? ''))};
+    const timeoutMs = ${Math.max(500, timeoutMs)};
+    const startedAt = Date.now();
+    let lastAnswer = '';
+    let lastChangeAt = Date.now();
+    let resolved = false;
+    let observer;
+    let checkTimer;
+    let timeoutTimer;
+
+    const finish = state => {
+      if (resolved) return;
+      resolved = true;
+      if (observer) observer.disconnect();
+      clearInterval(checkTimer);
+      clearTimeout(timeoutTimer);
+      resolve({
+        ...state,
+        elapsedMs: Date.now() - startedAt,
+        stableMs: Date.now() - lastChangeAt,
+        syncStrategy: state.syncStrategy || 'mutation-observer'
+      });
+    };
+
+    const readState = () => {
+      ${CHATGPT_PAGE_STATE_HELPERS}
+      return getLeviathanChatGptState();
+    };
+
+    const check = () => {
+      const state = readState();
+      const answer = String(state.lastAssistantText || '').trim();
+      const normalizedAnswer = normalizeLeviathanText(answer);
+      const hasNewAnswer =
+        answer &&
+        (state.assistantCount > beforeAssistantCount || normalizedAnswer !== beforeText);
+
+      if (answer !== lastAnswer) {
+        lastAnswer = answer;
+        lastChangeAt = Date.now();
+      }
+
+      if (!hasNewAnswer) return;
+      if (state.pendingAnswer || state.isGenerating) return;
+      const stableMs = Date.now() - lastChangeAt;
+      if (stableMs >= 250) {
+        finish({ ...state, stableMs, syncStrategy: 'mutation-observer-final' });
+      }
+    };
+
+    observer = new MutationObserver(check);
+    observer.observe(document.body || document.documentElement, {
+      childList: true,
+      subtree: true,
+      characterData: true
+    });
+    checkTimer = setInterval(check, 200);
+    timeoutTimer = setTimeout(() => {
+      const state = readState();
+      finish({ ...state, timedOut: true, syncStrategy: 'mutation-observer-timeout' });
+    }, timeoutMs);
+    check();
+  }))()`
+}
+
+function buildPrepareChatGptQuestionExpression(): string {
+  return `(() => {
+    ${CHATGPT_PAGE_STATE_HELPERS}
+    const state = getLeviathanChatGptState();
+    const composerSelectors = [
+      '#prompt-textarea',
+      'textarea[data-testid="prompt-textarea"]',
+      'textarea',
+      '[contenteditable="true"][data-testid="prompt-textarea"]',
+      '[contenteditable="true"][data-id="root"]',
+      'div[role="textbox"][contenteditable="true"]',
+      '[contenteditable="true"]'
+    ];
+    const composer = composerSelectors
+      .map(selector => document.querySelector(selector))
+      .find(Boolean);
+    const pageText = document.body ? document.body.innerText.slice(0, 1600) : '';
+    const loginRequired = /\\b(Log in|Sign up|Continue with|登录|注册)\\b/i.test(pageText);
+    if (!composer) {
+      return {
+        ok: false,
+        reason: 'composer_not_found',
+        title: document.title,
+        url: location.href,
+        composerFound: false,
+        loginRequired,
+        assistantCount: state.assistantCount,
+        lastAssistantText: state.lastAssistantText || '',
+        pageText
+      };
+    }
+    composer.scrollIntoView({ block: 'center', inline: 'center' });
+    composer.focus();
+    if ('value' in composer) {
+      composer.value = '';
+      composer.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'deleteContentBackward' }));
+    } else {
+      composer.innerHTML = '';
+      composer.textContent = '';
+      composer.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'deleteContentBackward' }));
+    }
+    return {
+      ok: true,
+      title: document.title,
+      url: location.href,
+      composerFound: true,
+      loginRequired,
+      assistantCount: state.assistantCount,
+      lastAssistantText: state.lastAssistantText || '',
+      pageText
+    };
+  })()`
+}
+
+const CHATGPT_SUBMIT_EXPRESSION = `(() => {
+  const byText = button => {
+    const label = [
+      button.getAttribute('aria-label') || '',
+      button.getAttribute('data-testid') || '',
+      button.innerText || '',
+      button.textContent || ''
+    ].join(' ');
+    return /send|submit|发送/i.test(label);
+  };
+  const buttons = [...document.querySelectorAll('button')];
+  const button = document.querySelector('button[data-testid="send-button"]') ||
+    document.querySelector('button[aria-label*="Send" i]') ||
+    buttons.find(byText);
+  if (button && !button.disabled && button.getAttribute('aria-disabled') !== 'true') {
+    button.click();
+    return { submitted: true, method: 'button' };
+  }
+  const form = document.querySelector('form');
+  if (form && typeof form.requestSubmit === 'function') {
+    form.requestSubmit();
+    return { submitted: true, method: 'form' };
+  }
+  return { submitted: false, reason: 'send_button_not_found' };
+})()`
+
+const CHATGPT_STATE_EXPRESSION = `(() => {
+  const textOf = element => (element?.innerText || element?.textContent || '').trim();
+  const assistantMessages = [...document.querySelectorAll('[data-message-author-role="assistant"]')]
+    .map(textOf)
+    .filter(Boolean);
+  const composer = document.querySelector('#prompt-textarea') ||
+    document.querySelector('textarea') ||
+    document.querySelector('[contenteditable="true"]');
+  const pageText = document.body ? document.body.innerText.slice(0, 1600) : '';
+  const isGenerating = !!document.querySelector('button[data-testid="stop-button"]') ||
+    !![...document.querySelectorAll('button')].find(button =>
+      /stop|停止/i.test([
+        button.getAttribute('aria-label') || '',
+        button.getAttribute('data-testid') || '',
+        button.innerText || '',
+        button.textContent || ''
+      ].join(' '))
+    );
+  return {
+    ok: true,
+    title: document.title,
+    url: location.href,
+    composerFound: !!composer,
+    loginRequired: !composer && /\\b(Log in|Sign up|Continue with|登录|注册)\\b/i.test(pageText),
+    assistantCount: assistantMessages.length,
+    lastAssistantText: assistantMessages.at(-1) || '',
+    isGenerating,
+    pageText
+  };
+})()`
 
 const SNAPSHOT_EXPRESSION = `(() => {
   const visible = element => {

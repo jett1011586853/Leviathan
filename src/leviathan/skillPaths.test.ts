@@ -6,6 +6,7 @@ import {
   isKeybindingCustomizationEnabled,
 } from '../keybindings/loadUserBindings.js'
 import { getMemoryBaseDir } from '../memdir/paths.js'
+import { registerSkillCreatorSkill } from '../skills/bundled/skillCreator.js'
 import { getSkillsPath } from '../skills/loadSkillsDir.js'
 
 function source(relativePath: string): string {
@@ -78,6 +79,39 @@ describe('Leviathan skill paths', () => {
 
     expect(loader).toContain('LEVIATHAN_SKILL_DIR')
     expect(loader).toContain('LEVIATHAN_SESSION_ID')
+  })
+
+  test('bundled skill creator is available with Leviathan skill roots', () => {
+    const creator = source('skills/bundled/skillCreator.ts')
+    const index = source('skills/bundled/index.ts')
+
+    expect(typeof registerSkillCreatorSkill).toBe('function')
+    expect(index).toContain("import { registerSkillCreatorSkill }")
+    expect(index).toContain('registerSkillCreatorSkill()')
+    expect(creator).toContain("name: 'skill-creator'")
+    expect(creator).toContain("aliases: ['skill-creater']")
+    expect(creator).toContain('userInvocable: true')
+    expect(creator).not.toContain('process.env.USER_TYPE')
+    expect(creator).toContain('.leviathan/skills/<skill-name>/SKILL.md')
+    expect(creator).toContain('~/.leviathan/skills/<skill-name>/SKILL.md')
+    expect(creator).toContain('SKILL.md')
+
+    for (const legacy of ['Codex', '.codex', 'Claude', '.claude']) {
+      expect(creator).not.toContain(legacy)
+    }
+  })
+
+  test('chatgpt rescue team skill is bundled and user-invocable', () => {
+    const skill = source('skills/bundled/chatgptRescueTeam.ts')
+    const index = source('skills/bundled/index.ts')
+
+    expect(index).toContain('registerChatGptRescueTeamSkill')
+    expect(index).toContain('registerChatGptRescueTeamSkill()')
+    expect(skill).toContain("name: 'chatgpt-rescue-team'")
+    expect(skill).toContain('userInvocable: true')
+    expect(skill).toContain("'BrowserDevTools'")
+    expect(skill).toContain('ask_chatgpt')
+    expect(skill).toContain('FULL PROBLEM/PAGE INFORMATION')
   })
 
   test('markdown config discovery scans Leviathan roots', () => {
