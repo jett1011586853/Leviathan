@@ -1,0 +1,22 @@
+{
+  "awmp": "0.1",
+  "kind": "Task",
+  "id": "task_presentation_example",
+  "contextId": "ctx_presentation_example",
+  "title": "Create a management presentation outline",
+  "objective": "Create presentation.outline and presentation.pptx artifacts from available structured analysis evidence.",
+  "modeIds": ["com.leviathan.ppt"],
+  "inputs": {
+    "audience": "management",
+    "maxSlides": 8
+  },
+  "status": {
+    "state": "submitted"
+  },
+  "constraints": {
+    "maxRuntimeSeconds": 900,
+    "network": "deny"
+  },
+  "artifacts": [],
+  "traceId": "trace_presentation_example"
+}

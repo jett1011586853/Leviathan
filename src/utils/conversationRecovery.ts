@@ -388,7 +388,10 @@ export function restoreSkillStateFromMessages(messages: Message[]): void {
       for (const skill of message.attachment.skills) {
         if (skill.name && skill.path && skill.content) {
           // Resume only happens for the main session, so agentId is null
-          addInvokedSkill(skill.name, skill.path, skill.content, null)
+          addInvokedSkill(skill.name, skill.path, skill.content, null, {
+            skillPolicy: skill.skillPolicy,
+            remainingReminderTurns: skill.remainingReminderTurns,
+          })
         }
       }
     }

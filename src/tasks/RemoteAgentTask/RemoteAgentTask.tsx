@@ -491,7 +491,7 @@ async function restoreRemoteAgentTasksImpl(context: TaskContext): Promise<void> 
       remoteStatus = session.session_status;
     } catch (e) {
       // Only 404 means the CCR session is truly gone. Auth errors (401,
-      // missing OAuth token) are recoverable via /login — the remote
+      // missing remote-session credentials) are recoverable after reconnecting — the remote
       // session is still running. fetchSession throws plain Error for all
       // 4xx (validateStatus treats <500 as success), so isTransientNetworkError
       // can't distinguish them; match the 404 message instead.

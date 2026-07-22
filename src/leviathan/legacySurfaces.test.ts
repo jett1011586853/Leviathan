@@ -49,12 +49,16 @@ describe('Leviathan identity surfaces', () => {
 })
 
 describe('Leviathan account-only surfaces', () => {
-  test('legacy OAuth component is reduced to a local unavailable notice', () => {
-    const oauth = source('components/ConsoleOAuthFlow.tsx')
+  test('legacy product login UI and commands are not mounted', () => {
+    const onboarding = source('components/Onboarding.tsx')
+    const commands = source('commands.ts')
+    const main = source('main.tsx')
 
-    expect(oauth).toContain('LEGACY_ACCOUNT_FEATURE_NOTICE')
-    expect(oauth).not.toContain('validateForceLoginOrg')
-    expect(oauth).not.toContain('startOAuth')
+    expect(onboarding).not.toContain('ConsoleOAuthFlow')
+    expect(commands).not.toContain("./commands/login/index.js")
+    expect(commands).not.toContain("./commands/logout/index.js")
+    expect(main).not.toContain("program.command('auth')")
+    expect(main).not.toContain("program.command('setup-token')")
   })
 
   test('teleport and token helpers cannot mount account OAuth', () => {

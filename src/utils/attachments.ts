@@ -647,6 +647,8 @@ export type Attachment =
         name: string
         path: string
         content: string
+        skillPolicy?: import('../types/skill.js').SkillRuntimePolicy
+        remainingReminderTurns?: number
       }>
     }
   | {

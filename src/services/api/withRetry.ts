@@ -40,7 +40,10 @@ import {
   checkMockRateLimitError,
   isMockRateLimitError,
 } from '../rateLimitMocking.js'
-import { REPEATED_529_ERROR_MESSAGE } from './errors.js'
+import {
+  isTransientMultimodalProcessingError,
+  REPEATED_529_ERROR_MESSAGE,
+} from './errors.js'
 import { extractConnectionErrorDetails } from './errorUtils.js'
 
 const abortError = () => new APIUserAbortError()
@@ -48,6 +51,7 @@ const abortError = () => new APIUserAbortError()
 const DEFAULT_MAX_RETRIES = 10
 const FLOOR_OUTPUT_TOKENS = 3000
 const MAX_529_RETRIES = 3
+const MAX_MULTIMODAL_PROCESSING_RETRIES = 2
 export const BASE_DELAY_MS = 500
 
 // Foreground query sources where the user IS blocking on the result — these
@@ -182,7 +186,10 @@ export async function* withRetry<T>(
   let consecutive529Errors = options.initialConsecutive529Errors ?? 0
   let lastError: unknown
   let persistentAttempt = 0
-  for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
+  let multimodalProcessingRetries = 0
+  const maxLoopAttempts =
+    maxRetries + MAX_MULTIMODAL_PROCESSING_RETRIES + 1
+  for (let attempt = 1; attempt <= maxLoopAttempts; attempt++) {
     if (options.signal?.aborted) {
       throw new APIUserAbortError()
     }
@@ -246,8 +253,10 @@ export async function* withRetry<T>(
       return await operation(client, attempt, retryContext)
     } catch (error) {
       lastError = error
+      const transientMultimodalError =
+        isTransientMultimodalProcessingError(error)
       logForDebugging(
-        `API error (attempt ${attempt}/${maxRetries + 1}): ${error instanceof APIError ? `${error.status} ${error.message}` : errorMessage(error)}`,
+        `API error (attempt ${attempt}/${maxLoopAttempts}): ${error instanceof APIError ? `${error.status} ${error.message}` : errorMessage(error)}`,
         { level: 'error' },
       )
 
@@ -360,7 +369,13 @@ export async function* withRetry<T>(
       // Only retry if the error indicates we should
       const persistent =
         isPersistentRetryEnabled() && isTransientCapacityError(error)
-      if (attempt > maxRetries && !persistent) {
+      if (
+        transientMultimodalError &&
+        multimodalProcessingRetries >= MAX_MULTIMODAL_PROCESSING_RETRIES
+      ) {
+        throw new CannotRetryError(error, retryContext)
+      }
+      if (attempt > maxRetries && !persistent && !transientMultimodalError) {
         throw new CannotRetryError(error, retryContext)
       }
 
@@ -369,9 +384,13 @@ export async function* withRetry<T>(
         handleAwsCredentialError(error) || handleGcpCredentialError(error)
       if (
         !handledCloudAuthError &&
+        !transientMultimodalError &&
         (!(error instanceof APIError) || !shouldRetry(error))
       ) {
         throw new CannotRetryError(error, retryContext)
+      }
+      if (transientMultimodalError) {
+        multimodalProcessingRetries += 1
       }
 
       // Handle max tokens context overflow errors by adjusting max_tokens for the next attempt
@@ -423,7 +442,17 @@ export async function* withRetry<T>(
       // Get retry-after header if available
       const retryAfter = getRetryAfter(error)
       let delayMs: number
-      if (persistent && error instanceof APIError && error.status === 429) {
+      if (transientMultimodalError) {
+        delayMs = getRetryDelay(
+          multimodalProcessingRetries,
+          retryAfter,
+          2_000,
+        )
+      } else if (
+        persistent &&
+        error instanceof APIError &&
+        error.status === 429
+      ) {
         persistentAttempt++
         // Window-based limits (e.g. 5hr Max/Pro) include a reset timestamp.
         // Wait until reset rather than polling every 5 min uselessly.
@@ -457,7 +486,14 @@ export async function* withRetry<T>(
 
       // In persistent mode the for-loop `attempt` is clamped at maxRetries+1;
       // use persistentAttempt for telemetry/yields so they show the true count.
-      const reportedAttempt = persistent ? persistentAttempt : attempt
+      const reportedAttempt = transientMultimodalError
+        ? multimodalProcessingRetries
+        : persistent
+          ? persistentAttempt
+          : attempt
+      const reportedMaxRetries = transientMultimodalError
+        ? MAX_MULTIMODAL_PROCESSING_RETRIES
+        : maxRetries
       logEvent('tengu_api_retry', {
         attempt: reportedAttempt,
         delayMs: delayMs,
@@ -487,7 +523,7 @@ export async function* withRetry<T>(
               error,
               remaining,
               reportedAttempt,
-              maxRetries,
+              reportedMaxRetries,
             )
           }
           const chunk = Math.min(remaining, HEARTBEAT_INTERVAL_MS)
@@ -499,7 +535,12 @@ export async function* withRetry<T>(
         if (attempt >= maxRetries) attempt = maxRetries
       } else {
         if (error instanceof APIError) {
-          yield createSystemAPIErrorMessage(error, delayMs, attempt, maxRetries)
+          yield createSystemAPIErrorMessage(
+            error,
+            delayMs,
+            reportedAttempt,
+            reportedMaxRetries,
+          )
         }
         await sleep(delayMs, options.signal, { abortError })
       }

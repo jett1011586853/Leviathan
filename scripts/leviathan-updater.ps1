@@ -13,6 +13,9 @@ $pendingPath = Join-Path $InstallRoot 'pending-update.json'
 $updatesRoot = Join-Path $InstallRoot 'updates'
 $assetNames = @(
     'leviathan-windows-x64.exe',
+    'leviathan-game-capture-windows-x64.exe',
+    'libvips-42.dll',
+    'libvips-cpp-8.17.3.dll',
     'leviathan-launcher.ps1',
     'leviathan-updater.ps1'
 )
@@ -96,7 +99,7 @@ try {
     $installedVersionText = if ($state.installedVersion) { [string]$state.installedVersion } else { '0.0.0' }
     $latestVersion = [version]$latestVersionText
     $installedVersion = [version]$installedVersionText
-    if ($latestVersion -le $installedVersion) {
+    if ($latestVersion -le $installedVersion -and -not $Force) {
         if (-not $Quiet) {
             Write-Host "Leviathan $installedVersionText is already up to date."
         }

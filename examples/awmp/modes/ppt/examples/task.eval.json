@@ -1,0 +1,19 @@
+{
+  "awmp": "0.1",
+  "kind": "ModeEvalExpectation",
+  "expectedTaskState": "completed",
+  "expectedSchedulerStatus": "completed",
+  "requiredArtifactTypes": ["presentation.outline", "presentation.pptx"],
+  "expectedMetrics": {
+    "workCompletion": 1,
+    "validationPassRate": 1
+  },
+  "artifactReviewFixtures": [
+    {
+      "artifactType": "presentation.pptx",
+      "status": "accepted",
+      "reviewedBy": "awmp-mode-eval-fixture",
+      "note": "Presentation deck fixture accepted for deterministic mode regression."
+    }
+  ]
+}

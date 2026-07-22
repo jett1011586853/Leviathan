@@ -1509,6 +1509,8 @@ export function createSkillAttachmentIfNeeded(
     .map(skill => ({
       name: skill.skillName,
       path: skill.skillPath,
+      skillPolicy: skill.skillPolicy,
+      remainingReminderTurns: skill.remainingReminderTurns,
       content: truncateToTokens(
         skill.content,
         POST_COMPACT_MAX_TOKENS_PER_SKILL,

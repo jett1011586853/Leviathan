@@ -592,6 +592,9 @@ export function REPL({
   const toolPermissionContext = useAppState(s => s.toolPermissionContext);
   const computerUseEnabled = useAppState(s => s.computerUseEnabled);
   const browserUseEnabled = useAppState(s => s.browserUseEnabled);
+  const gameModelEnabled = useAppState((s: {
+    gameModelMode: 'off' | 'observe' | 'demo' | 'live';
+  }) => s.gameModelMode !== 'off') as boolean;
   const verbose = useAppState(s => s.verbose);
   const mcp = useAppState(s => s.mcp);
   const plugins = useAppState(s => s.plugins);
@@ -671,8 +674,9 @@ export function REPL({
   const isBriefOnly = useAppState(s => s.isBriefOnly);
   const localTools = useMemo(() => getTools(toolPermissionContext, {
     includeComputerUseTools: computerUseEnabled,
-    includeBrowserUseTools: browserUseEnabled
-  }), [toolPermissionContext, computerUseEnabled, browserUseEnabled, proactiveActive, isBriefOnly]);
+    includeBrowserUseTools: browserUseEnabled,
+    includeGameModelTools: gameModelEnabled
+  }), [toolPermissionContext, computerUseEnabled, browserUseEnabled, gameModelEnabled, proactiveActive, isBriefOnly]);
   useKickOffCheckAndDisableBypassPermissionsIfNeeded();
   useKickOffCheckAndDisableAutoModeIfNeeded();
   const [dynamicMcpConfig, setDynamicMcpConfig] = useState<Record<string, ScopedMcpServerConfig> | undefined>(initialDynamicMcpConfig);
@@ -2272,7 +2276,8 @@ export function REPL({
       const state = store.getState();
       const assembled = assembleToolPool(state.toolPermissionContext, state.mcp.tools, {
         includeComputerUseTools: state.computerUseEnabled,
-        includeBrowserUseTools: state.browserUseEnabled
+        includeBrowserUseTools: state.browserUseEnabled,
+        includeGameModelTools: state.gameModelMode !== 'off'
       });
       const merged = mergeAndFilterTools(combinedInitialTools, assembled, state.toolPermissionContext.mode);
       if (!mainThreadAgentDefinition) return merged;

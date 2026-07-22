@@ -27,6 +27,7 @@ import { createSignal } from 'src/utils/signal.js'
 type RegisteredHookMatcher = HookCallbackMatcher | PluginHookMatcher
 
 import type { SessionId } from 'src/types/ids.js'
+import type { SkillRuntimePolicy } from 'src/types/skill.js'
 
 // DO NOT ADD MORE STATE HERE - BE JUDICIOUS WITH GLOBAL STATE
 
@@ -183,6 +184,8 @@ type State = {
       content: string
       invokedAt: number
       agentId: string | null
+      skillPolicy?: SkillRuntimePolicy
+      remainingReminderTurns: number
     }
   >
   // Track slow operations for dev bar display (ant-only)
@@ -1505,6 +1508,13 @@ export type InvokedSkillInfo = {
   content: string
   invokedAt: number
   agentId: string | null
+  skillPolicy?: SkillRuntimePolicy
+  remainingReminderTurns: number
+}
+
+export type InvokedSkillOptions = {
+  skillPolicy?: SkillRuntimePolicy
+  remainingReminderTurns?: number
 }
 
 export function addInvokedSkill(
@@ -1512,14 +1522,23 @@ export function addInvokedSkill(
   skillPath: string,
   content: string,
   agentId: string | null = null,
+  options: InvokedSkillOptions = {},
 ): void {
   const key = `${agentId ?? ''}:${skillName}`
+  const configuredTurns = options.skillPolicy?.reminderTurns ?? 0
+  const remainingReminderTurns =
+    options.remainingReminderTurns ??
+    (options.skillPolicy?.lifecycle === 'task' && options.skillPolicy.reminder
+      ? Math.max(1, Math.min(50, Math.floor(configuredTurns || 12)))
+      : 0)
   STATE.invokedSkills.set(key, {
     skillName,
     skillPath,
     content,
     invokedAt: Date.now(),
     agentId,
+    skillPolicy: options.skillPolicy,
+    remainingReminderTurns,
   })
 }
 
@@ -1538,6 +1557,25 @@ export function getInvokedSkillsForAgent(
     }
   }
   return filtered
+}
+
+/** Returns task-scoped reminders once for the current user turn. */
+export function consumeActiveSkillReminders(
+  agentId: string | undefined | null,
+): InvokedSkillInfo[] {
+  const active: InvokedSkillInfo[] = []
+  for (const skill of getInvokedSkillsForAgent(agentId).values()) {
+    if (
+      skill.skillPolicy?.lifecycle !== 'task' ||
+      !skill.skillPolicy.reminder ||
+      skill.remainingReminderTurns <= 0
+    ) {
+      continue
+    }
+    skill.remainingReminderTurns -= 1
+    active.push(skill)
+  }
+  return active.sort((a, b) => b.invokedAt - a.invokedAt)
 }
 
 export function clearInvokedSkills(

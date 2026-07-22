@@ -31,6 +31,7 @@ import type { FileHistoryState } from '../utils/fileHistory.js'
 import type { REPLHookContext } from '../utils/hooks/postSamplingHooks.js'
 import type { SessionHooksState } from '../utils/hooks/sessionHooks.js'
 import type { ModelSetting } from '../utils/model/model.js'
+import type { GameModelMode } from '../game/types.js'
 import type { DenialTrackingState } from '../utils/permissions/denialTracking.js'
 import type { PermissionMode } from '../utils/permissions/PermissionMode.js'
 import { getInitialSettings } from '../utils/settings/settings.js'
@@ -113,6 +114,9 @@ export type AppState = DeepImmutable<{
   // Session-scoped gate for Chrome DevTools Protocol browser automation.
   // Defaults off so BrowserDevTools only becomes available after /browser use.
   browserUseEnabled: boolean
+  // Session-scoped realtime game runtime. The GameModel tool is hidden while
+  // off; observe never emits input and live remains foreground/lease gated.
+  gameModelMode: GameModelMode
   spinnerTip?: string
   // Agent name from --agent CLI flag or settings (for logo display)
   agent: string | undefined
@@ -509,6 +513,7 @@ export function getDefaultAppState(): AppState {
     },
     computerUseEnabled: false,
     browserUseEnabled: false,
+    gameModelMode: 'off',
     agent: undefined,
     agentDefinitions: { activeAgents: [], allAgents: [] },
     fileHistory: {

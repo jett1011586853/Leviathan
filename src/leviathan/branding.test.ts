@@ -1,16 +1,12 @@
 import { describe, expect, test } from 'bun:test'
 import {
-  ACCOUNT_LOGIN_REQUIRED,
-  ACCOUNT_LOGIN_STATUS,
   LEVIATHAN_PIXEL_WHALE,
   PRODUCT_NAME,
 } from './branding.js'
 
 describe('Leviathan hard-cut identity', () => {
-  test('does not require product account login', () => {
+  test('uses the Leviathan product identity', () => {
     expect(PRODUCT_NAME).toBe('Leviathan')
-    expect(ACCOUNT_LOGIN_REQUIRED).toBe(false)
-    expect(ACCOUNT_LOGIN_STATUS).toContain('does not require account sign-in')
   })
 
   test('ships a compact code-rendered pixel whale', () => {

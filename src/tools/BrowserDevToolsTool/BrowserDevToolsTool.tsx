@@ -45,7 +45,7 @@ const inputSchema = lazySchema(() =>
     url: z
       .string()
       .optional()
-      .describe('URL for launch_browser, new_tab, or navigate.'),
+      .describe('URL for launch_browser, new_tab, navigate, or an optional specific ChatGPT conversation for ask_chatgpt.'),
     tab_id: z
       .string()
       .optional()
@@ -332,6 +332,27 @@ export const BrowserDevToolsTool = buildTool({
         result: false,
         message: 'ask_chatgpt requires question.',
         errorCode: 6,
+      }
+    }
+    if (input.action === 'ask_chatgpt' && input.url) {
+      try {
+        const parsed = new URL(input.url)
+        const host = parsed.hostname.toLowerCase()
+        if (
+          parsed.protocol !== 'https:' ||
+          (host !== 'chatgpt.com' &&
+            !host.endsWith('.chatgpt.com') &&
+            host !== 'chat.openai.com')
+        ) {
+          throw new Error('unsupported host')
+        }
+      } catch {
+        return {
+          result: false,
+          message:
+            'ask_chatgpt url must be an https://chatgpt.com or https://chat.openai.com URL.',
+          errorCode: 8,
+        }
       }
     }
     return { result: true }

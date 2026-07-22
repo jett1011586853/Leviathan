@@ -109,6 +109,10 @@ import {
   incrementBudgetContinuationCount,
 } from './bootstrap/state.js'
 import { createBudgetTracker, checkTokenBudget } from './query/tokenBudget.js'
+import {
+  decidePrematureStopRecovery,
+  MAX_PREMATURE_STOP_RECOVERY_ATTEMPTS,
+} from './query/prematureStopRecovery.js'
 import { count } from './utils/array.js'
 
 /* eslint-disable @typescript-eslint/no-require-imports */
@@ -289,6 +293,7 @@ async function* queryLoop(
   // trigger point. Loop-local (not on State) to avoid touching the 7 continue
   // sites.
   let taskBudgetRemaining: number | undefined = undefined
+  let prematureStopRecoveryCount = 0
 
   // Snapshot immutable env/statsig/session state once at entry. See QueryConfig
   // for what's included and why feature() gates are intentionally excluded.
@@ -1061,6 +1066,62 @@ async function* queryLoop(
 
     if (!needsFollowUp) {
       const lastMessage = assistantMessages.at(-1)
+      const prematureStopReason =
+        lastMessage?.type === 'assistant'
+          ? lastMessage.message.stop_reason
+          : undefined
+      const prematureStopDecision = decidePrematureStopRecovery(
+        prematureStopReason,
+        prematureStopRecoveryCount,
+      )
+
+      if (prematureStopDecision.action === 'recover') {
+        prematureStopRecoveryCount = prematureStopDecision.attempt
+        logForDebugging(
+          `Recovering from premature model stop ${prematureStopReason} ` +
+            `(attempt ${prematureStopRecoveryCount}/${MAX_PREMATURE_STOP_RECOVERY_ATTEMPTS})`,
+          { level: 'warn' },
+        )
+        logEvent('tengu_premature_stop_recovery', {
+          stop_reason:
+            prematureStopReason as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          attempt: prematureStopRecoveryCount,
+          max_attempts: MAX_PREMATURE_STOP_RECOVERY_ATTEMPTS,
+          queryChainId: queryChainIdForAnalytics,
+          queryDepth: queryTracking.depth,
+        })
+
+        state = {
+          messages: [
+            ...messagesForQuery,
+            ...assistantMessages,
+            createUserMessage({
+              content: prematureStopDecision.prompt,
+              isMeta: true,
+            }),
+          ],
+          toolUseContext,
+          autoCompactTracking: tracking,
+          maxOutputTokensRecoveryCount: 0,
+          hasAttemptedReactiveCompact,
+          maxOutputTokensOverride: undefined,
+          pendingToolUseSummary: undefined,
+          stopHookActive: undefined,
+          turnCount,
+          transition: undefined,
+        }
+        continue
+      }
+
+      if (prematureStopDecision.action === 'exhausted') {
+        const error = new Error(
+          `Model stopped early with ${prematureStopReason} after ` +
+            `${MAX_PREMATURE_STOP_RECOVERY_ATTEMPTS} recovery attempts.`,
+        )
+        yield createAssistantAPIErrorMessage({ content: error.message })
+        logError(error)
+        return { reason: 'model_error', error }
+      }
 
       // Prompt-too-long recovery: the streaming loop withheld the error
       // (see withheldByCollapse / withheldByReactive above). Try collapse
@@ -1356,6 +1417,10 @@ async function* queryLoop(
 
       return { reason: 'completed' }
     }
+
+    // Tool use is concrete progress, so a later premature stop starts a new
+    // bounded recovery episode instead of inheriting stale retry attempts.
+    prematureStopRecoveryCount = 0
 
     let shouldPreventContinuation = false
     let updatedToolUseContext = toolUseContext

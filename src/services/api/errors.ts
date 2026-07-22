@@ -50,10 +50,7 @@ import { extractConnectionErrorDetails, formatAPIError } from './errorUtils.js'
 export const API_ERROR_MESSAGE_PREFIX = 'API Error'
 
 export function startsWithApiErrorPrefix(text: string): boolean {
-  return (
-    text.startsWith(API_ERROR_MESSAGE_PREFIX) ||
-    text.startsWith(`Please run /login · ${API_ERROR_MESSAGE_PREFIX}`)
-  )
+  return text.startsWith(API_ERROR_MESSAGE_PREFIX)
 }
 export const PROMPT_TOO_LONG_ERROR_MESSAGE = 'Prompt is too long'
 
@@ -134,6 +131,60 @@ export function isMediaSizeError(raw: string): boolean {
   )
 }
 
+const TRANSIENT_MULTIMODAL_PROCESSING_MESSAGE =
+  'multimodal data is corrupted or cannot be processed'
+
+function getErrorStatus(error: unknown): number | undefined {
+  if (error instanceof APIError) return error.status
+  if (!error || typeof error !== 'object') return undefined
+
+  const record = error as Record<string, unknown>
+  const nested =
+    record.error && typeof record.error === 'object'
+      ? (record.error as Record<string, unknown>)
+      : undefined
+  const status = Number(record.status ?? record.code ?? nested?.code)
+  return Number.isFinite(status) ? status : undefined
+}
+
+function getErrorText(error: unknown): string {
+  if (!error || typeof error !== 'object') return String(error)
+
+  const record = error as Record<string, unknown>
+  const nested =
+    record.error && typeof record.error === 'object'
+      ? (record.error as Record<string, unknown>)
+      : undefined
+  return [
+    error instanceof Error ? error.message : undefined,
+    record.message,
+    record.param,
+    nested?.message,
+    nested?.param,
+  ]
+    .filter((value): value is string => typeof value === 'string')
+    .join(' ')
+}
+
+/**
+ * Some Anthropic-compatible gateways intermittently reject otherwise valid
+ * image payloads with this exact 400. Retrying the same request is safe, but
+ * other 400 responses remain non-retryable because they usually need a fix.
+ */
+export function isTransientMultimodalProcessingError(error: unknown): boolean {
+  const text = getErrorText(error)
+  const status = getErrorStatus(error)
+  const reports400 =
+    status === 400 ||
+    /(?:^|\b)(?:api error:\s*)?400\b/i.test(text) ||
+    /"code"\s*:\s*"400"/i.test(text)
+
+  return (
+    reports400 &&
+    text.toLowerCase().includes(TRANSIENT_MULTIMODAL_PROCESSING_MESSAGE)
+  )
+}
+
 /**
  * Message-level predicate: is this assistant message a media-size rejection?
  * Parallel to isPromptTooLongMessage. Checks errorDetails (the raw API error
@@ -148,15 +199,16 @@ export function isMediaSizeErrorMessage(msg: AssistantMessage): boolean {
   )
 }
 export const CREDIT_BALANCE_TOO_LOW_ERROR_MESSAGE = 'Credit balance is too low'
-export const INVALID_API_KEY_ERROR_MESSAGE = 'Not logged in · Please run /login'
+export const INVALID_API_KEY_ERROR_MESSAGE =
+  'Model provider credentials are missing or invalid - configure /model or provider environment variables'
 export const INVALID_API_KEY_ERROR_MESSAGE_EXTERNAL =
-  'Invalid API key · Fix external API key'
+  'Invalid API key - update external provider credentials'
 export const ORG_DISABLED_ERROR_MESSAGE_ENV_KEY_WITH_OAUTH =
   'Your ANTHROPIC_API_KEY belongs to a disabled organization · Unset the environment variable to use your subscription instead'
 export const ORG_DISABLED_ERROR_MESSAGE_ENV_KEY =
   'Your ANTHROPIC_API_KEY belongs to a disabled organization · Update or unset the environment variable'
 export const TOKEN_REVOKED_ERROR_MESSAGE =
-  'OAuth token revoked · Please run /login'
+  'Provider token was revoked - update /model or provider credentials'
 export const CCR_AUTH_ERROR_MESSAGE =
   'Authentication error · This may be a temporary network issue, please try again'
 export const REPEATED_529_ERROR_MESSAGE = 'Repeated 529 Overloaded errors'
@@ -194,9 +246,7 @@ export const OAUTH_ORG_NOT_ALLOWED_ERROR_MESSAGE =
   'Leviathan local mode does not use product account access.'
 
 export function getTokenRevokedErrorMessage(): string {
-  return getIsNonInteractiveSession()
-    ? 'Leviathan local mode does not use product account access.'
-    : TOKEN_REVOKED_ERROR_MESSAGE
+  return TOKEN_REVOKED_ERROR_MESSAGE
 }
 
 export function getOauthOrgNotAllowedErrorMessage(): string {
@@ -207,8 +257,8 @@ export function getOauthOrgNotAllowedErrorMessage(): string {
 
 /**
  * Check if we're in Leviathan remote mode.
- * In CCR mode, auth is handled via JWTs provided by the infrastructure,
- * not via /login. Transient auth errors should suggest retrying, not logging in.
+ * In CCR mode, auth is handled via JWTs provided by the infrastructure.
+ * Transient auth errors should suggest retrying, not replacing model credentials.
  */
 function isCCRMode(): boolean {
   return isEnvTruthy(process.env.LEVIATHAN_CODE_REMOTE)
@@ -765,7 +815,7 @@ export function getAssistantMessageFromError(
   }
   // "Organization has been disabled" — commonly a stale ANTHROPIC_API_KEY
   // from a previous employer/project overriding subscription auth. Only handle
-  // the env-var case; apiKeyHelper and /login-managed keys mean the active
+  // the env-var case; apiKeyHelper and managed keys mean the active
   // auth's org is genuinely disabled with no fallback to point at.
   if (
     error instanceof APIError &&
@@ -856,11 +906,13 @@ export function getAssistantMessageFromError(
       })
     }
 
+    const credentialHint = getIsNonInteractiveSession()
+      ? 'Update model provider credentials or provider environment variables.'
+      : 'Update model provider credentials in /model or provider environment variables.'
+
     return createAssistantAPIErrorMessage({
       error: 'authentication_failed',
-      content: getIsNonInteractiveSession()
-        ? `Failed to authenticate. ${API_ERROR_MESSAGE_PREFIX}: ${error.message}`
-        : `Please run /login · ${API_ERROR_MESSAGE_PREFIX}: ${error.message}`,
+      content: `${credentialHint} ${API_ERROR_MESSAGE_PREFIX}: ${error.message}`,
     })
   }
 

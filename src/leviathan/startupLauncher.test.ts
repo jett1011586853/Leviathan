@@ -21,16 +21,19 @@ describe('Leviathan fast startup launcher', () => {
   test('checks source freshness in Bun and rebuilds stale artifacts', () => {
     const launcher = source('scripts/start-leviathan.ts')
 
-    expect(launcher).toContain("new Bun.Glob('src/**/*.{ts,tsx,js,jsx,json,txt}')")
+    expect(launcher).toContain('src/**/*.{ts,tsx,js,jsx,json,txt}')
     expect(launcher).toContain('artifactMtime >= (await getLatestInputMtime())')
-    expect(launcher).toContain("cmd: [process.execPath, 'run', 'build:startup']")
+    expect(launcher).toContain('build:startup')
+    expect(launcher).toContain('native/game-capture/src/**/*.rs')
+    expect(launcher).toContain('build:game-capture')
+    expect(launcher).toContain('process.env.LEVIATHAN_GAME_CAPTURE_BINARY')
     expect(launcher).toContain('await import(pathToFileURL(entrypoint).href)')
   })
 
   test('PowerShell wrapper forwards all CLI arguments to the Bun launcher', () => {
     const launcher = source('scripts/start-leviathan.ps1')
 
-    expect(launcher).toContain("start-leviathan.ts")
+    expect(launcher).toContain('start-leviathan.ts')
     expect(launcher).toContain('@LeviathanArgs')
     expect(launcher).not.toContain('Get-ChildItem')
   })

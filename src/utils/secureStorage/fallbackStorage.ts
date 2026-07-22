@@ -47,7 +47,7 @@ export function createFallbackStorage(
         // entry. read() prefers primary whenever it returns non-null, so that
         // stale entry would shadow the fresh data we just wrote to secondary —
         // e.g. a refresh token the server has already rotated away, causing a
-        // /login loop (#30337). Best-effort delete; if this also fails the
+        // credential retry loop (#30337). Best-effort delete; if this also fails the
         // user's keychain is in a bad state we can't fix from here.
         if (primaryDataBefore !== null) {
           primary.delete()

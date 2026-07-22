@@ -16,17 +16,17 @@ import { logForDebugging } from '../../utils/debug.js'
 import { toError } from '../../utils/errors.js'
 import { truncate } from '../../utils/format.js'
 import { logError } from '../../utils/log.js'
+import {
+  getSkillListingDescription,
+  MAX_LISTING_DESC_CHARS,
+} from './skillDescription.js'
+
+export { MAX_LISTING_DESC_CHARS } from './skillDescription.js'
 
 // Skill listing gets 1% of the context window (in characters)
 export const SKILL_BUDGET_CONTEXT_PERCENT = 0.01
 export const CHARS_PER_TOKEN = 4
 export const DEFAULT_CHAR_BUDGET = 8_000 // Fallback: 1% of 200k × 4
-
-// Per-entry hard cap. The listing is for discovery only — the Skill tool loads
-// full content on invoke, so verbose whenToUse strings waste turn-1 cache_creation
-// tokens without improving match rate. Applies to all entries, including bundled,
-// since the cap is generous enough to preserve the core use case.
-export const MAX_LISTING_DESC_CHARS = 250
 
 export function getCharBudget(contextWindowTokens?: number): number {
   if (Number(process.env.SLASH_COMMAND_TOOL_CHAR_BUDGET)) {
@@ -41,12 +41,7 @@ export function getCharBudget(contextWindowTokens?: number): number {
 }
 
 function getCommandDescription(cmd: Command): string {
-  const desc = cmd.whenToUse
-    ? `${cmd.description} - ${cmd.whenToUse}`
-    : cmd.description
-  return desc.length > MAX_LISTING_DESC_CHARS
-    ? desc.slice(0, MAX_LISTING_DESC_CHARS - 1) + '\u2026'
-    : desc
+  return getSkillListingDescription(cmd)
 }
 
 function formatCommandDescription(cmd: Command): string {

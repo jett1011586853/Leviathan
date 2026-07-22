@@ -1,0 +1,19 @@
+{
+  "awmp": "0.1",
+  "kind": "ModeEvalExpectation",
+  "expectedTaskState": "completed",
+  "expectedSchedulerStatus": "completed",
+  "requiredArtifactTypes": ["support.analysis.report"],
+  "expectedMetrics": {
+    "workCompletion": 1,
+    "validationPassRate": 1
+  },
+  "artifactReviewFixtures": [
+    {
+      "artifactType": "support.analysis.report",
+      "status": "accepted",
+      "reviewedBy": "awmp-mode-eval-fixture",
+      "note": "Support analysis report fixture accepted for deterministic mode regression."
+    }
+  ]
+}

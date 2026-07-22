@@ -9,10 +9,10 @@ code.
 
 ## Boundary
 
-Account authentication is removed from normal startup, onboarding, `/login`,
-and `auth login`. Provider credentials needed to make actual model API calls
-remain transport configuration, because removing them would remove model
-execution rather than remove recovered product account verification.
+Product-account authentication, its commands, and its OAuth UI are absent from
+normal startup and onboarding. Provider credentials needed to make actual model
+API calls remain transport configuration, because removing them would remove
+model execution rather than recovered product account verification.
 
 Remote features implemented by the recovered source through product account
 tokens are not represented as locally available Leviathan capabilities in this
@@ -20,12 +20,11 @@ cut. They must later be replaced with Leviathan-owned services or removed.
 
 ## Implementation
 
-- Add a small `src/leviathan/branding.ts` module for product name, no-account
-  policy text, and the pixel whale drawing.
+- Add a small `src/leviathan/branding.ts` module for the product name and pixel
+  whale drawing.
 - Skip account/OAuth steps during onboarding while retaining theme, trust and
   safety controls.
-- Make both CLI and in-session login commands report that account login is
-  disabled and return immediately.
+- Remove product-account commands and the unused account OAuth component.
 - Remove startup organization-validation calls that make a local run depend on
   a recovered product account.
 - Replace the visible mascot and welcome brand with the pixel whale and

@@ -7,7 +7,9 @@
   "scripts": {
     "build": "bun build --target=bun --packages=external src/entrypoints/cli.tsx --outdir ./dist",
     "build:startup": "bun build --target=bun --packages=external --minify src/entrypoints/cli.tsx --outdir ./dist-startup",
+    "build:game-capture": "cargo build --release --manifest-path native/game-capture/Cargo.toml",
     "build:release": "bun build --compile --minify --bytecode --target=bun-windows-x64 --windows-icon=./assets/leviathan-icon.ico --windows-title=Leviathan --windows-publisher=Leviathan --windows-description=\"Leviathan AI coding agent\" --external \"@opentelemetry/exporter-*\" --external modifiers-napi src/entrypoints/cli.tsx --outfile ./dist-release/leviathan.exe",
+    "build:offline": "powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File scripts/build-offline-package.ps1",
     "start": "bun run src/entrypoints/cli.tsx",
     "typecheck": "tsc --noEmit",
     "test": "bun test src"
@@ -98,5 +100,8 @@
     "p-map": "^7.0.4",
     "qrcode": "^1.5.4",
     "typescript": "^5.5.0"
+  },
+  "patchedDependencies": {
+    "sharp@0.34.5": "patches/sharp@0.34.5.patch"
   }
 }

@@ -1,5 +1,6 @@
 import { feature } from 'bun:bundle'
 import { registerBatchSkill } from './batch.js'
+import { registerAiCodingOrchestratorSkill } from './aiCodingOrchestrator.js'
 import { registerChatGptRescueTeamSkill } from './chatgptRescueTeam.js'
 import { registerDebugSkill } from './debug.js'
 import { registerKeybindingsSkill } from './keybindings.js'
@@ -23,6 +24,7 @@ import { registerVerifySkill } from './verify.js'
  * 3. Import and call that function here
  */
 export function initBundledSkills(): void {
+  registerAiCodingOrchestratorSkill()
   registerUpdateConfigSkill()
   registerKeybindingsSkill()
   registerVerifySkill()

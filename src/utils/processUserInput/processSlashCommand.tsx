@@ -6,7 +6,7 @@ import { builtInCommandNames, type Command, type CommandBase, findCommand, getCo
 import { NO_CONTENT_MESSAGE } from 'src/constants/messages.js';
 import type { SetToolJSXFn, ToolUseContext } from 'src/Tool.js';
 import type { AssistantMessage, AttachmentMessage, Message, NormalizedUserMessage, ProgressMessage, UserMessage } from 'src/types/message.js';
-import { addInvokedSkill, getSessionId } from '../../bootstrap/state.js';
+import { addInvokedSkill, getInvokedSkillsForAgent, getSessionId } from '../../bootstrap/state.js';
 import { COMMAND_MESSAGE_TAG, COMMAND_NAME_TAG } from '../../constants/xml.js';
 import type { CanUseToolFn } from '../../hooks/useCanUseTool.js';
 import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, type AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED, logEvent } from '../../services/analytics/index.js';
@@ -882,19 +882,28 @@ async function getMessagesForPromptSlashCommand(command: CommandBase & PromptCom
   // agent are restored during compaction (preventing cross-agent leaks).
   const skillPath = command.source ? `${command.source}:${command.name}` : command.name;
   const skillContent = result.filter((b): b is TextBlockParam => b.type === 'text').map(b => b.text).join('\n\n');
-  addInvokedSkill(command.name, skillPath, skillContent, getAgentContext()?.agentId ?? null);
+  const agentId = getAgentContext()?.agentId ?? null;
+  const previouslyInvoked = Array.from(getInvokedSkillsForAgent(agentId).values()).find(skill => skill.skillName === command.name);
+  const isIdenticalReinvocation = previouslyInvoked?.content === skillContent;
+  addInvokedSkill(command.name, skillPath, skillContent, agentId, {
+    skillPolicy: command.skillPolicy
+  });
+  const effectiveResult: ContentBlockParam[] = isIdenticalReinvocation ? [{
+    type: 'text',
+    text: `The /${command.name} skill is already loaded with identical instructions. Continue following the existing copy; do not duplicate it in context.`
+  }] : result;
   const metadata = formatCommandLoadingMetadata(command, args);
   const additionalAllowedTools = parseToolListFromCLI(command.allowedTools ?? []);
 
   // Create content for the main message, including any pasted images
-  const mainMessageContent: ContentBlockParam[] = imageContentBlocks.length > 0 || precedingInputBlocks.length > 0 ? [...imageContentBlocks, ...precedingInputBlocks, ...result] : result;
+  const mainMessageContent: ContentBlockParam[] = imageContentBlocks.length > 0 || precedingInputBlocks.length > 0 ? [...imageContentBlocks, ...precedingInputBlocks, ...effectiveResult] : effectiveResult;
 
   // Extract attachments from command arguments (@-mentions, MCP resources,
   // agent mentions in SKILL.md). skipSkillDiscovery prevents the SKILL.md
   // content itself from triggering discovery — it's meta-content, not user
   // intent, and a large SKILL.md (e.g. 110KB) would fire chunked AKI queries
   // adding seconds of latency to every skill invocation.
-  const attachmentMessages = await toArray(getAttachmentMessages(result.filter((block): block is TextBlockParam => block.type === 'text').map(block => block.text).join(' '), context, null, [],
+  const attachmentMessages = await toArray(getAttachmentMessages(effectiveResult.filter((block): block is TextBlockParam => block.type === 'text').map(block => block.text).join(' '), context, null, [],
   // queuedCommands - handled by query.ts for mid-turn attachments
   context.messages, 'repl_main_thread', {
     skipSkillDiscovery: true

@@ -76,8 +76,6 @@ describe('Leviathan custom model freedom', () => {
     const approveApiKey = source('components/ApproveApiKey.tsx')
     const config = source('utils/config.ts')
     const settingsTypes = source('utils/settings/types.ts')
-    const authHandler = source('cli/handlers/auth.ts')
-    const consoleOAuthFlow = source('components/ConsoleOAuthFlow.tsx')
 
     expect(main).toContain('ANTHROPIC_AUTH_TOKEN')
     expect(main).not.toContain('--claudeai')
@@ -137,8 +135,9 @@ describe('Leviathan custom model freedom', () => {
     expect(settingsTypes).toContain('forceLoginMethod: z')
     expect(settingsTypes).toContain('.string()')
     expect(settingsTypes).not.toContain(".enum(['claudeai', 'console'])")
-    expect(authHandler).not.toContain('claudeai?: boolean')
-    expect(consoleOAuthFlow).toContain('forceLoginMethod?: string')
+    expect(main).not.toContain("program.command('auth')")
+    expect(main).not.toContain("program.command('setup-token')")
+    expect(auth).not.toContain("'/login managed key'")
   })
 
   test('system prompt respects configured provider models instead of recommending Claude defaults', () => {

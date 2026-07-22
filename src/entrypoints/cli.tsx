@@ -54,6 +54,16 @@ async function main(): Promise<void> {
     return;
   }
 
+  // Internal realtime GameModel sidecar. Keep this before model/config startup
+  // so a child process never loads the interactive agent stack.
+  if (args[0] === '--game-runtime-sidecar') {
+    const {
+      runGameSidecarProcess
+    } = await import('../game/sidecar.js');
+    await runGameSidecarProcess();
+    return;
+  }
+
   // For all other paths, load the startup profiler
   const {
     profileCheckpoint

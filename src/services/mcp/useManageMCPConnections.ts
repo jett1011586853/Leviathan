@@ -157,7 +157,7 @@ export function useManageMCPConnections(
   const reconnectTimersRef = useRef<Map<string, NodeJS.Timeout>>(new Map())
 
   // Dedup the --channels blocked warning per skip kind so that a user who
-  // sees "run /login" (auth skip), logs in, then hits the policy gate
+  // sees the authentication hint, reconnects, then hits the policy gate
   // gets a second toast.
   const channelWarnedKindsRef = useRef<
     Set<'disabled' | 'auth' | 'policy' | 'marketplace' | 'allowlist'>

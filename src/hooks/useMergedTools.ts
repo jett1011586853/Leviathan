@@ -3,6 +3,7 @@ import { useMemo } from 'react'
 import type { Tools, ToolPermissionContext } from '../Tool.js'
 import { assembleToolPool } from '../tools.js'
 import { useAppState } from '../state/AppState.js'
+import type { AppState } from '../state/AppStateStore.js'
 import { mergeAndFilterTools } from '../utils/toolPool.js'
 
 /**
@@ -24,14 +25,22 @@ export function useMergedTools(
 ): Tools {
   let replBridgeEnabled = false
   let replBridgeOutboundOnly = false
-  const computerUseEnabled = useAppState(s => s.computerUseEnabled)
-  const browserUseEnabled = useAppState(s => s.browserUseEnabled)
+  const computerUseEnabled = useAppState(
+    (state: AppState) => state.computerUseEnabled,
+  ) as boolean
+  const browserUseEnabled = useAppState(
+    (state: AppState) => state.browserUseEnabled,
+  ) as boolean
+  const gameModelEnabled = useAppState(
+    (state: AppState) => state.gameModelMode !== 'off',
+  ) as boolean
   return useMemo(() => {
     // assembleToolPool is the shared function that both REPL and runAgent use.
     // It handles: getTools() + MCP deny-rule filtering + dedup + MCP CLI exclusion.
     const assembled = assembleToolPool(toolPermissionContext, mcpTools, {
       includeComputerUseTools: computerUseEnabled,
       includeBrowserUseTools: browserUseEnabled,
+      includeGameModelTools: gameModelEnabled,
     })
 
     return mergeAndFilterTools(
@@ -45,6 +54,7 @@ export function useMergedTools(
     toolPermissionContext,
     computerUseEnabled,
     browserUseEnabled,
+    gameModelEnabled,
     replBridgeEnabled,
     replBridgeOutboundOnly,
   ])

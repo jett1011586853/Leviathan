@@ -3750,7 +3750,7 @@ function runHeadlessStreaming(
               // initReplBridge surfaces gate-failure reasons via
               // onStateChange('failed', detail) before returning null.
               // Capture so the control-response error is actionable
-              // ("/login", "disabled by your organization's policy", etc.)
+              // (provider authentication, organization policy, etc.)
               // instead of a generic "initialization failed".
               let bridgeFailureDetail: string | undefined
               try {

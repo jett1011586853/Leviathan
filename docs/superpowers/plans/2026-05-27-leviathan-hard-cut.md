@@ -4,7 +4,7 @@
 
 **Goal:** Remove account-login gating from the normal CLI path and present Leviathan with a code-rendered pixel whale identity.
 
-**Architecture:** A pure Leviathan branding/policy module provides the hard-cut constants used by the UI and command entry points. Startup removes only account and organization gates; provider transport code remains intact so configured model calls retain their execution path.
+**Architecture:** A pure Leviathan branding module provides the product identity used by the UI. Startup and command discovery omit product-account entry points; provider transport code remains intact so configured model calls retain their execution path.
 
 **Tech Stack:** TypeScript, React, Ink, Bun test
 
@@ -17,8 +17,7 @@
 - Test: `src/leviathan/branding.test.ts`
 
 - [ ] Write a failing Bun test that imports the not-yet-existing module and
-  asserts `PRODUCT_NAME === 'Leviathan'`, `ACCOUNT_LOGIN_REQUIRED === false`,
-  and that the whale drawing is non-empty.
+  asserts `PRODUCT_NAME === 'Leviathan'` and that the whale drawing is non-empty.
 - [ ] Run `bun test src/leviathan/branding.test.ts`; expect failure because
   `branding.ts` does not yet exist.
 - [ ] Implement constants and pixel-whale rows in `branding.ts`.
@@ -28,16 +27,14 @@
 
 **Files:**
 - Modify: `src/components/Onboarding.tsx`
-- Modify: `src/commands/login/index.ts`
-- Modify: `src/commands/login/login.tsx`
-- Modify: `src/cli/handlers/auth.ts`
 - Modify: `src/main.tsx`
 - Modify: `src/interactiveHelpers.tsx`
+- Delete: product-account command handlers and their unused OAuth component
 
 - [ ] Remove OAuth/account steps from onboarding while retaining theme and
   safety/trust flow.
-- [ ] Make `/login`, `auth login`, `auth status`, and `setup-token` explain
-  that Leviathan does not require account authentication without opening OAuth.
+- [ ] Remove product-account commands from both interactive and top-level CLI
+  registries.
 - [ ] Delete startup calls that validate an Anthropic organization or perform
   onboarding post-login hooks.
 - [ ] Search these entry points for active `ConsoleOAuthFlow` references and

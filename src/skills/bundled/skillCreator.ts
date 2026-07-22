@@ -43,12 +43,10 @@ Only create \`scripts/\`, \`references/\`, or \`assets/\` when they are actually
 \`\`\`markdown
 ---
 name: skill-name
-description: Use when the user wants ...
+description: Use when the user wants ... Include the strongest trigger phrases and the workflow outcome.
 allowed-tools: Read, Write, Edit
-when_to_use: Use when ...
-argument-hint: "[optional arguments]"
-arguments:
-  - optional_arg
+metadata:
+  when_to_use: Use when ... Include representative user requests.
 ---
 
 # Skill Title
@@ -62,11 +60,10 @@ Required:
 
 Optional:
 - \`allowed-tools\`: minimum required tool permissions, using precise patterns such as \`Bash(gh:*)\` instead of broad \`Bash\`.
-- \`when_to_use\`: richer trigger guidance and example user phrases.
-- \`argument-hint\` and \`arguments\`: only when the skill has reusable parameters.
-- \`context: fork\`: only for self-contained work that should run away from the current conversation.
-- \`paths\`: only for skills that should activate for specific file paths.
-- \`model\`, \`effort\`, \`agent\`, or \`hooks\`: only when the user explicitly needs them.
+- \`metadata.when_to_use\`: richer trigger guidance and example user phrases for Leviathan. Keep the strongest trigger phrases at the beginning because listings are length-bounded before the full skill loads.
+- \`metadata.leviathan.auto_trigger\`: optional high-confidence literal phrases for deterministic implicit invocation. Use \`phrases\` plus \`exclude\`; keep ordinary semantic discovery in the description.
+- \`metadata.leviathan.lifecycle: task\`, \`reminder\`, and \`reminder_turns\`: optional for multi-turn workflows whose critical gates must remain active after invocation. Keep the reminder to one concise sentence.
+- Keep provider-specific extensions inside \`metadata\`. Use only \`name\`, \`description\`, \`license\`, \`allowed-tools\`, and \`metadata\` at the top level so the Skill remains portable and standards-compatible.
 
 ## Workflow
 
@@ -93,7 +90,8 @@ Optional:
 5. Validate.
    - Check that the frontmatter parses as YAML.
    - Check that \`name\` matches the directory name.
-   - Check that \`description\` and \`when_to_use\` make the invocation trigger obvious.
+   - Check that \`description\` and \`metadata.when_to_use\` make the invocation trigger obvious.
+   - For deterministic triggers, test at least one intended phrase, one exclusion, and one unrelated prompt.
    - Check that referenced files actually exist.
    - Run project tests only when the skill includes executable project code.
 

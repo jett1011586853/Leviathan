@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "experiment_id": "nzm-future-jungle-phantom-private-research-v4-contrastive",
+  "game": "\u9006\u6218\uff1a\u672a\u6765",
+  "map": "\u4e1b\u6797\u9b45\u5f71",
+  "seed": 20260718,
+  "data": {
+    "minimum_relevance": 0.7,
+    "token_budget": {
+      "train": 50000000,
+      "validation": 6250000,
+      "test": 6250000,
+      "minimum_content_groups": {
+        "train": 50,
+        "validation": 10,
+        "test": 10
+      },
+      "maximum_train_group_fraction": 0.02
+    }
+  },
+  "clip": {
+    "duration_seconds": 4.0,
+    "stride_seconds": 3.0,
+    "frames": 8,
+    "width": 112,
+    "height": 112
+  },
+  "split": {
+    "train": 0.8,
+    "validation": 0.1,
+    "test": 0.1,
+    "group_key": "content_group_id"
+  },
+  "model": {
+    "architecture_version": 4,
+    "embedding_dim": 192,
+    "depth": 4,
+    "heads": 6,
+    "tubelet_size": 2,
+    "patch_size": 16,
+    "mask_ratio": 0.6,
+    "ema_decay": 0.996,
+    "state_ema_decay": 0.95,
+    "action_dim": 12,
+    "state_prediction_weight": 0.1,
+    "variance_weight": 0.25,
+    "covariance_weight": 0.01,
+    "variance_target": 0.3,
+    "state_diversity_weight": 0.25,
+    "state_similarity_ceiling": 0.9,
+    "contrastive_weight": 1.0,
+    "contrastive_temperature": 0.1,
+    "state_queue_size": 256
+  },
+  "training": {
+    "batch_size": 4,
+    "learning_rate": 0.0003,
+    "weight_decay": 0.05,
+    "gradient_accumulation": 2,
+    "max_steps": 1000,
+    "num_workers": 0,
+    "mixed_precision": true
+  }
+}

@@ -33,4 +33,5 @@ test_ink.ts
 dist/
 dist-startup/
 dist-release/
+artifacts/
 coverage/

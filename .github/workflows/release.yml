@@ -14,6 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
+      - uses: dtolnay/rust-toolchain@stable
       - run: bun install --frozen-lockfile
       - run: bun run test
       - name: Verify tag matches package version
@@ -24,11 +25,15 @@ jobs:
             throw "Tag ${{ github.ref_name }} does not match package version $packageVersion"
           }
       - run: bun run build:release
+      - run: bun run build:game-capture
       - name: Prepare release assets
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Path release -Force | Out-Null
           Copy-Item dist-release/leviathan.exe release/leviathan-windows-x64.exe
+          Copy-Item native/game-capture/target/release/leviathan-game-capture.exe release/leviathan-game-capture-windows-x64.exe
+          Copy-Item node_modules/@img/sharp-win32-x64/lib/libvips-42.dll release/libvips-42.dll
+          Copy-Item node_modules/@img/sharp-win32-x64/lib/libvips-cpp-8.17.3.dll release/libvips-cpp-8.17.3.dll
           Copy-Item scripts/leviathan-launcher.ps1 release/leviathan-launcher.ps1
           Copy-Item scripts/leviathan-updater.ps1 release/leviathan-updater.ps1
           $lines = Get-ChildItem release -File | Sort-Object Name | ForEach-Object {

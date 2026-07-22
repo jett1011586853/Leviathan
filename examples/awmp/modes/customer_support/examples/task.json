@@ -1,0 +1,30 @@
+{
+  "awmp": "0.1",
+  "kind": "Task",
+  "id": "task_customer_support_analysis_example",
+  "contextId": "ctx_customer_support_analysis_example",
+  "title": "Analyze weekly support issues",
+  "objective": "Analyze a support ticket sample and produce a support.analysis.report artifact.",
+  "modeIds": ["com.leviathan.customer_support"],
+  "inputs": {
+    "audience": "support leadership",
+    "dateRange": { "from": "2026-07-01", "to": "2026-07-07" },
+    "ticketSample": [
+      { "id": "T-1001", "category": "refund", "severity": "high" },
+      { "id": "T-1002", "category": "billing", "severity": "medium" },
+      { "id": "T-1003", "category": "refund", "severity": "high" },
+      { "id": "T-1004", "category": "delivery", "severity": "medium" },
+      { "id": "T-1005", "category": "billing", "severity": "medium" }
+    ]
+  },
+  "status": {
+    "state": "submitted"
+  },
+  "constraints": {
+    "maxRuntimeSeconds": 900,
+    "network": "deny",
+    "requiresHumanApprovalFor": ["refund:create", "email:send_external"]
+  },
+  "artifacts": [],
+  "traceId": "trace_customer_support_analysis_example"
+}

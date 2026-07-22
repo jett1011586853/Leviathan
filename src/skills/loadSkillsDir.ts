@@ -56,6 +56,10 @@ import {
 } from '../utils/markdownConfigLoader.js'
 import { parseUserSpecifiedModel } from '../utils/model/model.js'
 import { executeShellCommandsInPrompt } from '../utils/promptShellExecution.js'
+import {
+  getSkillWhenToUse,
+  parseSkillRuntimePolicy,
+} from '../utils/skillPolicy.js'
 import type { SettingSource } from '../utils/settings/constants.js'
 import { isSettingSourceEnabled } from '../utils/settings/constants.js'
 import { getManagedFilePath } from '../utils/settings/managedPath.js'
@@ -195,6 +199,7 @@ export function parseSkillFrontmatterFields(
   argumentHint: string | undefined
   argumentNames: string[]
   whenToUse: string | undefined
+  skillPolicy: ReturnType<typeof parseSkillRuntimePolicy>
   version: string | undefined
   model: ReturnType<typeof parseUserSpecifiedModel> | undefined
   disableModelInvocation: boolean
@@ -249,7 +254,8 @@ export function parseSkillFrontmatterFields(
     argumentNames: parseArgumentNames(
       frontmatter.arguments as string | string[] | undefined,
     ),
-    whenToUse: frontmatter.when_to_use as string | undefined,
+    whenToUse: getSkillWhenToUse(frontmatter),
+    skillPolicy: parseSkillRuntimePolicy(frontmatter, resolvedName),
     version: frontmatter.version as string | undefined,
     model,
     disableModelInvocation: parseBooleanFrontmatter(
@@ -277,6 +283,7 @@ export function createSkillCommand({
   argumentHint,
   argumentNames,
   whenToUse,
+  skillPolicy,
   version,
   model,
   disableModelInvocation,
@@ -300,6 +307,7 @@ export function createSkillCommand({
   argumentHint: string | undefined
   argumentNames: string[]
   whenToUse: string | undefined
+  skillPolicy: ReturnType<typeof parseSkillRuntimePolicy>
   version: string | undefined
   model: string | undefined
   disableModelInvocation: boolean
@@ -323,6 +331,7 @@ export function createSkillCommand({
     argumentHint,
     argNames: argumentNames.length > 0 ? argumentNames : undefined,
     whenToUse,
+    skillPolicy,
     version,
     model,
     disableModelInvocation,

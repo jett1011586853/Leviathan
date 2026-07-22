@@ -23,11 +23,11 @@ Actions:
 - evaluate: executes JavaScript in the selected tab, like DevTools console.
 - click: clicks a CSS selector.
 - type_text: writes text into an input, textarea, or contenteditable selector.
-- stream_type_text: focuses a browser code editor and inserts text one character at a time via CDP Input.insertText. It supports Monaco, CodeMirror, Ace, textarea, contenteditable, and role=textbox targets. selector is optional; when omitted, Leviathan auto-detects common code editors. clear defaults to true and replaces current editor contents. Set clear=false to append. typing_delay_ms controls the visible per-character delay and defaults to 200.
+- stream_type_text: focuses a browser code editor and inserts text one character at a time via CDP. It supports Monaco, CodeMirror, Ace, textarea, contenteditable, and role=textbox targets. Leviathan reconciles every newline and leading indentation against the exact source prefix, so the result remains identical in editors with or without automatic indentation, then verifies the final editor contents when the editor API is readable. selector is optional; when omitted, Leviathan auto-detects common code editors. clear defaults to true and replaces current editor contents. Set clear=false to append. typing_delay_ms controls the visible per-character delay and defaults to 200.
 - press_key: sends a simple key such as Enter, Tab, Escape, Backspace, Delete, or arrow keys.
 - screenshot: captures a browser screenshot and sends it to the model.
 - cdp_send: sends a raw Chrome DevTools Protocol command. Provide cdp_method, optional cdp_params, optional cdp_target ("tab" or "browser"), and optional cdp_session_id for flattened sessions. This can inspect or control sensitive browser internals such as targets, cookies, storage, network state, permissions, downloads, and browser process data.
-- ask_chatgpt: opens or reuses ChatGPT in the controlled browser, sends question, waits for a response, and returns the answer as external guidance. If a previous ChatGPT answer is still generating, it will wait for that existing answer and will not submit a new question. This uses the user's browser session, so ChatGPT may require the user to log in first.
+- ask_chatgpt: opens or reuses ChatGPT in the controlled browser, sends question, waits for a response, and returns the answer as external guidance. Set url to target a specific ChatGPT conversation; only ChatGPT URLs are accepted. If a previous ChatGPT answer is still generating, it will wait for that existing answer and will not submit a new question. This uses the user's browser session, so ChatGPT may require the user to log in first.
 - close_tab: closes a tab.
 
 Safety:

@@ -1,0 +1,12 @@
+{
+  "awmp": "0.1",
+  "kind": "ModeEvalExpectation",
+  "expectRuntimePass": false,
+  "expectedTaskState": "failed",
+  "expectedSchedulerStatus": "blocked",
+  "forbiddenArtifactTypes": ["support.analysis.report"],
+  "expectedMetrics": {
+    "workCompletion": 0,
+    "crossModeTaskSuccess": 0
+  }
+}

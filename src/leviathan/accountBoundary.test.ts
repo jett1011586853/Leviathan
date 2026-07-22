@@ -137,21 +137,14 @@ describe('Leviathan product account boundary', () => {
     )
   })
 
-  test('logout never deletes provider credentials or installs account tokens', () => {
-    const logout = source('commands/logout/logout.tsx')
-    const logoutIndex = source('commands/logout/index.ts')
-    const authHandler = source('cli/handlers/auth.ts')
+  test('product account commands are not registered', () => {
+    const commands = source('commands.ts')
+    const main = source('main.tsx')
 
-    expect(logout).not.toContain('removeApiKey')
-    expect(logout).not.toContain('getSecureStorage')
-    expect(logout).not.toContain('getGroveSettings')
-    expect(logout).toContain('ACCOUNT_LOGIN_STATUS')
-    expect(logoutIndex).not.toContain('Anthropic account')
-    expect(authHandler).toContain(
-      'throw new Error(LEGACY_ACCOUNT_FEATURE_NOTICE)',
-    )
-    expect(authHandler).not.toContain('saveOAuthTokensIfNeeded')
-    expect(authHandler).not.toContain('createAndStoreApiKey')
+    expect(commands).not.toContain("./commands/login/index.js")
+    expect(commands).not.toContain("./commands/logout/index.js")
+    expect(main).not.toContain("program.command('auth')")
+    expect(main).not.toContain("program.command('setup-token')")
   })
 
   test('REPL never mounts recovered product feedback or transcript sharing', () => {

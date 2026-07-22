@@ -5,6 +5,10 @@ import type {
   ImageBlockParam,
 } from '@anthropic-ai/sdk/resources/messages.mjs'
 import { randomUUID } from 'crypto'
+import {
+  consumeActiveSkillReminders,
+  getInvokedSkillsForAgent,
+} from '../../bootstrap/state.js'
 import type { QuerySource } from 'src/constants/querySource.js'
 import { logEvent } from 'src/services/analytics/index.js'
 import { getContentText } from 'src/utils/messages.js'
@@ -47,6 +51,10 @@ import {
   maybeResizeAndDownsampleImageBlock,
 } from '../imageResizer.js'
 import { storeImages } from '../imageStore.js'
+import {
+  buildActiveSkillReminder,
+  findAutoTriggeredSkill,
+} from '../../skills/skillActivation.js'
 import {
   createCommandInputMessage,
   createSystemMessage,
@@ -492,6 +500,42 @@ async function processUserInputBase(
     return addImageMetadataMessage(slashResult, imageMetadataTexts)
   }
 
+  // Optional high-confidence implicit invocation. This is deliberately
+  // declarative per skill; ordinary semantic matching remains the model's job.
+  if (
+    mode === 'prompt' &&
+    inputString !== null &&
+    !isMeta &&
+    !effectiveSkipSlash &&
+    !inputString.startsWith('/')
+  ) {
+    const activeSkillNames = new Set(
+      Array.from(getInvokedSkillsForAgent(context.agentId).values()).map(
+        skill => skill.skillName,
+      ),
+    )
+    const match = findAutoTriggeredSkill(
+      preExpansionInput ?? inputString,
+      context.options.commands,
+      activeSkillNames,
+    )
+    if (match) {
+      const { processSlashCommand } = await import('./processSlashCommand.js')
+      const slashResult = await processSlashCommand(
+        `/${match.command.name} ${inputString}`,
+        precedingInputBlocks,
+        imageContentBlocks,
+        [],
+        context,
+        setToolJSX,
+        uuid,
+        isAlreadyProcessing,
+        canUseTool,
+      )
+      return addImageMetadataMessage(slashResult, imageMetadataTexts)
+    }
+  }
+
   // For slash commands, attachments will be extracted within getMessagesForSlashCommand
   const shouldExtractAttachments =
     !skipAttachments &&
@@ -511,6 +555,28 @@ async function processUserInputBase(
         ),
       )
     : []
+
+  if (
+    mode === 'prompt' &&
+    inputString !== null &&
+    !isMeta &&
+    (!inputString.startsWith('/') || effectiveSkipSlash)
+  ) {
+    const reminder = buildActiveSkillReminder(
+      consumeActiveSkillReminders(context.agentId).map(skill => ({
+        skillName: skill.skillName,
+        reminder: skill.skillPolicy!.reminder!,
+      })),
+    )
+    if (reminder) {
+      attachmentMessages.push(
+        createAttachmentMessage({
+          type: 'critical_system_reminder',
+          content: reminder,
+        }),
+      )
+    }
+  }
   queryCheckpoint('query_attachment_loading_end')
 
   // Bash commands

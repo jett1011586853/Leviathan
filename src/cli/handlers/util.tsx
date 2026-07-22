@@ -3,19 +3,11 @@
 import React from 'react'
 import { useManagePlugins } from '../../hooks/useManagePlugins.js'
 import type { Root } from '../../ink.js'
-import {
-  LEGACY_ACCOUNT_FEATURE_NOTICE,
-  LEVIATHAN_DISTRIBUTION_NOTICE,
-} from '../../leviathan/branding.js'
+import { LEVIATHAN_DISTRIBUTION_NOTICE } from '../../leviathan/branding.js'
 import { KeybindingSetup } from '../../keybindings/KeybindingProviderSetup.js'
 import { logEvent } from '../../services/analytics/index.js'
 import { MCPConnectionManager } from '../../services/mcp/MCPConnectionManager.js'
 import { AppStateProvider } from '../../state/AppState.js'
-
-export async function setupTokenHandler(_root: Root): Promise<void> {
-  process.stdout.write(`${LEGACY_ACCOUNT_FEATURE_NOTICE}\n`)
-  process.exit(0)
-}
 
 const DoctorLazy = React.lazy(() =>
   import('../../screens/Doctor.js').then(module => ({

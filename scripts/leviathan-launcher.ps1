@@ -7,6 +7,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $installRoot = $PSScriptRoot
 $executablePath = Join-Path $installRoot 'leviathan.exe'
+$gameCapturePath = Join-Path $installRoot 'leviathan-game-capture.exe'
 $updaterPath = Join-Path $installRoot 'leviathan-updater.ps1'
 $statePath = Join-Path $installRoot 'install-state.json'
 $pendingPath = Join-Path $installRoot 'pending-update.json'
@@ -51,9 +52,12 @@ function Apply-PendingUpdate {
         }
 
         $newExecutable = Join-Path $pendingDirectory 'leviathan-windows-x64.exe'
+        $newGameCapture = Join-Path $pendingDirectory 'leviathan-game-capture-windows-x64.exe'
+        $newLibvips = Join-Path $pendingDirectory 'libvips-42.dll'
+        $newLibvipsCpp = Join-Path $pendingDirectory 'libvips-cpp-8.17.3.dll'
         $newLauncher = Join-Path $pendingDirectory 'leviathan-launcher.ps1'
         $newUpdater = Join-Path $pendingDirectory 'leviathan-updater.ps1'
-        foreach ($requiredFile in @($newExecutable, $newLauncher, $newUpdater)) {
+        foreach ($requiredFile in @($newExecutable, $newLibvips, $newLibvipsCpp, $newLauncher, $newUpdater)) {
             if (-not (Test-Path -LiteralPath $requiredFile)) {
                 throw "Pending update is missing $requiredFile."
             }
@@ -79,6 +83,11 @@ function Apply-PendingUpdate {
 
         Copy-Item -LiteralPath $newLauncher -Destination (Join-Path $installRoot 'leviathan-launcher.ps1') -Force
         Copy-Item -LiteralPath $newUpdater -Destination $updaterPath -Force
+        if (Test-Path -LiteralPath $newGameCapture) {
+            Copy-Item -LiteralPath $newGameCapture -Destination $gameCapturePath -Force
+        }
+        Copy-Item -LiteralPath $newLibvips -Destination (Join-Path $installRoot 'libvips-42.dll') -Force
+        Copy-Item -LiteralPath $newLibvipsCpp -Destination (Join-Path $installRoot 'libvips-cpp-8.17.3.dll') -Force
 
         $state = Read-InstallState
         $state | Add-Member -NotePropertyName installedVersion -NotePropertyValue ([string]$pending.version) -Force
@@ -102,6 +111,9 @@ function Apply-PendingUpdate {
 function Test-UpdateCheckDue {
     if ($env:LEVIATHAN_DISABLE_AUTO_UPDATE -eq '1') {
         return $false
+    }
+    if (-not (Test-Path -LiteralPath $gameCapturePath)) {
+        return $true
     }
 
     $state = Read-InstallState
@@ -132,7 +144,8 @@ if ($manualUpdate) {
 }
 
 if ((Test-UpdateCheckDue) -and (Test-Path -LiteralPath $updaterPath)) {
-    $updaterArguments = "-NoLogo -NoProfile -ExecutionPolicy Bypass -File `"$updaterPath`" -InstallRoot `"$installRoot`" -Quiet"
+    $repairArgument = if (Test-Path -LiteralPath $gameCapturePath) { '' } else { ' -Force' }
+    $updaterArguments = "-NoLogo -NoProfile -ExecutionPolicy Bypass -File `"$updaterPath`" -InstallRoot `"$installRoot`" -Quiet$repairArgument"
     Start-Process -FilePath powershell.exe -ArgumentList $updaterArguments -WindowStyle Hidden | Out-Null
 }
 
@@ -141,5 +154,6 @@ if (-not (Test-Path -LiteralPath $executablePath)) {
 }
 
 $env:LEVIATHAN_CODE_INSTALL_ROOT = $installRoot
+$env:PATH = "$installRoot;$env:PATH"
 & $executablePath @LeviathanArgs
 exit $LASTEXITCODE

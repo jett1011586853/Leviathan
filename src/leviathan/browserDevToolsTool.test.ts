@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import { getEmptyToolPermissionContext, type ToolUseContext } from '../Tool.js'
 import { getTools } from '../tools.js'
 import { BrowserDevToolsTool } from '../tools/BrowserDevToolsTool/BrowserDevToolsTool.js'
+import { createStreamTypingPlan } from '../tools/BrowserDevToolsTool/browserDevTools.js'
 import { BROWSER_DEVTOOLS_TOOL_NAME } from '../tools/BrowserDevToolsTool/constants.js'
 
 function source(relativePath: string): string {
@@ -37,18 +38,14 @@ describe('Leviathan Browser DevTools tool', () => {
     })
     expect(
       computerUseTools.some(tool => tool.name === BROWSER_DEVTOOLS_TOOL_NAME),
-    ).toBe(
-      false,
-    )
+    ).toBe(false)
 
     const browserUseTools = getTools(getEmptyToolPermissionContext(), {
       includeBrowserUseTools: true,
     })
     expect(
       browserUseTools.some(tool => tool.name === BROWSER_DEVTOOLS_TOOL_NAME),
-    ).toBe(
-      true,
-    )
+    ).toBe(true)
   })
 
   test('asks for permission by default and allows full access mode', async () => {
@@ -83,7 +80,9 @@ describe('Leviathan Browser DevTools tool', () => {
   test('treats passive inspection as read-only', () => {
     expect(BrowserDevToolsTool.isReadOnly({ action: 'snapshot' })).toBe(true)
     expect(BrowserDevToolsTool.isReadOnly({ action: 'screenshot' })).toBe(true)
-    expect(BrowserDevToolsTool.isReadOnly({ action: 'click', selector: 'button' })).toBe(false)
+    expect(
+      BrowserDevToolsTool.isReadOnly({ action: 'click', selector: 'button' }),
+    ).toBe(false)
     expect(
       BrowserDevToolsTool.isReadOnly({
         action: 'cdp_send',
@@ -138,6 +137,21 @@ describe('Leviathan Browser DevTools tool', () => {
       action: 'ask_chatgpt',
       question: 'What is a likely cause of this test failure?',
     })
+    const validReference = await BrowserDevToolsTool.validateInput({
+      action: 'ask_chatgpt',
+      question: 'Review this failing case.',
+      url: 'https://chatgpt.com/c/example',
+    })
+    const invalidReference = await BrowserDevToolsTool.validateInput({
+      action: 'ask_chatgpt',
+      question: 'Review this failing case.',
+      url: 'https://example.com/c/example',
+    })
+    const insecureReference = await BrowserDevToolsTool.validateInput({
+      action: 'ask_chatgpt',
+      question: 'Review this failing case.',
+      url: 'http://chatgpt.com/c/example',
+    })
     const permission = await BrowserDevToolsTool.checkPermissions(
       {
         action: 'ask_chatgpt',
@@ -160,6 +174,9 @@ describe('Leviathan Browser DevTools tool', () => {
       missingQuestion.result === false ? missingQuestion.message : '',
     ).toContain('question')
     expect(validQuestion.result).toBe(true)
+    expect(validReference.result).toBe(true)
+    expect(invalidReference.result).toBe(false)
+    expect(insecureReference.result).toBe(false)
     expect(permission.behavior).toBe('ask')
     expect(permission.behavior === 'ask' ? permission.message : '').toContain(
       'ChatGPT',
@@ -173,6 +190,8 @@ describe('Leviathan Browser DevTools tool', () => {
     expect(files).toContain('pendingAnswer')
     expect(files).toContain('submittedNewQuestion: false')
     expect(files).toContain('ChatGPT is still generating')
+    expect(files).toContain('isSameChatGptTarget')
+    expect(files).toContain('specific ChatGPT conversation')
     expect(files).toContain('ask ChatGPT')
   })
 
@@ -198,6 +217,7 @@ describe('Leviathan Browser DevTools tool', () => {
     expect(prompt).toContain('stream_type_text')
     expect(prompt).toContain('character-by-character')
     expect(prompt).toContain('defaults to 200')
+    expect(prompt).toContain('with or without automatic indentation')
     expect(missingText.result).toBe(false)
     expect(missingText.result === false ? missingText.message : '').toContain(
       'text',
@@ -210,6 +230,40 @@ describe('Leviathan Browser DevTools tool', () => {
     expect(files).toContain('typing_delay_ms')
     expect(files).toContain('input.typing_delay_ms ?? 200')
     expect(files).toContain('clearFocusedEditor')
+    expect(files).toContain('buildReadStreamEditorExpression')
+    expect(files).toContain('buildReplaceStreamEditorExpression')
+    expect(files).toContain('indentationCorrections')
+    expect(files).toContain('verifiedExact')
+  })
+
+  test('keeps streamed source exact with and without editor auto-indent', () => {
+    const sourceText = [
+      'class Solution:',
+      '    def twoSum(self):',
+      '        if True:',
+      '            return []',
+    ].join('\n')
+    const plan = createStreamTypingPlan(sourceText)
+
+    const simulateEditor = (automaticIndent: string) => {
+      let editorText = ''
+      for (const step of plan) {
+        if (step.mode === 'reconcile') {
+          editorText = step.expectedText
+        } else {
+          editorText += step.character
+          if (step.character === '\n') editorText += automaticIndent
+        }
+        if (step.reconcileAfterInsert) editorText = step.expectedText
+      }
+      return editorText
+    }
+
+    expect(simulateEditor('')).toBe(sourceText)
+    expect(simulateEditor('    ')).toBe(sourceText)
+    expect(
+      plan.filter(step => step.mode === 'reconcile').length,
+    ).toBeGreaterThan(0)
   })
 
   test('returns screenshots as model-visible image blocks without exposing data URI text', () => {
@@ -230,17 +284,21 @@ describe('Leviathan Browser DevTools tool', () => {
     )
     expect(Array.isArray(block.content)).toBe(true)
     expect(JSON.stringify(block.content)).toContain('"type":"image"')
-    expect(JSON.stringify(block.content)).not.toContain(output.screenshot.dataUrl)
+    expect(JSON.stringify(block.content)).not.toContain(
+      output.screenshot.dataUrl,
+    )
   })
 
   test('returns ChatGPT guidance as model-visible text', () => {
     const output = {
       ok: true,
       action: 'ask_chatgpt' as const,
-      message: 'Asked ChatGPT through Browser Use and captured its response as external guidance.',
+      message:
+        'Asked ChatGPT through Browser Use and captured its response as external guidance.',
       chatgpt: {
         question: 'Why is this test failing?',
-        answer: 'Check whether the new state field is initialized in every AppState constructor.',
+        answer:
+          'Check whether the new state field is initialized in every AppState constructor.',
         url: 'https://chatgpt.com/c/example',
         tabId: 'tab-1',
       },

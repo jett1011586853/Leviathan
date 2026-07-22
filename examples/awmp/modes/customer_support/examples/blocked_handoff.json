@@ -1,0 +1,26 @@
+{
+  "awmp": "0.1",
+  "kind": "Task",
+  "id": "task_customer_support_blocked_handoff_example",
+  "contextId": "ctx_customer_support_blocked_handoff_example",
+  "title": "Reject incompatible presentation to support handoff",
+  "objective": "Attempt an invalid PPT-to-support handoff and verify the mode boundary blocks execution.",
+  "modeIds": ["com.leviathan.ppt", "com.leviathan.customer_support"],
+  "inputs": {
+    "audience": "support leadership",
+    "maxSlides": 8,
+    "ticketSample": [
+      { "id": "T-2001", "category": "refund", "severity": "high" },
+      { "id": "T-2002", "category": "billing", "severity": "medium" }
+    ]
+  },
+  "status": {
+    "state": "submitted"
+  },
+  "constraints": {
+    "maxRuntimeSeconds": 900,
+    "network": "deny"
+  },
+  "artifacts": [],
+  "traceId": "trace_customer_support_blocked_handoff_example"
+}

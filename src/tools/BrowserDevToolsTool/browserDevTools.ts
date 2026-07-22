@@ -213,31 +213,48 @@ export async function runBrowserDevTools(
       return withTab(input, signal, async (client, tab) => {
         const text = input.text ?? ''
         const typingDelayMs = input.typing_delay_ms ?? 200
+        const clearBeforeTyping = input.clear !== false
         const focusResult = (await evaluate(
           client,
           buildFocusStreamTargetExpression(input.selector),
           input.timeout_ms,
         )) as Record<string, unknown>
-        if (input.clear !== false) {
+        const initialEditorState = clearBeforeTyping
+          ? null
+          : await readFocusedStreamEditor(
+              client,
+              input.selector,
+              input.timeout_ms,
+            )
+        if (clearBeforeTyping) {
           await clearFocusedEditor(client)
         }
-        const streamedCharacters = await streamInsertText(
+        const streamResult = await streamInsertText(
           client,
           text,
           typingDelayMs,
           signal,
+          {
+            selector: input.selector,
+            timeoutMs: input.timeout_ms,
+            baseText: initialEditorState?.readable
+              ? initialEditorState.text
+              : '',
+            exactCorrectionEnabled:
+              clearBeforeTyping || initialEditorState?.readable === true,
+          },
         )
         return {
           ok: true,
           action: input.action,
-          message: `Streamed ${streamedCharacters} characters into the browser editor.`,
+          message: `Streamed ${streamResult.streamedCharacters} characters into the browser editor.`,
           tab,
           result: {
             ...focusResult,
-            streamedCharacters,
+            ...streamResult,
             textLength: text.length,
             typingDelayMs,
-            clearedBeforeTyping: input.clear !== false,
+            clearedBeforeTyping: clearBeforeTyping,
           },
         }
       })
@@ -341,7 +358,9 @@ async function launchBrowser(
     await delay(250, signal)
   }
 
-  throw new Error(`Launched ${exe.name}, but DevTools did not become ready at ${endpoint}.`)
+  throw new Error(
+    `Launched ${exe.name}, but DevTools did not become ready at ${endpoint}.`,
+  )
 }
 
 async function connect(
@@ -399,7 +418,10 @@ async function closeTab(
   signal?: AbortSignal,
 ): Promise<BrowserDevToolsOutput> {
   const tab = await getTargetTab(input, signal)
-  const text = await getText(`${getEndpoint(input)}/json/close/${tab.id}`, signal)
+  const text = await getText(
+    `${getEndpoint(input)}/json/close/${tab.id}`,
+    signal,
+  )
   return {
     ok: true,
     action: input.action,
@@ -415,13 +437,14 @@ async function askChatGpt(
 ): Promise<BrowserDevToolsOutput> {
   const question = required(input.question ?? input.text, 'question').trim()
   if (!question) throw new Error('question is required.')
+  const targetUrl = getChatGptTargetUrl(input)
 
   if (!(await canConnect(input, signal))) {
     await launchBrowser(
       {
         ...input,
         action: 'launch_browser',
-        url: CHATGPT_URL,
+        url: targetUrl,
       },
       signal,
     )
@@ -507,11 +530,7 @@ async function askChatGpt(
       }
     }
 
-    await client.send(
-      'Input.insertText',
-      { text: question },
-      input.timeout_ms,
-    )
+    await client.send('Input.insertText', { text: question }, input.timeout_ms)
     await delay(250, signal)
 
     const submitted = (await evaluate(
@@ -546,7 +565,8 @@ async function askChatGpt(
     return {
       ok: true,
       action: input.action,
-      message: 'Asked ChatGPT through Browser Use and captured its response as external guidance.',
+      message:
+        'Asked ChatGPT through Browser Use and captured its response as external guidance.',
       endpoint: getEndpoint(input),
       tab,
       chatgpt: {
@@ -651,7 +671,7 @@ async function getTargetTab(
   const pages = tabs.filter(tab => tab.type === 'page')
   const tab = input.tab_id
     ? tabs.find(candidate => candidate.id === input.tab_id)
-    : pages[0] ?? tabs[0]
+    : (pages[0] ?? tabs[0])
   if (!tab) {
     throw new Error('No Browser DevTools tabs are available.')
   }
@@ -662,15 +682,18 @@ async function getOrOpenChatGptTab(
   input: BrowserDevToolsInput,
   signal?: AbortSignal,
 ): Promise<BrowserDevToolsTab> {
+  const targetUrl = getChatGptTargetUrl(input)
   let tabs = await listTabs(input, signal)
-  const existing = tabs.find(isChatGptTab)
+  const existing = input.url
+    ? tabs.find(tab => isSameChatGptTarget(tab.url, targetUrl))
+    : tabs.find(isChatGptTab)
   if (existing) return existing
 
   const created = await newTab(
     {
       ...input,
       action: 'new_tab',
-      url: CHATGPT_URL,
+      url: targetUrl,
     },
     signal,
   )
@@ -678,10 +701,47 @@ async function getOrOpenChatGptTab(
   tabs = await listTabs(input, signal)
   return (
     tabs.find(tab => tab.id === created.tab?.id) ??
-    tabs.find(isChatGptTab) ??
+    tabs.find(tab => isSameChatGptTarget(tab.url, targetUrl)) ??
     created.tab ??
     getTargetTab(input, signal)
   )
+}
+
+function getChatGptTargetUrl(input: BrowserDevToolsInput): string {
+  const rawUrl = input.url?.trim() || CHATGPT_URL
+  let parsed: URL
+  try {
+    parsed = new URL(rawUrl)
+  } catch {
+    throw new Error('ChatGPT reference URL is invalid.')
+  }
+  const host = parsed.hostname.toLowerCase()
+  if (
+    parsed.protocol !== 'https:' ||
+    (host !== 'chatgpt.com' &&
+      !host.endsWith('.chatgpt.com') &&
+      host !== 'chat.openai.com')
+  ) {
+    throw new Error(
+      'ChatGPT reference URL must use https://chatgpt.com or https://chat.openai.com.',
+    )
+  }
+  parsed.hash = ''
+  return parsed.toString()
+}
+
+function isSameChatGptTarget(candidateUrl: string, targetUrl: string): boolean {
+  try {
+    const candidate = new URL(candidateUrl)
+    const target = new URL(targetUrl)
+    return (
+      candidate.hostname.toLowerCase() === target.hostname.toLowerCase() &&
+      candidate.pathname.replace(/\/$/, '') ===
+        target.pathname.replace(/\/$/, '')
+    )
+  } catch {
+    return false
+  }
 }
 
 function isChatGptTab(tab: BrowserDevToolsTab): boolean {
@@ -774,7 +834,10 @@ async function listTabs(
   input: BrowserDevToolsInput,
   signal?: AbortSignal,
 ): Promise<BrowserDevToolsTab[]> {
-  return getJson<BrowserDevToolsTab[]>(`${getEndpoint(input)}/json/list`, signal)
+  return getJson<BrowserDevToolsTab[]>(
+    `${getEndpoint(input)}/json/list`,
+    signal,
+  )
 }
 
 async function getBrowserWebSocketDebuggerUrl(
@@ -855,7 +918,10 @@ function normalizeKey(key: string): {
   nativeVirtualKeyCode: number
 } {
   const lower = key.trim().toLowerCase()
-  const named: Record<string, { key: string; code: string; codePoint: number }> = {
+  const named: Record<
+    string,
+    { key: string; code: string; codePoint: number }
+  > = {
     enter: { key: 'Enter', code: 'Enter', codePoint: 13 },
     return: { key: 'Enter', code: 'Enter', codePoint: 13 },
     tab: { key: 'Tab', code: 'Tab', codePoint: 9 },
@@ -912,17 +978,28 @@ class CdpClient {
     const client = new CdpClient(socket)
     await new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(
-        () => reject(new Error('Timed out connecting to Browser DevTools websocket.')),
+        () =>
+          reject(
+            new Error('Timed out connecting to Browser DevTools websocket.'),
+          ),
         DEFAULT_TIMEOUT_MS,
       )
-      socket.addEventListener('open', () => {
-        clearTimeout(timeout)
-        resolve()
-      }, { once: true })
-      socket.addEventListener('error', () => {
-        clearTimeout(timeout)
-        reject(new Error('Failed to connect to Browser DevTools websocket.'))
-      }, { once: true })
+      socket.addEventListener(
+        'open',
+        () => {
+          clearTimeout(timeout)
+          resolve()
+        },
+        { once: true },
+      )
+      socket.addEventListener(
+        'error',
+        () => {
+          clearTimeout(timeout)
+          reject(new Error('Failed to connect to Browser DevTools websocket.'))
+        },
+        { once: true },
+      )
       signal?.addEventListener(
         'abort',
         () => {
@@ -1056,9 +1133,10 @@ function delay(ms: number, signal?: AbortSignal): Promise<void> {
   })
 }
 
-function findBrowserExecutable(
-  preferred: BrowserDevToolsInput['browser'],
-): { name: string; path: string } {
+function findBrowserExecutable(preferred: BrowserDevToolsInput['browser']): {
+  name: string
+  path: string
+} {
   const candidates = getBrowserCandidates()
   const ordered =
     preferred && preferred !== 'auto'
@@ -1078,7 +1156,8 @@ function getBrowserCandidates(): Array<{
   path: string
 }> {
   if (platform() === 'win32') {
-    const local = process.env.LOCALAPPDATA ?? join(homedir(), 'AppData', 'Local')
+    const local =
+      process.env.LOCALAPPDATA ?? join(homedir(), 'AppData', 'Local')
     return [
       {
         id: 'edge',
@@ -1254,6 +1333,278 @@ function buildFocusStreamTargetExpression(selector?: string): string {
   })()`
 }
 
+type StreamEditorState = {
+  readable: boolean
+  text: string
+  strategy: string
+}
+
+type StreamEditorReplaceResult = {
+  replaced: boolean
+  strategy: string
+}
+
+export type StreamTypingStep = {
+  character: string
+  expectedText: string
+  mode: 'insert' | 'reconcile'
+  reconcileAfterInsert: boolean
+}
+
+export function createStreamTypingPlan(
+  text: string,
+  baseText = '',
+): StreamTypingStep[] {
+  const characters = Array.from(text.replace(/\r\n?/g, '\n'))
+  const steps: StreamTypingStep[] = []
+  let expectedText = baseText
+  let atLineStart = true
+
+  for (const character of characters) {
+    expectedText += character
+    const isLeadingIndent =
+      atLineStart && (character === ' ' || character === '\t')
+    steps.push({
+      character,
+      expectedText,
+      mode: isLeadingIndent ? 'reconcile' : 'insert',
+      reconcileAfterInsert: character === '\n',
+    })
+
+    if (character === '\n') {
+      atLineStart = true
+    } else if (!isLeadingIndent) {
+      atLineStart = false
+    }
+  }
+
+  return steps
+}
+
+function buildReadStreamEditorExpression(selector?: string): string {
+  return buildStreamEditorAccessExpression(selector)
+}
+
+function buildReplaceStreamEditorExpression(
+  selector: string | undefined,
+  text: string,
+): string {
+  return buildStreamEditorAccessExpression(selector, text)
+}
+
+function buildStreamEditorAccessExpression(
+  selector?: string,
+  replacementText?: string,
+): string {
+  const replacing = replacementText !== undefined
+  return `(() => {
+    const requestedSelector = ${selector ? jsString(selector) : 'null'};
+    const replacing = ${replacing ? 'true' : 'false'};
+    const replacementText = ${replacing ? jsString(replacementText ?? '') : "''"};
+    const editableSelector = [
+      'textarea.inputarea',
+      'textarea.ace_text-input',
+      '.cm-content[contenteditable="true"]',
+      '.CodeMirror textarea',
+      'textarea',
+      'input',
+      '[contenteditable="true"]',
+      '[role="textbox"]'
+    ].join(',');
+    const editableChild = element => element?.matches?.(editableSelector)
+      ? element
+      : element?.querySelector?.(editableSelector);
+    const requested = requestedSelector ? document.querySelector(requestedSelector) : null;
+    const active = document.activeElement && document.activeElement !== document.body
+      ? document.activeElement
+      : null;
+    const fallback = document.querySelector([
+      '.monaco-editor textarea.inputarea',
+      '.monaco-editor textarea',
+      '.cm-content[contenteditable="true"]',
+      '.CodeMirror textarea',
+      '.ace_text-input',
+      'textarea',
+      '[contenteditable="true"]',
+      '[role="textbox"]'
+    ].join(','));
+    const target = editableChild(requested) || editableChild(active) || fallback;
+    if (!target) {
+      return replacing
+        ? { replaced: false, strategy: 'target-not-found' }
+        : { readable: false, text: '', strategy: 'target-not-found' };
+    }
+    const focusTarget = () => {
+      if (typeof target.focus === 'function') target.focus();
+    };
+    const readResult = (strategy, value) => ({
+      readable: true,
+      text: String(value ?? ''),
+      strategy
+    });
+    const replaceResult = strategy => {
+      focusTarget();
+      return { replaced: true, strategy };
+    };
+
+    const codeMirrorRoot = target.closest?.('.CodeMirror') || target.querySelector?.('.CodeMirror');
+    const codeMirror = codeMirrorRoot?.CodeMirror;
+    if (codeMirror && typeof codeMirror.getValue === 'function') {
+      if (!replacing) return readResult('codemirror5', codeMirror.getValue());
+      codeMirror.setValue(replacementText);
+      const lastLine = Math.max(0, codeMirror.lineCount() - 1);
+      codeMirror.setCursor(lastLine, codeMirror.getLine(lastLine).length);
+      codeMirror.focus();
+      return { replaced: true, strategy: 'codemirror5' };
+    }
+
+    const aceRoot = target.closest?.('.ace_editor') || target.querySelector?.('.ace_editor');
+    const aceEditor = aceRoot?.env?.editor ||
+      (aceRoot && globalThis.ace?.edit ? globalThis.ace.edit(aceRoot) : null);
+    if (aceEditor && typeof aceEditor.getValue === 'function') {
+      if (!replacing) return readResult('ace', aceEditor.getValue());
+      aceEditor.setValue(replacementText, -1);
+      aceEditor.focus();
+      return { replaced: true, strategy: 'ace' };
+    }
+
+    const cmContent = target.matches?.('.cm-content')
+      ? target
+      : target.closest?.('.cm-editor')?.querySelector?.('.cm-content');
+    const cmView = cmContent?.cmView?.view || cmContent?.cmView;
+    if (cmView?.state?.doc && typeof cmView.dispatch === 'function') {
+      if (!replacing) return readResult('codemirror6', cmView.state.doc.toString());
+      cmView.dispatch({
+        changes: { from: 0, to: cmView.state.doc.length, insert: replacementText },
+        selection: { anchor: replacementText.length }
+      });
+      cmView.focus();
+      return { replaced: true, strategy: 'codemirror6' };
+    }
+
+    const monacoRoot = target.closest?.('.monaco-editor') || target.querySelector?.('.monaco-editor');
+    const monacoApi = monacoRoot ? globalThis.monaco?.editor : null;
+    const monacoEditors = monacoApi?.getEditors ? monacoApi.getEditors() : [];
+    const focusedMonacoEditor = monacoEditors.find(editor =>
+      editor.hasTextFocus?.() || editor.hasWidgetFocus?.()
+    ) || monacoEditors.find(editor => editor.getDomNode?.() === monacoRoot);
+    const monacoModels = monacoApi?.getModels
+      ? monacoApi.getModels()
+      : [];
+    const monacoModel = focusedMonacoEditor?.getModel?.() ||
+      (monacoModels.length === 1 ? monacoModels[0] : null);
+    if (monacoModel && typeof monacoModel.getValue === 'function') {
+      if (!replacing) return readResult('monaco', monacoModel.getValue());
+      if (focusedMonacoEditor?.setValue) {
+        focusedMonacoEditor.setValue(replacementText);
+        focusedMonacoEditor.setPosition?.(monacoModel.getPositionAt(replacementText.length));
+        focusedMonacoEditor.focus?.();
+      } else {
+        monacoModel.setValue(replacementText);
+        focusTarget();
+      }
+      return { replaced: true, strategy: 'monaco' };
+    }
+
+    const managedEditorRoot = target.closest?.('.monaco-editor,.CodeMirror,.ace_editor,.cm-editor');
+    if (managedEditorRoot) {
+      return replacing
+        ? { replaced: false, strategy: 'managed-editor-api-unavailable' }
+        : { readable: false, text: '', strategy: 'managed-editor-api-unavailable' };
+    }
+
+    if ('value' in target) {
+      if (!replacing) return readResult('native-value', target.value);
+      const prototype = target.tagName === 'TEXTAREA'
+        ? HTMLTextAreaElement.prototype
+        : HTMLInputElement.prototype;
+      const setter = Object.getOwnPropertyDescriptor(prototype, 'value')?.set;
+      if (setter) setter.call(target, replacementText);
+      else target.value = replacementText;
+      target.dispatchEvent(new InputEvent('input', {
+        bubbles: true,
+        inputType: 'insertText',
+        data: replacementText
+      }));
+      target.dispatchEvent(new Event('change', { bubbles: true }));
+      if (typeof target.setSelectionRange === 'function') {
+        target.setSelectionRange(replacementText.length, replacementText.length);
+      }
+      return replaceResult('native-value');
+    }
+
+    if (target.isContentEditable || target.getAttribute?.('role') === 'textbox') {
+      if (!replacing) return readResult('contenteditable', target.textContent || '');
+      target.textContent = replacementText;
+      target.dispatchEvent(new InputEvent('input', {
+        bubbles: true,
+        inputType: 'insertText',
+        data: replacementText
+      }));
+      const selection = globalThis.getSelection?.();
+      if (selection) {
+        const range = document.createRange();
+        range.selectNodeContents(target);
+        range.collapse(false);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+      return replaceResult('contenteditable');
+    }
+
+    return replacing
+      ? { replaced: false, strategy: 'unsupported-target' }
+      : { readable: false, text: '', strategy: 'unsupported-target' };
+  })()`
+}
+
+async function readFocusedStreamEditor(
+  client: CdpClient,
+  selector?: string,
+  timeoutMs?: number,
+): Promise<StreamEditorState> {
+  const result = (await evaluate(
+    client,
+    buildReadStreamEditorExpression(selector),
+    timeoutMs,
+  )) as Partial<StreamEditorState> | undefined
+  return {
+    readable: result?.readable === true,
+    text: typeof result?.text === 'string' ? result.text : '',
+    strategy:
+      typeof result?.strategy === 'string' ? result.strategy : 'unknown',
+  }
+}
+
+async function replaceFocusedStreamEditor(
+  client: CdpClient,
+  selector: string | undefined,
+  text: string,
+  timeoutMs?: number,
+  forceKeyboardFallback = false,
+): Promise<StreamEditorReplaceResult> {
+  if (!forceKeyboardFallback) {
+    const result = (await evaluate(
+      client,
+      buildReplaceStreamEditorExpression(selector, text),
+      timeoutMs,
+    )) as Partial<StreamEditorReplaceResult> | undefined
+    if (result?.replaced === true) {
+      return {
+        replaced: true,
+        strategy:
+          typeof result.strategy === 'string' ? result.strategy : 'page-api',
+      }
+    }
+  }
+
+  await clearFocusedEditor(client)
+  if (text) {
+    await client.send('Input.insertText', { text })
+  }
+  return { replaced: true, strategy: 'cdp-select-all' }
+}
+
 async function clearFocusedEditor(client: CdpClient): Promise<void> {
   const isMac = process.platform === 'darwin'
   const modifierKey = isMac ? 'Meta' : 'Control'
@@ -1299,15 +1650,119 @@ async function streamInsertText(
   text: string,
   typingDelayMs: number,
   signal?: AbortSignal,
-): Promise<number> {
-  const characters = Array.from(text.replace(/\r\n/g, '\n'))
-  for (const character of characters) {
-    await client.send('Input.insertText', { text: character })
+  options: {
+    selector?: string
+    timeoutMs?: number
+    baseText: string
+    exactCorrectionEnabled: boolean
+  } = {
+    baseText: '',
+    exactCorrectionEnabled: true,
+  },
+): Promise<{
+  streamedCharacters: number
+  indentationCorrections: number
+  exactReplacements: number
+  exactCorrectionEnabled: boolean
+  exactCorrectionStrategies: string[]
+  verificationAvailable: boolean
+  verifiedExact: boolean
+}> {
+  const plan = createStreamTypingPlan(text, options.baseText)
+  const expectedText = plan.at(-1)?.expectedText ?? options.baseText
+  const strategies = new Set<string>()
+  let indentationCorrections = 0
+  let exactReplacements = 0
+
+  const reconcile = async (value: string, forceKeyboardFallback = false) => {
+    const result = await replaceFocusedStreamEditor(
+      client,
+      options.selector,
+      value,
+      options.timeoutMs,
+      forceKeyboardFallback,
+    )
+    strategies.add(result.strategy)
+    exactReplacements += 1
+  }
+
+  if (options.exactCorrectionEnabled && options.baseText) {
+    await reconcile(options.baseText)
+  }
+
+  for (const step of plan) {
+    if (signal?.aborted) {
+      throw new Error('Browser editor streaming was aborted.')
+    }
+    if (options.exactCorrectionEnabled && step.mode === 'reconcile') {
+      await reconcile(step.expectedText)
+      indentationCorrections += 1
+    } else {
+      await client.send('Input.insertText', { text: step.character })
+    }
+    if (options.exactCorrectionEnabled && step.reconcileAfterInsert) {
+      await reconcile(step.expectedText)
+      indentationCorrections += 1
+    }
     if (typingDelayMs > 0) {
       await delay(typingDelayMs, signal)
     }
   }
-  return characters.length
+
+  if (!options.exactCorrectionEnabled) {
+    return {
+      streamedCharacters: plan.length,
+      indentationCorrections,
+      exactReplacements,
+      exactCorrectionEnabled: false,
+      exactCorrectionStrategies: [],
+      verificationAvailable: false,
+      verifiedExact: false,
+    }
+  }
+
+  await reconcile(expectedText)
+  let finalState = await readFocusedStreamEditor(
+    client,
+    options.selector,
+    options.timeoutMs,
+  )
+  let verifiedExact =
+    finalState.readable &&
+    normalizeStreamEditorText(finalState.text) ===
+      normalizeStreamEditorText(expectedText)
+
+  if (finalState.readable && !verifiedExact) {
+    await reconcile(expectedText, true)
+    finalState = await readFocusedStreamEditor(
+      client,
+      options.selector,
+      options.timeoutMs,
+    )
+    verifiedExact =
+      finalState.readable &&
+      normalizeStreamEditorText(finalState.text) ===
+        normalizeStreamEditorText(expectedText)
+    if (!verifiedExact) {
+      throw new Error(
+        'Browser editor content verification failed after streaming. The editor did not preserve the exact source text.',
+      )
+    }
+  }
+
+  return {
+    streamedCharacters: plan.length,
+    indentationCorrections,
+    exactReplacements,
+    exactCorrectionEnabled: true,
+    exactCorrectionStrategies: [...strategies],
+    verificationAvailable: finalState.readable,
+    verifiedExact,
+  }
+}
+
+function normalizeStreamEditorText(text: string): string {
+  return text.replace(/\r\n?/g, '\n')
 }
 
 const CHATGPT_PAGE_STATE_HELPERS = `

@@ -5060,7 +5060,7 @@ export function filterOrphanedThinkingOnlyMessages(
 /**
  * Strip signature-bearing blocks (thinking, redacted_thinking, connector_text)
  * from all assistant messages. Their signatures are bound to the API key that
- * generated them; after a credential change (e.g. /login) they're invalid and
+ * generated them; after a provider credential change they're invalid and
  * the API rejects them with a 400.
  */
 export function stripSignatureBlocks(messages: Message[]): Message[] {

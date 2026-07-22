@@ -94,6 +94,18 @@ cd D:\path\to\your-project
 leviathan
 ```
 
+### 离线安装
+
+目标电脑无法访问 GitHub 时，可以在开发机生成完整离线包：
+
+```powershell
+bun run build:offline
+```
+
+将 `artifacts\offline` 中生成的 ZIP 通过 U 盘、局域网或可访问的网盘传给目标电脑。目标用户完整解压 ZIP 后双击 `install.cmd` 即可。离线安装器会验证 SHA-256、安装到 `%LOCALAPPDATA%\Leviathan` 并注册用户 PATH，不需要 Bun、Git 或管理员权限。
+
+离线包不会携带开发者的模型配置、API Key、Cookie 或个人会话。目标用户仍需在首次启动后通过 `/model` 配置自己的模型服务。模型调用本身需要目标电脑能够访问对应的模型网关。
+
 首次使用时，建议输入：
 
 ```text

@@ -1,0 +1,33 @@
+{
+  "awmp": "0.1",
+  "kind": "Task",
+  "id": "task_support_to_ppt_demo",
+  "contextId": "ctx_support_to_ppt_demo",
+  "title": "Support analysis to management presentation",
+  "objective": "Analyze a support ticket sample, produce a governed support report, then create management presentation artifacts from that report.",
+  "modeIds": ["com.leviathan.customer_support", "com.leviathan.ppt"],
+  "inputs": {
+    "dateRange": { "from": "2026-07-01", "to": "2026-07-07" },
+    "audience": "management",
+    "maxSlides": 8,
+    "ticketSample": [
+      { "id": "T-1001", "category": "refund", "severity": "high" },
+      { "id": "T-1002", "category": "billing", "severity": "medium" },
+      { "id": "T-1003", "category": "refund", "severity": "high" },
+      { "id": "T-1004", "category": "delivery", "severity": "medium" },
+      { "id": "T-1005", "category": "billing", "severity": "medium" },
+      { "id": "T-1006", "category": "delivery", "severity": "medium" }
+    ]
+  },
+  "status": {
+    "state": "submitted",
+    "timestamp": "2026-07-08T09:00:00+08:00"
+  },
+  "constraints": {
+    "maxRuntimeSeconds": 900,
+    "network": "deny",
+    "requiresHumanApprovalFor": ["refund:create", "email:send_external"]
+  },
+  "artifacts": [],
+  "traceId": "trace_support_to_ppt_demo"
+}

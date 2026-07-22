@@ -48,7 +48,7 @@ export async function checkAndDisableBypassPermissionsIfNeeded(
 
 /**
  * Reset the run-once flag for checkAndDisableBypassPermissionsIfNeeded.
- * Call this after /login so the gate check re-runs with the new org.
+ * Call this after managed identity changes so the gate check re-runs.
  */
 export function resetBypassPermissionsCheck(): void {
   bypassPermissionsCheckRan = false
@@ -118,7 +118,7 @@ export async function checkAndDisableAutoModeIfNeeded(
 
 /**
  * Reset the run-once flag for checkAndDisableAutoModeIfNeeded.
- * Call this after /login so the gate check re-runs with the new org.
+ * Call this after managed identity changes so the gate check re-runs.
  */
 export function resetAutoModeGateCheck(): void {
   autoModeCheckRan = false

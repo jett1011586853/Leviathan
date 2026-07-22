@@ -1,0 +1,51 @@
+awmp: "0.1"
+kind: "Mode"
+id: "com.leviathan.customer_support"
+name: "Customer Support Analysis Mode"
+version: "0.1.0"
+description: "Analyze support ticket fixtures, identify issue clusters, draft management-ready findings, and mark approval-sensitive refund cases."
+activation:
+  intents:
+    - "analyze customer support tickets"
+    - "summarize complaint trends"
+    - "identify refund approval cases"
+    - "prepare support findings for handoff"
+  examples:
+    - "Analyze last week's support complaints and produce a structured report."
+    - "Find the top complaint categories and refund cases that need approval."
+  antiExamples:
+    - "Create presentation slides from an existing analysis report."
+inputs:
+  accepted:
+    - "dateRange"
+    - "ticketSample"
+    - "audience"
+outputs:
+  artifacts:
+    - type: "support.analysis.report"
+      mediaType: "application/json"
+      schema: "schemas/analysis_report.schema.json"
+tools:
+  local:
+    - name: "analyze_tickets"
+      command: "bun tools/analyze_tickets.ts"
+permissions:
+  default:
+    - "artifact:read"
+    - "artifact:write"
+    - "support:read"
+  requiresApproval:
+    - "refund:create"
+    - "email:send_external"
+  denied:
+    - "secrets:exfiltrate"
+    - "policy:export_internal_raw"
+    - "policy:bypass_approval"
+validators:
+  - id: "support_artifact_contract_check"
+    command: "bun validators/check_artifacts.ts"
+    blocking: true
+handoffs:
+  canDelegateTo:
+    - "com.leviathan.ppt"
+  canReceiveFrom: []

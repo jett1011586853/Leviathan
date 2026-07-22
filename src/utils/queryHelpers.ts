@@ -6,6 +6,7 @@ import {
 } from 'src/bootstrap/state.js'
 import type { SDKMessage } from 'src/entrypoints/agentSdkTypes.js'
 import type { CanUseToolFn } from '../hooks/useCanUseTool.js'
+import { isRecoverablePrematureStopReason } from '../query/prematureStopRecovery.js'
 import { runTools } from '../services/tools/toolOrchestration.js'
 import { findToolByName, type Tool, type Tools } from '../Tool.js'
 import { BASH_TOOL_NAME } from '../tools/BashTool/toolName.js'
@@ -58,6 +59,7 @@ export function isResultSuccessful(
   stopReason: string | null = null,
 ): message is Message {
   if (!message) return false
+  if (isRecoverablePrematureStopReason(stopReason)) return false
 
   if (message.type === 'assistant') {
     const lastContent = last(message.message.content)

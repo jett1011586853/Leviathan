@@ -25,6 +25,10 @@ import {
 } from '../markdownConfigLoader.js'
 import { parseUserSpecifiedModel } from '../model/model.js'
 import { executeShellCommandsInPrompt } from '../promptShellExecution.js'
+import {
+  getSkillWhenToUse,
+  parseSkillRuntimePolicy,
+} from '../skillPolicy.js'
 import { loadAllPluginsCacheOnly } from './pluginLoader.js'
 import {
   loadPluginOptions,
@@ -264,7 +268,7 @@ function createPluginCommand(
     const argumentNames = parseArgumentNames(
       frontmatter.arguments as string | string[] | undefined,
     )
-    const whenToUse = frontmatter.when_to_use as string | undefined
+    const whenToUse = getSkillWhenToUse(frontmatter)
     const version = frontmatter.version as string | undefined
     const displayName = frontmatter.name as string | undefined
 
@@ -306,6 +310,7 @@ function createPluginCommand(
       argumentHint,
       argNames: argumentNames.length > 0 ? argumentNames : undefined,
       whenToUse,
+      skillPolicy: parseSkillRuntimePolicy(frontmatter, commandName),
       version,
       model,
       effort,

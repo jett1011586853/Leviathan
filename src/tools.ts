@@ -1,6 +1,8 @@
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import { toolMatchesName, type Tool, type Tools } from './Tool.js'
 import { AgentTool } from './tools/AgentTool/AgentTool.js'
+import { AwmpTool } from './tools/AwmpTool/AwmpTool.js'
+import { GameModelTool } from './tools/GameModelTool/GameModelTool.js'
 import { SkillTool } from './tools/SkillTool/SkillTool.js'
 import { BashTool } from './tools/BashTool/BashTool.js'
 import { FileEditTool } from './tools/FileEditTool/FileEditTool.js'
@@ -143,6 +145,7 @@ import {
   filterBrowserUseFeatureTools,
   filterComputerUseFeatureTools,
 } from './utils/computerUseFeature.js'
+import { filterGameModelFeatureTools } from './utils/gameModelFeature.js'
 import {
   REPL_TOOL_NAME,
   REPL_ONLY_TOOLS,
@@ -168,6 +171,7 @@ export type ToolPreset = (typeof TOOL_PRESETS)[number]
 type ToolAssemblyOptions = {
   includeComputerUseTools?: boolean
   includeBrowserUseTools?: boolean
+  includeGameModelTools?: boolean
 }
 
 export function parseToolPreset(preset: string): ToolPreset | null {
@@ -185,8 +189,11 @@ export function parseToolPreset(preset: string): ToolPreset | null {
  * @returns Array of tool names
  */
 export function getToolsForDefaultPreset(): string[] {
-  const tools = filterBrowserUseFeatureTools(
-    filterComputerUseFeatureTools(getAllBaseTools(), false),
+  const tools = filterGameModelFeatureTools(
+    filterBrowserUseFeatureTools(
+      filterComputerUseFeatureTools(getAllBaseTools(), false),
+      false,
+    ),
     false,
   )
   const isEnabled = tools.map(tool => tool.isEnabled())
@@ -204,6 +211,8 @@ export function getToolsForDefaultPreset(): string[] {
 export function getAllBaseTools(): Tools {
   return [
     AgentTool,
+    AwmpTool,
+    GameModelTool,
     TaskOutputTool,
     BashTool,
     // Ant-native builds have bfs/ugrep embedded in the bun binary (same ARGV0
@@ -319,12 +328,15 @@ export const getTools = (
     SYNTHETIC_OUTPUT_TOOL_NAME,
   ])
 
-  const featureFilteredTools = filterBrowserUseFeatureTools(
-    filterComputerUseFeatureTools(
-      getAllBaseTools(),
-      options.includeComputerUseTools === true,
+  const featureFilteredTools = filterGameModelFeatureTools(
+    filterBrowserUseFeatureTools(
+      filterComputerUseFeatureTools(
+        getAllBaseTools(),
+        options.includeComputerUseTools === true,
+      ),
+      options.includeBrowserUseTools === true,
     ),
-    options.includeBrowserUseTools === true,
+    options.includeGameModelTools === true,
   )
 
   const tools = featureFilteredTools.filter(tool => !specialTools.has(tool.name))

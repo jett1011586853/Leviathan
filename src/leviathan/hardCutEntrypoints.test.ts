@@ -18,14 +18,27 @@ describe('Leviathan hard-cut entry points', () => {
     expect(onboarding).not.toContain('isAnthropicAuthEnabled')
   })
 
-  test('login commands do not start account OAuth', () => {
-    const inSessionLogin = source('commands/login/login.tsx')
-    const cliAuth = source('cli/handlers/auth.ts')
+  test('product account login entry points are absent', () => {
+    const commands = source('commands.ts')
+    const main = source('main.tsx')
 
-    expect(inSessionLogin).not.toContain('ConsoleOAuthFlow')
-    expect(inSessionLogin).toContain('ACCOUNT_LOGIN_STATUS')
-    expect(cliAuth).not.toContain('startOAuthFlow')
-    expect(cliAuth).toContain('ACCOUNT_LOGIN_STATUS')
+    expect(commands).not.toContain("./commands/login/index.js")
+    expect(commands).not.toContain("./commands/logout/index.js")
+    expect(main).not.toContain("program.command('auth')")
+    expect(main).not.toContain("program.command('setup-token')")
+    expect(main).not.toContain(".option('--chrome'")
+    expect(main).not.toContain(".option('--no-chrome'")
+    expect(main).not.toContain('Please run /login')
+  })
+
+  test('provider authentication errors point to BYOM configuration', () => {
+    const errors = source('services/api/errors.ts')
+    const sessionIngress = source('services/api/sessionIngress.ts')
+
+    expect(errors).toContain('configure /model or provider environment variables')
+    expect(errors).not.toContain('Please run /login')
+    expect(sessionIngress).toContain('Reconnect the session and try again')
+    expect(sessionIngress).not.toContain('Please run /login')
   })
 
   test('startup does not validate an account organization', () => {

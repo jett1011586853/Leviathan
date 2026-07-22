@@ -1,0 +1,52 @@
+awmp: "0.1"
+kind: "Mode"
+id: "com.leviathan.ppt"
+name: "Management Presentation Mode"
+version: "0.1.0"
+description: "Convert structured work artifacts into management-ready presentation outline and deck artifacts."
+activation:
+  intents:
+    - "create a management presentation"
+    - "turn an analysis report into slides"
+    - "prepare a ppt handoff artifact"
+  examples:
+    - "Turn the support analysis report into an eight-slide management deck."
+    - "Create a concise presentation outline from a structured report."
+  antiExamples:
+    - "Handle refund decisions directly."
+inputs:
+  accepted:
+    - "analysis_report"
+    - "outline"
+    - "maxSlides"
+    - "audience"
+outputs:
+  artifacts:
+    - type: "presentation.outline"
+      mediaType: "application/json"
+      schema: "schemas/presentation_outline.schema.json"
+    - type: "presentation.pptx"
+      mediaType: "application/json"
+      schema: "schemas/presentation_deck.schema.json"
+tools:
+  local:
+    - name: "create_deck"
+      command: "bun tools/create_deck.ts"
+permissions:
+  default:
+    - "artifact:read"
+    - "artifact:write"
+    - "template:read"
+  requiresApproval: []
+  denied:
+    - "email:send_external"
+    - "secrets:exfiltrate"
+    - "policy:bypass_approval"
+validators:
+  - id: "presentation_artifact_contract_check"
+    command: "bun validators/check_artifacts.ts"
+    blocking: true
+handoffs:
+  canDelegateTo: []
+  canReceiveFrom:
+    - "com.leviathan.customer_support"

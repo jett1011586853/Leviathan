@@ -12,6 +12,7 @@ import type { ThemeName } from '../utils/theme.js'
 import type { LogOption } from './logs.js'
 import type { Message } from './message.js'
 import type { PluginManifest } from './plugin.js'
+import type { SkillRuntimePolicy } from './skill.js'
 
 export type LocalCommandResult =
   | { type: 'text'; value: string }
@@ -185,6 +186,8 @@ export type CommandBase = {
   isMcp?: boolean
   argumentHint?: string // Hint text for command arguments (displayed in gray after command)
   whenToUse?: string // From the "Skill" spec. Detailed usage scenarios for when to use this command
+  /** Leviathan-only invocation and task-lifecycle extensions. */
+  skillPolicy?: SkillRuntimePolicy
   version?: string // Version of the command/skill
   disableModelInvocation?: boolean // Whether to disable this command from being invoked by models
   userInvocable?: boolean // Whether users can invoke this skill by typing /skill-name

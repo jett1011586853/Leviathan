@@ -5,6 +5,7 @@
 
 import { logForDebugging } from './debug.js'
 import type { HooksSettings } from './settings/types.js'
+import type { SkillAutoTrigger, SkillLifecycle } from '../types/skill.js'
 import { parseYaml } from './yaml.js'
 
 export type FrontmatterData = {
@@ -16,6 +17,19 @@ export type FrontmatterData = {
   type?: string | null
   'argument-hint'?: string | null
   when_to_use?: string | null
+  // Standard Skill frontmatter permits provider-specific data under metadata.
+  // Leviathan writes new extensions there while continuing to read legacy
+  // top-level fields for backwards compatibility.
+  metadata?: Record<string, unknown> | null
+  // Leviathan extensions. Portable readers safely ignore these fields.
+  'leviathan-auto-trigger'?:
+    | string
+    | string[]
+    | (Partial<SkillAutoTrigger> & Record<string, unknown>)
+    | null
+  'leviathan-lifecycle'?: SkillLifecycle | string | null
+  'leviathan-reminder'?: string | null
+  'leviathan-reminder-turns'?: number | string | null
   version?: string | null
   // Only applicable to slash commands -- a string similar to a boolean env var
   // to determine whether to make them visible to the SlashCommand tool.

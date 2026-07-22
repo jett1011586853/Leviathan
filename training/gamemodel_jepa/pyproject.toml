@@ -1,0 +1,29 @@
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "leviathan-game-jepa"
+version = "0.1.0"
+description = "Offline data and world-model training base for Leviathan GameModel"
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+dependencies = []
+
+[project.optional-dependencies]
+train = [
+  "numpy>=1.26,<3",
+  "pillow>=10,<13",
+  "torch>=2.5,<3",
+]
+test = ["pytest>=8,<10"]
+
+[project.scripts]
+leviathan-game-jepa = "leviathan_game_jepa.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/leviathan_game_jepa"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

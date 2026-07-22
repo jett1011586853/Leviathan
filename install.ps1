@@ -20,6 +20,9 @@ $releaseApiUrl = if ($env:LEVIATHAN_RELEASE_API_URL) {
 
 $assetNames = @(
     'leviathan-windows-x64.exe',
+    'leviathan-game-capture-windows-x64.exe',
+    'libvips-42.dll',
+    'libvips-cpp-8.17.3.dll',
     'leviathan-launcher.ps1',
     'leviathan-updater.ps1'
 )
@@ -126,6 +129,9 @@ try {
     }
 
     Copy-Item -LiteralPath (Join-Path $temporaryRoot 'leviathan-windows-x64.exe') -Destination $currentExecutable -Force
+    Copy-Item -LiteralPath (Join-Path $temporaryRoot 'leviathan-game-capture-windows-x64.exe') -Destination (Join-Path $installRoot 'leviathan-game-capture.exe') -Force
+    Copy-Item -LiteralPath (Join-Path $temporaryRoot 'libvips-42.dll') -Destination (Join-Path $installRoot 'libvips-42.dll') -Force
+    Copy-Item -LiteralPath (Join-Path $temporaryRoot 'libvips-cpp-8.17.3.dll') -Destination (Join-Path $installRoot 'libvips-cpp-8.17.3.dll') -Force
     Copy-Item -LiteralPath (Join-Path $temporaryRoot 'leviathan-launcher.ps1') -Destination (Join-Path $installRoot 'leviathan-launcher.ps1') -Force
     Copy-Item -LiteralPath (Join-Path $temporaryRoot 'leviathan-updater.ps1') -Destination (Join-Path $installRoot 'leviathan-updater.ps1') -Force
 
