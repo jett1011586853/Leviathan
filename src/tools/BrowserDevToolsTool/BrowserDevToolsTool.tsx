@@ -45,7 +45,7 @@ const inputSchema = lazySchema(() =>
     url: z
       .string()
       .optional()
-      .describe('URL for launch_browser, new_tab, navigate, or an optional specific ChatGPT conversation for ask_chatgpt.'),
+      .describe('URL for launch_browser, new_tab, or navigate.'),
     tab_id: z
       .string()
       .optional()
@@ -70,10 +70,6 @@ const inputSchema = lazySchema(() =>
       .boolean()
       .optional()
       .describe('For stream_type_text, clear the focused editor before typing. Defaults to true.'),
-    question: z
-      .string()
-      .optional()
-      .describe('Question to send to ChatGPT for ask_chatgpt. Keep it concise and omit secrets.'),
     key: z
       .string()
       .optional()
@@ -100,7 +96,7 @@ const inputSchema = lazySchema(() =>
       .min(500)
       .max(180_000)
       .optional()
-      .describe('Action timeout in milliseconds. Defaults to 10000, except ask_chatgpt which may wait longer for a response.'),
+      .describe('Action timeout in milliseconds. Defaults to 10000.'),
     user_data_dir: z
       .string()
       .optional()
@@ -154,14 +150,6 @@ const outputSchema = lazySchema(() =>
         mediaType: z.literal('image/png'),
       })
       .optional(),
-    chatgpt: z
-      .object({
-        question: z.string(),
-        answer: z.string(),
-        url: z.string(),
-        tabId: z.string(),
-      })
-      .optional(),
   }),
 )
 
@@ -196,9 +184,6 @@ function isReadOnlyAction(action: BrowserDevToolsAction | undefined): boolean {
 function permissionMessage(action: BrowserDevToolsAction): string {
   if (action === 'cdp_send') {
     return 'Allow Leviathan to use full Chrome DevTools Protocol (CDP) access in the connected Browser Use session. Full CDP access can inspect and control sensitive browser internals.'
-  }
-  if (action === 'ask_chatgpt') {
-    return 'Allow Leviathan to send a question to ChatGPT through Browser Use and read the response as external guidance.'
   }
   return `Leviathan requested permission to use Browser DevTools (${action}).`
 }
@@ -322,37 +307,6 @@ export const BrowserDevToolsTool = buildTool({
         result: false,
         message: 'cdp_send requires cdp_method.',
         errorCode: 5,
-      }
-    }
-    if (
-      input.action === 'ask_chatgpt' &&
-      !(input.question ?? input.text)?.trim()
-    ) {
-      return {
-        result: false,
-        message: 'ask_chatgpt requires question.',
-        errorCode: 6,
-      }
-    }
-    if (input.action === 'ask_chatgpt' && input.url) {
-      try {
-        const parsed = new URL(input.url)
-        const host = parsed.hostname.toLowerCase()
-        if (
-          parsed.protocol !== 'https:' ||
-          (host !== 'chatgpt.com' &&
-            !host.endsWith('.chatgpt.com') &&
-            host !== 'chat.openai.com')
-        ) {
-          throw new Error('unsupported host')
-        }
-      } catch {
-        return {
-          result: false,
-          message:
-            'ask_chatgpt url must be an https://chatgpt.com or https://chat.openai.com URL.',
-          errorCode: 8,
-        }
       }
     }
     return { result: true }

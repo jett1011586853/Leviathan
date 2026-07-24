@@ -101,19 +101,6 @@ describe('Leviathan skill paths', () => {
     }
   })
 
-  test('chatgpt rescue team skill is bundled and user-invocable', () => {
-    const skill = source('skills/bundled/chatgptRescueTeam.ts')
-    const index = source('skills/bundled/index.ts')
-
-    expect(index).toContain('registerChatGptRescueTeamSkill')
-    expect(index).toContain('registerChatGptRescueTeamSkill()')
-    expect(skill).toContain("name: 'chatgpt-rescue-team'")
-    expect(skill).toContain('userInvocable: true')
-    expect(skill).toContain("'BrowserDevTools'")
-    expect(skill).toContain('ask_chatgpt')
-    expect(skill).toContain('FULL PROBLEM/PAGE INFORMATION')
-  })
-
   test('AI Coding orchestrator is bundled with staged evidence gates', () => {
     const registration = source('skills/bundled/aiCodingOrchestrator.ts')
     const content = source('skills/bundled/aiCodingOrchestratorContent.ts')
@@ -121,11 +108,11 @@ describe('Leviathan skill paths', () => {
     const playbook = source(
       'skills/bundled/ai-coding-orchestrator/references/orchestration-playbook.md',
     )
-    const rescue = source(
-      'skills/bundled/ai-coding-orchestrator/references/rescue-and-compliance.md',
+    const recovery = source(
+      'skills/bundled/ai-coding-orchestrator/references/local-recovery-and-compliance.md',
     )
     const index = source('skills/bundled/index.ts')
-    const all = [registration, content, skill, playbook, rescue, index].join(
+    const all = [registration, content, skill, playbook, recovery, index].join(
       '\n',
     )
 
@@ -136,16 +123,12 @@ describe('Leviathan skill paths', () => {
     expect(registration).toContain('userInvocable: true')
     expect(registration).toContain("'BrowserDevTools'")
     expect(registration).toContain('AI_CODING_SKILL_FILES')
-    expect(registration).toContain('Leviathan 提问空间')
-    expect(registration).toContain(
-      'https://chatgpt.com/c/6a604c21-9eac-83ee-986c-7848328ece4f',
-    )
     expect(skill).toContain('## Detect No Progress')
-    expect(skill).toContain('default: 3')
+    expect(skill).toContain('three consecutive ineffective rounds')
     expect(playbook).toContain('## L0 - Collect The Problem And Environment')
     expect(playbook).toContain('## L9 - Decide Whether The Result Is Submit-Ready')
-    expect(rescue).toContain('Only one new submission')
-    expect(rescue).toContain('Never accept or inject exported cookies')
+    expect(recovery).toContain('## Freeze The Best Candidate')
+    expect(recovery).toContain('Do not transmit it to an external question-answering service')
 
     for (const credentialMarker of [
       ['oai', 'did='].join('-'),

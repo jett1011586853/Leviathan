@@ -29,4 +29,15 @@ describe('AI Coding orchestrator scoring policy', () => {
     expect(ledger).toContain('official_tests_remaining')
     expect(ledger).toContain('best_candidate')
   })
+
+  test('uses local evidence recovery after repeated ineffective rounds', () => {
+    const recovery =
+      AI_CODING_SKILL_FILES[
+        'references/local-recovery-and-compliance.md'
+      ]
+
+    expect(AI_CODING_SKILL_MD).toContain('Recover Locally')
+    expect(recovery).toContain('Change The Diagnostic Axis')
+    expect(recovery).toContain('Do not claim completion from confidence alone')
+  })
 })

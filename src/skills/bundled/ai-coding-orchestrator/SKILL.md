@@ -34,7 +34,7 @@ metadata:
 
 # Leviathan AI Coding Orchestrator
 
-Act as the main controller. Treat every website AI assistant and external model as a subordinate candidate generator, never as the source of truth.
+Act as the main controller. Treat every website AI assistant as a subordinate candidate generator, never as the source of truth.
 
 ## Start With The Policy Gate
 
@@ -60,7 +60,6 @@ Use this source-of-truth order:
 2. Reproducible compiler, test, judge, and runtime evidence.
 3. Current code and environment state.
 4. Site AI assistant output.
-5. External ChatGPT reference output.
 
 ## Maximize Verified Score Under Budgets
 
@@ -122,24 +121,22 @@ Count an iteration as effective only when it produces at least one material delt
 - a smaller failure set or a newly passing check;
 - a candidate with a demonstrated complexity or correctness improvement.
 
-Generic restatements, repeated prompts, untested rewrites, unchanged failures, and confidence without evidence are ineffective. After the configured number of consecutive ineffective rounds (default: 3), stop repeating the same worker loop and read `references/rescue-and-compliance.md`.
+Generic restatements, repeated prompts, untested rewrites, unchanged failures, and confidence without evidence are ineffective. After three consecutive ineffective rounds, stop repeating the same worker loop and read `references/local-recovery-and-compliance.md`.
 
-## Use External Reference Once
+## Recover Locally
 
-When the no-progress threshold is reached, consult the configured ChatGPT reference through `BrowserDevTools` action `ask_chatgpt` only if Browser Use is enabled, policy mode permits external assistance, and the evidence packet contains no secrets or unrelated private material.
+When the no-progress threshold is reached, preserve the best verified candidate and switch to a different local diagnostic strategy. Do not contact an external question-answering service.
 
-For first-time setup, `/aicoding login` means: launch the configured reference URL in Leviathan's persistent Browser DevTools profile, ask the user to complete login manually, and verify that the prompt composer is available. Never type credentials for the user. The persistent profile retains the authenticated session for later runs. Preserve the model selected for the configured conversation; if that model is unavailable, report it instead of silently switching models.
-
-- Submit at most one new question for an unchanged problem fingerprint.
-- Send the complete relevant problem statement and exact evidence; do not compress away constraints.
-- Redact credentials, cookies, tokens, personal data, and unrelated proprietary code.
-- If ChatGPT is still thinking, wait for that response. Never send follow-up prompts merely to hurry it.
-- Treat the response as a candidate. Verify it locally before changing code or submitting.
-
-If the configured reference is unavailable or requires login, pause and ask the user to sign in through the browser. Never import or inject session cookies.
+- Freeze broad rewrites and record the unchanged failure fingerprint.
+- Re-check the exact statement, constraints, interfaces, and current code.
+- Generate a new falsifiable root-cause hypothesis rather than restating the old one.
+- Use a discriminating local test, counterexample, trace, or reduced case.
+- Ask the permitted website AI worker for an independent scoped review only when it is already part of the authorized task environment.
+- Keep every new candidate unverified until local execution or judge evidence supports it.
+- If no local evidence-producing step remains, report the blocker instead of fabricating progress.
 
 ## Finish Through Evidence
 
 Read `references/worker-contract-and-ledger.md` when dispatching workers or recording changes. Enter `ready_for_user_confirmation` only when the L9 checklist is complete.
 
-Do not click a final submit control without explicit user confirmation unless the user already authorized automatic submission for this task and the target rules permit it. Report what was implemented, what was actually verified, remaining risk, and whether external reference guidance was used.
+Do not click a final submit control without explicit user confirmation unless the user already authorized automatic submission for this task and the target rules permit it. Report what was implemented, what was actually verified, and the remaining risk.

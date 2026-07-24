@@ -4,7 +4,10 @@ import { getEmptyToolPermissionContext, type ToolUseContext } from '../Tool.js'
 import { getTools } from '../tools.js'
 import { BrowserDevToolsTool } from '../tools/BrowserDevToolsTool/BrowserDevToolsTool.js'
 import { createStreamTypingPlan } from '../tools/BrowserDevToolsTool/browserDevTools.js'
-import { BROWSER_DEVTOOLS_TOOL_NAME } from '../tools/BrowserDevToolsTool/constants.js'
+import {
+  BROWSER_DEVTOOLS_ACTIONS,
+  BROWSER_DEVTOOLS_TOOL_NAME,
+} from '../tools/BrowserDevToolsTool/constants.js'
 
 function source(relativePath: string): string {
   return readFileSync(new URL(`../${relativePath}`, import.meta.url), 'utf8')
@@ -128,37 +131,8 @@ describe('Leviathan Browser DevTools tool', () => {
     expect(files).toContain('sessionId')
   })
 
-  test('supports asking ChatGPT through Browser Use as external guidance', async () => {
+  test('does not expose the removed external consultation action', async () => {
     const prompt = await BrowserDevToolsTool.prompt()
-    const missingQuestion = await BrowserDevToolsTool.validateInput({
-      action: 'ask_chatgpt',
-    })
-    const validQuestion = await BrowserDevToolsTool.validateInput({
-      action: 'ask_chatgpt',
-      question: 'What is a likely cause of this test failure?',
-    })
-    const validReference = await BrowserDevToolsTool.validateInput({
-      action: 'ask_chatgpt',
-      question: 'Review this failing case.',
-      url: 'https://chatgpt.com/c/example',
-    })
-    const invalidReference = await BrowserDevToolsTool.validateInput({
-      action: 'ask_chatgpt',
-      question: 'Review this failing case.',
-      url: 'https://example.com/c/example',
-    })
-    const insecureReference = await BrowserDevToolsTool.validateInput({
-      action: 'ask_chatgpt',
-      question: 'Review this failing case.',
-      url: 'http://chatgpt.com/c/example',
-    })
-    const permission = await BrowserDevToolsTool.checkPermissions(
-      {
-        action: 'ask_chatgpt',
-        question: 'Give a debugging hypothesis.',
-      },
-      contextWithMode('default'),
-    )
     const files = [
       source('tools/BrowserDevToolsTool/constants.ts'),
       source('tools/BrowserDevToolsTool/BrowserDevToolsTool.tsx'),
@@ -167,32 +141,24 @@ describe('Leviathan Browser DevTools tool', () => {
       source('tools/BrowserDevToolsTool/UI.tsx'),
     ].join('\n')
 
-    expect(prompt).toContain('ask_chatgpt')
-    expect(prompt).toContain('external guidance')
-    expect(missingQuestion.result).toBe(false)
-    expect(
-      missingQuestion.result === false ? missingQuestion.message : '',
-    ).toContain('question')
-    expect(validQuestion.result).toBe(true)
-    expect(validReference.result).toBe(true)
-    expect(invalidReference.result).toBe(false)
-    expect(insecureReference.result).toBe(false)
-    expect(permission.behavior).toBe('ask')
-    expect(permission.behavior === 'ask' ? permission.message : '').toContain(
-      'ChatGPT',
-    )
-    expect(files).toContain("'ask_chatgpt'")
-    expect(files).toContain('https://chatgpt.com/')
-    expect(files).toContain('CHATGPT_STATE_EXPRESSION')
-    expect(files).toContain('MutationObserver')
-    expect(files).toContain('syncStrategy')
-    expect(files).toContain('polling-fallback')
-    expect(files).toContain('pendingAnswer')
-    expect(files).toContain('submittedNewQuestion: false')
-    expect(files).toContain('ChatGPT is still generating')
-    expect(files).toContain('isSameChatGptTarget')
-    expect(files).toContain('specific ChatGPT conversation')
-    expect(files).toContain('ask ChatGPT')
+    expect(BROWSER_DEVTOOLS_ACTIONS).toEqual([
+      'launch_browser',
+      'connect',
+      'list_tabs',
+      'new_tab',
+      'navigate',
+      'evaluate',
+      'snapshot',
+      'click',
+      'type_text',
+      'stream_type_text',
+      'press_key',
+      'screenshot',
+      'cdp_send',
+      'close_tab',
+    ])
+    expect(prompt).not.toContain('outside second opinion')
+    expect(files).not.toContain('external guidance')
   })
 
   test('supports streaming code into browser editors', async () => {
@@ -287,29 +253,6 @@ describe('Leviathan Browser DevTools tool', () => {
     expect(JSON.stringify(block.content)).not.toContain(
       output.screenshot.dataUrl,
     )
-  })
-
-  test('returns ChatGPT guidance as model-visible text', () => {
-    const output = {
-      ok: true,
-      action: 'ask_chatgpt' as const,
-      message:
-        'Asked ChatGPT through Browser Use and captured its response as external guidance.',
-      chatgpt: {
-        question: 'Why is this test failing?',
-        answer:
-          'Check whether the new state field is initialized in every AppState constructor.',
-        url: 'https://chatgpt.com/c/example',
-        tabId: 'tab-1',
-      },
-    }
-
-    const block = BrowserDevToolsTool.mapToolResultToToolResultBlockParam(
-      output,
-      'toolu_chatgpt',
-    )
-    expect(block.content).toContain('Why is this test failing?')
-    expect(block.content).toContain('new state field')
   })
 
   test('does not depend on recovered private browser automation packages', () => {

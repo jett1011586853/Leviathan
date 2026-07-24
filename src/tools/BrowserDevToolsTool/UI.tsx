@@ -16,7 +16,6 @@ export function getToolUseSummary(
   if (input.action === 'cdp_send') {
     return `CDP ${input.cdp_method ?? 'command'}`
   }
-  if (input.action === 'ask_chatgpt') return 'ask ChatGPT'
   if (input.action === 'stream_type_text') {
     return `stream type${input.selector ? ` ${input.selector}` : ''}`
   }
@@ -65,13 +64,6 @@ function summarizeOutput(output: BrowserDevToolsOutput): string {
       output.message,
       `${output.snapshot.title}  ${output.snapshot.url}`,
       `Visible controls: ${output.snapshot.elements.length}`,
-    ].join('\n')
-  }
-  if (output.chatgpt) {
-    return [
-      output.message,
-      `Question: ${output.chatgpt.question.slice(0, 240)}`,
-      `Answer: ${output.chatgpt.answer.slice(0, 1200)}`,
     ].join('\n')
   }
   if (output.tab) {

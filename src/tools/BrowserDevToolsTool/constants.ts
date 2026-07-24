@@ -14,7 +14,6 @@ export const BROWSER_DEVTOOLS_ACTIONS = [
   'press_key',
   'screenshot',
   'cdp_send',
-  'ask_chatgpt',
   'close_tab',
 ] as const
 
