@@ -19,6 +19,7 @@ import { TASK_CREATE_TOOL_NAME } from '../tools/TaskCreateTool/constants.js'
 import type { Tools } from '../Tool.js'
 import type { Command } from '../types/command.js'
 import { BASH_TOOL_NAME } from '../tools/BashTool/toolName.js'
+import { isPowerShellToolEnabled } from '../utils/shell/shellToolUtils.js'
 import {
   getCanonicalName,
   getMarketingNameForModel,
@@ -729,6 +730,13 @@ function getShellInfoLine(): string {
       ? 'bash'
       : shell
   if (env.platform === 'win32') {
+    // The PowerShell tool is on by default on Windows. Announcing the shell as
+    // "bash with Unix syntax" (which is what the SHELL env var made this line
+    // say, since it points at powershell.exe but never matches the bash/zsh
+    // checks) pushed the model into Unix-style commands and the Bash tool.
+    if (isPowerShellToolEnabled()) {
+      return `Shell: PowerShell (the default shell on this machine - use native Windows paths such as C:\\Users\\... and PowerShell syntax; the Bash tool is available for POSIX scripts that genuinely need it)`
+    }
     return `Shell: ${shellName} (use Unix shell syntax, not Windows — e.g., /dev/null not NUL, forward slashes in paths)`
   }
   return `Shell: ${shellName}`

@@ -277,7 +277,7 @@ export const PowerShellTool = buildTool({
   async description({
     description
   }: Partial<PowerShellToolInput>): Promise<string> {
-    return description || 'Run PowerShell command';
+    return description || 'Run a PowerShell command (the default shell on this Windows machine)';
   },
   async prompt(): Promise<string> {
     return getPrompt();

@@ -29,6 +29,7 @@ import { expandPath } from '../../utils/path.js';
 import type { PermissionResult } from '../../utils/permissions/PermissionResult.js';
 import { maybeRecordPluginHint } from '../../utils/plugins/hintRecommendation.js';
 import { buildCommandFailureHint } from './outputDiagnostics.js';
+import { isPowerShellToolEnabled } from '../../utils/shell/shellToolUtils.js';
 import { exec } from '../../utils/Shell.js';
 import type { ExecResult } from '../../utils/ShellCommand.js';
 import { SandboxManager } from '../../utils/sandbox/sandbox-adapter.js';
@@ -427,6 +428,12 @@ export const BashTool = buildTool({
   async description({
     description
   }) {
+    // On Windows this tool is the POSIX fallback, not the default. Say so in
+    // the one-line description, which is what the model reads when choosing
+    // between shell tools.
+    if (isPowerShellToolEnabled()) {
+      return description || 'Run a POSIX shell command (Windows: prefer the PowerShell tool)';
+    }
     return description || 'Run shell command';
   },
   async prompt() {
