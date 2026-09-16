@@ -48,6 +48,10 @@ import {
   isDeferredTool,
   TOOL_SEARCH_TOOL_NAME,
 } from '../../tools/ToolSearchTool/prompt.js'
+import {
+  isToolInputRepairEnabled,
+  repairToolInput,
+} from './toolInputRepair.js'
 import { getAllBaseTools } from '../../tools.js'
 import type { HookProgress } from '../../types/hooks.js'
 import type {
@@ -596,6 +600,21 @@ export function buildSchemaNotSentHint(
   )
 }
 
+/**
+ * When the argument object arrives empty, the streamed tool input almost
+ * certainly failed to parse (see normalizeContentFromAPI). Say so explicitly:
+ * the plain zod message ("required parameter X is missing") reads like the
+ * model simply forgot to fill in the call, which sends it down the wrong
+ * repair path - or worse, makes it re-issue an identical call.
+ */
+function buildEmptyToolInputHint(input: unknown): string | null {
+  if (typeof input !== 'object' || input === null) return null
+  if (Object.keys(input as Record<string, unknown>).length > 0) return null
+  return (
+    '\n\nThe argument object arrived empty, which means the tool input JSON was truncated or could not be parsed - not that parameters were omitted. Re-issue the call; if it fails again the same way, send a smaller payload.'
+  )
+}
+
 async function checkPermissionsAndCallTool(
   tool: Tool,
   toolUseID: string,
@@ -612,7 +631,30 @@ async function checkPermissionsAndCallTool(
   ) => void,
 ): Promise<MessageUpdateLazy[]> {
   // Validate input types with zod (surprisingly, the model is not great at generating valid input)
-  const parsedInput = tool.inputSchema.safeParse(input)
+  let parsedInput = tool.inputSchema.safeParse(input)
+  // Repair pass: models routinely emit nested objects as JSON strings, numbers
+  // as strings, or a key the schema does not accept. Coercing those keeps the
+  // call alive instead of burning a whole round-trip on a retry.
+  if (!parsedInput.success && isToolInputRepairEnabled()) {
+    const repair = repairToolInput(tool, input)
+    if (repair) {
+      const retried = tool.inputSchema.safeParse(repair.input)
+      if (retried.success) {
+        parsedInput = retried
+        logForDebugging(
+          `${tool.name} tool input repaired: ${repair.repairs.map(entry => entry.detail).join('; ')}`,
+        )
+        logEvent('tengu_tool_input_repaired', {
+          toolName: sanitizeToolNameForAnalytics(tool.name),
+          repairCount: repair.repairs.length,
+          repairKinds: [
+            ...new Set(repair.repairs.map(entry => entry.kind)),
+          ].join(',') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          isMcp: tool.isMcp ?? false,
+        })
+      }
+    }
+  }
   if (!parsedInput.success) {
     let errorContent = formatZodValidationError(tool.name, parsedInput.error)
 
@@ -627,6 +669,11 @@ async function checkPermissionsAndCallTool(
         isMcp: tool.isMcp ?? false,
       })
       errorContent += schemaHint
+    }
+
+    const emptyInputHint = buildEmptyToolInputHint(input)
+    if (emptyInputHint) {
+      errorContent += emptyInputHint
     }
 
     logForDebugging(

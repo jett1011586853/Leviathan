@@ -35,3 +35,7 @@ dist-startup/
 dist-release/
 artifacts/
 coverage/
+
+# Vendored binaries (provisioned by scripts/fetch-ripgrep.ps1)
+vendor/
+src/utils/vendor/

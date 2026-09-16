@@ -28,6 +28,7 @@ import { lazySchema } from '../../utils/lazySchema.js';
 import { expandPath } from '../../utils/path.js';
 import type { PermissionResult } from '../../utils/permissions/PermissionResult.js';
 import { maybeRecordPluginHint } from '../../utils/plugins/hintRecommendation.js';
+import { buildCommandFailureHint } from './outputDiagnostics.js';
 import { exec } from '../../utils/Shell.js';
 import type { ExecResult } from '../../utils/ShellCommand.js';
 import { SandboxManager } from '../../utils/sandbox/sandbox-adapter.js';
@@ -603,6 +604,9 @@ export const BashTool = buildTool({
       if (stderr) errorMessage += EOL;
       errorMessage += '<error>Command was aborted before completion</error>';
     }
+    // Cryptic interpreter/shell failures get an actionable hint so the model
+    // fixes the actual mistake instead of retrying the same command.
+    const failureHint = buildCommandFailureHint(processedStdout, stderr);
     let backgroundInfo = '';
     if (backgroundTaskId) {
       const outputPath = getTaskOutputPath(backgroundTaskId);
@@ -617,7 +621,7 @@ export const BashTool = buildTool({
     return {
       tool_use_id: toolUseID,
       type: 'tool_result',
-      content: [processedStdout, errorMessage, backgroundInfo].filter(Boolean).join('\n'),
+      content: [processedStdout, errorMessage, failureHint, backgroundInfo].filter(Boolean).join('\n'),
       is_error: interrupted
     };
   },

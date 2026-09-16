@@ -347,14 +347,34 @@ async function loadRejectionDiff(filePath: string, content: string): Promise<Rej
     };
   }
 }
+/** First meaningful line of a tool error, for display under the summary. */
+function firstErrorLine(message: string | null | undefined): string | null {
+  if (!message) return null;
+  const line = message.split(/\r?\n/).map(candidate => candidate.trim()).find(Boolean);
+  if (!line) return null;
+  const compact = line.replace(/\s+/g, ' ');
+  return compact.length > 200 ? `${compact.slice(0, 197)}...` : compact;
+}
+
 export function renderToolUseErrorMessage(result: ToolResultBlockParam['content'], {
   verbose
 }: {
   verbose: boolean;
 }): React.ReactNode {
   if (!verbose && typeof result === 'string' && extractTag(result, 'tool_use_error')) {
+    const errorMessage = extractTag(result, 'tool_use_error');
+    // Collapsing every failure into "Error writing file" hid the actual reason
+    // (stale file, denied directory, disk error) from both the user and any bug
+    // report taken from the screen.
+    if (errorMessage?.includes('File has not been read yet')) {
+      return <MessageResponse>
+          <Text dimColor>File must be read first</Text>
+        </MessageResponse>;
+    }
+    const reason = firstErrorLine(errorMessage);
     return <MessageResponse>
         <Text color="error">Error writing file</Text>
+        {reason ? <Text dimColor>{reason}</Text> : null}
       </MessageResponse>;
   }
   return <FallbackToolUseErrorMessage result={result} verbose={verbose} />;

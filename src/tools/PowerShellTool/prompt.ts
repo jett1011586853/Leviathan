@@ -79,6 +79,8 @@ export async function getPrompt(): Promise<string> {
 
 IMPORTANT: This tool is for terminal operations via PowerShell: git, npm, docker, and PS cmdlets. DO NOT use it for file operations (reading, writing, editing, searching, finding files) - use the specialized tools for this instead.
 
+Preferred shell on Windows: prefer this tool over the Bash tool. PowerShell is installed on every Windows machine and works with native paths (C:\\Users\\...), while the Bash tool depends on a POSIX shell (WSL or Git Bash) that may be missing, slow to start, or broken. Use the Bash tool only when the task genuinely needs POSIX behaviour (shell scripts with grep/sed/awk pipelines, POSIX-only tooling, or commands the user asked to run in bash).
+
 ${getEditionSection(edition)}
 
 Before executing the command, please follow these steps:

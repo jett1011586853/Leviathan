@@ -63,7 +63,19 @@ export function createPowerShellProvider(shellPath: string): ShellProvider {
       // exit code (was 0 — old logic only looked at $? which the trailing
       // cmdlet set true). Both rarer than the git/npm/curl stderr case.
       const cwdTracking = `\n; $_ec = if ($null -ne $LASTEXITCODE) { $LASTEXITCODE } elseif ($?) { 0 } else { 1 }\n; (Get-Location).Path | Out-File -FilePath '${escapedCwdFilePath}' -Encoding utf8 -NoNewline\n; exit $_ec`
-      const psCommand = command + cwdTracking
+      // Pin text encodings to UTF-8 for this invocation.
+      //
+      // Windows PowerShell 5.1 otherwise decodes native command output (python,
+      // node, git, ...) with the OEM/ANSI code page, so any non-ASCII text - the
+      // norm for Chinese users - reaches the tool result as mojibake. Setting the
+      // console reader and the pipeline encoding makes both native output and
+      // PowerShell's own cmdlet output UTF-8, which is what the runtime decodes.
+      // try/catch because the setter throws when no console is attached.
+      const encodingPreamble = [
+        `try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}`,
+        `$OutputEncoding = [System.Text.Encoding]::UTF8`,
+      ].join('\r\n')
+      const psCommand = encodingPreamble + '\r\n' + command + cwdTracking
 
       // Sandbox wraps the returned commandString as `<binShell> -c '<cmd>'` —
       // hardcoded `-c`, no way to inject -NoProfile -NonInteractive. So for
@@ -101,7 +113,12 @@ export function createPowerShellProvider(shellPath: string): ShellProvider {
     },
 
     async getEnvironmentOverrides(): Promise<Record<string, string>> {
-      const env: Record<string, string> = {}
+      const env: Record<string, string> = {
+        // Windows Python writes non-ASCII to a redirected stdout using the
+        // locale encoding (cp936 here) unless told otherwise, which shows up as
+        // mojibake in the tool result. This only affects stdio, not file I/O.
+        PYTHONIOENCODING: 'utf-8',
+      }
       // Apply session env vars set via /env (child processes only, not
       // the REPL). Without this, `/env PATH=...` affects Bash tool
       // commands but not PowerShell — so PyCharm users with a stripped

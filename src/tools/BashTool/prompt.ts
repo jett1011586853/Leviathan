@@ -4,6 +4,7 @@ import { getAttributionTexts } from '../../utils/attribution.js'
 import { hasEmbeddedSearchTools } from '../../utils/embeddedTools.js'
 import { isEnvTruthy } from '../../utils/envUtils.js'
 import { shouldIncludeGitInstructions } from '../../utils/gitSettings.js'
+import { isPowerShellToolEnabled } from '../../utils/shell/shellToolUtils.js'
 import { getLeviathanTempDir } from '../../utils/permissions/filesystem.js'
 import { SandboxManager } from '../../utils/sandbox/sandbox-adapter.js'
 import { jsonStringify } from '../../utils/slowOperations.js'
@@ -356,6 +357,12 @@ export function getSimplePrompt(): string {
     '',
     "The working directory persists between commands, but shell state does not. The shell environment is initialized from the user's profile (bash or zsh).",
     '',
+    ...(isPowerShellToolEnabled()
+      ? [
+          'On this Windows machine the PowerShell tool is the default shell and these instructions are POSIX-only: prefer PowerShell for system, file, git, and package commands. Use this bash tool only when the task genuinely needs POSIX behaviour (shell scripts with grep/sed/awk pipelines, POSIX-only tooling, or an explicit request to run something in bash). Never mix PowerShell cmdlets into a bash command.',
+          '',
+        ]
+      : []),
     `IMPORTANT: Avoid using this tool to run ${avoidCommands} commands, unless explicitly instructed or after you have verified that a dedicated tool cannot accomplish your task. Instead, use the appropriate dedicated tool as this will provide a much better experience for the user:`,
     '',
     ...prependBullets(toolPreferenceItems),

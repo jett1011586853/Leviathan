@@ -54,6 +54,12 @@ const inputSchema = lazySchema(() =>
       .string()
       .optional()
       .describe('JavaScript expression to evaluate in the page.'),
+    scope: z
+      .enum(['main', 'all_frames'])
+      .optional()
+      .describe(
+        'For evaluate: run the expression in the main frame (default) or in the main frame plus every cross-origin frame attached to the tab. On site-isolated pages an expression that works in an iframe fails in the main frame, so scope=all_frames returns one result per frame.',
+      ),
     selector: z
       .string()
       .optional()
@@ -97,6 +103,41 @@ const inputSchema = lazySchema(() =>
       .max(180_000)
       .optional()
       .describe('Action timeout in milliseconds. Defaults to 10000.'),
+    annotate: z
+      .boolean()
+      .optional()
+      .describe(
+        'For screenshot: overlay a numbered box on every visible control and return their coordinates. Vision-capable models should prefer this, then click a box with node_index.',
+      ),
+    include_screenshot: z
+      .boolean()
+      .optional()
+      .describe(
+        'For snapshot: also attach a screenshot image so the page can be seen as well as read.',
+      ),
+    include_frames: z
+      .boolean()
+      .optional()
+      .describe(
+        'For list_tabs: also list the cross-origin frames of the target tab. Use their cdp_session_id with action="cdp_send" to control them directly.',
+      ),
+    node_index: z
+      .number()
+      .int()
+      .min(1)
+      .max(60)
+      .optional()
+      .describe(
+        'For click: click element number N from the last annotated screenshot. Works for shadow DOM, canvas, and cross-origin frame content.',
+      ),
+    x: z
+      .number()
+      .optional()
+      .describe('For click: viewport X coordinate in CSS pixels.'),
+    y: z
+      .number()
+      .optional()
+      .describe('For click: viewport Y coordinate in CSS pixels.'),
     user_data_dir: z
       .string()
       .optional()
@@ -124,6 +165,33 @@ const outputSchema = lazySchema(() =>
     tab: tabSchema.optional(),
     tabs: z.array(tabSchema).optional(),
     result: z.unknown().optional(),
+    frames: z
+      .array(
+        z.object({
+          sessionId: z.string(),
+          targetId: z.string(),
+          url: z.string(),
+          type: z.string(),
+        }),
+      )
+      .optional(),
+    elements: z
+      .array(
+        z.object({
+          index: z.number(),
+          selector: z.string(),
+          tag: z.string(),
+          text: z.string(),
+          frame: z.string().optional(),
+          rect: z.object({
+            x: z.number(),
+            y: z.number(),
+            width: z.number(),
+            height: z.number(),
+          }),
+        }),
+      )
+      .optional(),
     snapshot: z
       .object({
         title: z.string(),
@@ -140,6 +208,7 @@ const outputSchema = lazySchema(() =>
             role: z.string(),
             href: z.string(),
             visible: z.boolean(),
+            frame: z.string().optional(),
           }),
         ),
       })
@@ -281,7 +350,20 @@ export const BrowserDevToolsTool = buildTool({
         errorCode: 2,
       }
     }
-    if (['click', 'type_text'].includes(input.action) && !input.selector) {
+    if (
+      input.action === 'click' &&
+      !input.selector &&
+      input.node_index === undefined &&
+      (input.x === undefined || input.y === undefined)
+    ) {
+      return {
+        result: false,
+        message:
+          'click requires selector, node_index, or both x and y coordinates.',
+        errorCode: 3,
+      }
+    }
+    if (input.action === 'type_text' && !input.selector) {
       return {
         result: false,
         message: `${input.action} requires selector.`,

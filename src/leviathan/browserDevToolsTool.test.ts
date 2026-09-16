@@ -3,7 +3,10 @@ import { readFileSync } from 'node:fs'
 import { getEmptyToolPermissionContext, type ToolUseContext } from '../Tool.js'
 import { getTools } from '../tools.js'
 import { BrowserDevToolsTool } from '../tools/BrowserDevToolsTool/BrowserDevToolsTool.js'
-import { createStreamTypingPlan } from '../tools/BrowserDevToolsTool/browserDevTools.js'
+import {
+  ANNOTATE_EXPRESSION,
+  createStreamTypingPlan,
+} from '../tools/BrowserDevToolsTool/browserDevTools.js'
 import {
   BROWSER_DEVTOOLS_ACTIONS,
   BROWSER_DEVTOOLS_TOOL_NAME,
@@ -198,6 +201,11 @@ describe('Leviathan Browser DevTools tool', () => {
     expect(files).toContain('clearFocusedEditor')
     expect(files).toContain('buildReadStreamEditorExpression')
     expect(files).toContain('buildReplaceStreamEditorExpression')
+    expect(files).toContain('selectCurrentLineIndent')
+    expect(files).toContain('pressEditorEnter')
+    expect(files).toContain('detected-indent-repair')
+    expect(files).toContain('no-auto-indent')
+    expect(files).toContain('keyboard-line-indent-normalization')
     expect(files).toContain('indentationCorrections')
     expect(files).toContain('verifiedExact')
   })
@@ -214,13 +222,14 @@ describe('Leviathan Browser DevTools tool', () => {
     const simulateEditor = (automaticIndent: string) => {
       let editorText = ''
       for (const step of plan) {
-        if (step.mode === 'reconcile') {
-          editorText = step.expectedText
+        if (step.mode === 'normalize-indent') {
+          const lineStart = editorText.lastIndexOf('\n') + 1
+          editorText = editorText.slice(0, lineStart) + step.text
+        } else if (step.mode === 'newline') {
+          editorText += '\n' + automaticIndent
         } else {
-          editorText += step.character
-          if (step.character === '\n') editorText += automaticIndent
+          editorText += step.text
         }
-        if (step.reconcileAfterInsert) editorText = step.expectedText
       }
       return editorText
     }
@@ -228,8 +237,43 @@ describe('Leviathan Browser DevTools tool', () => {
     expect(simulateEditor('')).toBe(sourceText)
     expect(simulateEditor('    ')).toBe(sourceText)
     expect(
-      plan.filter(step => step.mode === 'reconcile').length,
+      plan.filter(step => step.mode === 'normalize-indent').length,
     ).toBeGreaterThan(0)
+  })
+
+  test('normalizes blank and dedented lines without deleting adjacent code', () => {
+    const sourceText = [
+      'if (ready) {',
+      '    while (work) {',
+      '        run();',
+      '    }',
+      '',
+      '}',
+    ].join('\n')
+    const plan = createStreamTypingPlan(sourceText)
+
+    const simulateEditor = (automaticIndent: string) => {
+      let editorText = ''
+      for (const step of plan) {
+        if (step.mode === 'newline') {
+          editorText += '\n' + automaticIndent
+        } else if (step.mode === 'normalize-indent') {
+          const lineStart = editorText.lastIndexOf('\n') + 1
+          editorText = editorText.slice(0, lineStart) + step.text
+        } else {
+          editorText += step.text
+        }
+      }
+      return editorText
+    }
+
+    expect(simulateEditor('')).toBe(sourceText)
+    expect(simulateEditor('        ')).toBe(sourceText)
+    expect(
+      plan
+        .filter(step => step.mode === 'normalize-indent')
+        .map(step => step.text),
+    ).toEqual(['    ', '        ', '    ', '', ''])
   })
 
   test('returns screenshots as model-visible image blocks without exposing data URI text', () => {
@@ -265,5 +309,73 @@ describe('Leviathan Browser DevTools tool', () => {
     expect(files).not.toContain('@ant/')
     expect(files).not.toContain('claude')
     expect(files).not.toContain('Claude')
+  })
+})
+
+describe('Leviathan Browser DevTools tool - vision and site isolation', () => {
+  test('exposes vision, frame, and coordinate parameters in the schema', () => {
+    const schema = BrowserDevToolsTool.inputSchema as unknown as {
+      shape: Record<string, unknown>
+    }
+    const keys = Object.keys(schema.shape)
+    for (const key of [
+      'annotate',
+      'include_screenshot',
+      'include_frames',
+      'node_index',
+      'x',
+      'y',
+      'scope',
+    ]) {
+      expect(keys).toContain(key)
+    }
+  })
+
+  test('accepts coordinate and numbered clicks but still rejects bare clicks', async () => {
+    const bare = await BrowserDevToolsTool.validateInput({ action: 'click' })
+    expect(bare.result).toBe(false)
+    expect(bare.result === false ? bare.message : '').toContain('node_index')
+
+    const coordinates = await BrowserDevToolsTool.validateInput({
+      action: 'click',
+      x: 100,
+      y: 200,
+    })
+    expect(coordinates.result).toBe(true)
+
+    const numbered = await BrowserDevToolsTool.validateInput({
+      action: 'click',
+      node_index: 3,
+    })
+    expect(numbered.result).toBe(true)
+  })
+
+  test('wires cross-origin frame control and annotated screenshots', async () => {
+    const files = [
+      source('tools/BrowserDevToolsTool/BrowserDevToolsTool.tsx'),
+      source('tools/BrowserDevToolsTool/browserDevTools.ts'),
+      source('tools/BrowserDevToolsTool/prompt.ts'),
+    ].join('\n')
+
+    expect(files).toContain('Target.setAutoAttach')
+    expect(files).toContain('attachFrameSessions')
+    expect(files).toContain('evaluateAcrossFrames')
+    expect(files).toContain('Input.dispatchMouseEvent')
+    expect(files).toContain('clickAtCoordinates')
+    expect(files).toContain('deleteCharactersBeforeCaret')
+    expect(files).toContain('auto-indent-removed')
+    expect(files).toContain('buildScopedEvaluateCandidates')
+
+    const prompt = await BrowserDevToolsTool.prompt()
+    expect(prompt).toContain('annotate=true')
+    expect(prompt).toContain('node_index')
+    expect(prompt).toContain('all_frames')
+    expect(prompt).toContain('cross-origin')
+  })
+
+  test('keeps the annotation overlay script parseable', () => {
+    expect(() => new Function(ANNOTATE_EXPRESSION)).not.toThrow()
+    expect(ANNOTATE_EXPRESSION).toContain('getBoundingClientRect')
+    expect(ANNOTATE_EXPRESSION).toContain('__leviathan_annotation_overlay__')
   })
 })

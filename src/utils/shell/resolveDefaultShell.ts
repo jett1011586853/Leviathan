@@ -1,4 +1,6 @@
+import { getPlatform } from '../platform.js'
 import { getInitialSettings } from '../settings/settings.js'
+import { isPowerShellToolEnabled } from './shellToolUtils.js'
 
 /**
  * Resolve the default shell for input-box `!` commands.
@@ -10,5 +12,13 @@ import { getInitialSettings } from '../settings/settings.js'
  * PowerShell (would break existing Windows users with bash hooks).
  */
 export function resolveDefaultShell(): 'bash' | 'powershell' {
-  return getInitialSettings().defaultShell ?? 'bash'
+  const configured = getInitialSettings().defaultShell
+  if (configured) return configured
+  // Windows defaults to PowerShell: it is installed everywhere, understands
+  // native paths, and needs no POSIX shell (WSL launcher or Git Bash) that may
+  // be missing or broken. settings.defaultShell still wins when set.
+  if (getPlatform() === 'windows' && isPowerShellToolEnabled()) {
+    return 'powershell'
+  }
+  return 'bash'
 }

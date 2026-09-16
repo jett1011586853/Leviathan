@@ -68,6 +68,104 @@ function isExecutable(shellPath: string): boolean {
 }
 
 /**
+ * Windows-specific bash candidates, checked after `which bash` fails a probe.
+ *
+ * `which('bash')` on Windows resolves to C:\WINDOWS\system32\bash.exe whenever
+ * WSL is installed, and that launcher is only a thin wrapper around the WSL
+ * service: if the registered distro cannot start (moved or deleted ext4.vhdx,
+ * stopped service, distro unregistered) every command exits 1 with an
+ * unreadable UTF-16 dump from the service. Git for Windows ships a standalone
+ * bash that works without WSL, so prefer it once the launcher is shown to be
+ * broken.
+ */
+function getWindowsBashCandidates(): string[] {
+  const candidates: string[] = []
+  const programFiles = process.env.ProgramFiles
+  const programFilesX86 = process.env['ProgramFiles(x86)']
+  const localAppData = process.env.LOCALAPPDATA
+  if (programFiles) {
+    candidates.push(
+      resolve(programFiles, 'Git', 'bin', 'bash.exe'),
+      resolve(programFiles, 'Git', 'usr', 'bin', 'bash.exe'),
+    )
+  }
+  if (programFilesX86) {
+    candidates.push(
+      resolve(programFilesX86, 'Git', 'bin', 'bash.exe'),
+      resolve(programFilesX86, 'Git', 'usr', 'bin', 'bash.exe'),
+    )
+  }
+  if (localAppData) {
+    candidates.push(
+      resolve(localAppData, 'Programs', 'Git', 'bin', 'bash.exe'),
+    )
+  }
+  // WSL launcher last: usable only when the distro actually starts.
+  candidates.push('C:\\WINDOWS\\system32\\bash.exe')
+  return candidates
+}
+
+const SHELL_PROBE_TIMEOUT_MS = 5_000
+const SHELL_PROBE_MARKER = 'leviathan-shell-probe-ok'
+const shellProbeCache = new Map<string, boolean>()
+
+/**
+ * Run the shell for real before trusting it.
+ *
+ * isExecutable() only proves the file exists on Windows (fs.access X_OK maps
+ * to a permission check that always passes), so a WSL launcher that cannot
+ * start a distro looked healthy and the Bash tool failed on every call with a
+ * garbled service error. Probing with one trivial command is the only way to
+ * tell a working bash from a launcher that has nothing behind it.
+ */
+async function probePosixShell(shellPath: string): Promise<boolean> {
+  const cached = shellProbeCache.get(shellPath)
+  if (cached !== undefined) return cached
+
+  const usable = await new Promise<boolean>(resolvePromise => {
+    let settled = false
+    const finish = (value: boolean) => {
+      if (settled) return
+      settled = true
+      resolvePromise(value)
+    }
+
+    try {
+      const child = spawn(shellPath, ['-c', `printf ${SHELL_PROBE_MARKER}`], {
+        stdio: ['ignore', 'pipe', 'ignore'],
+        windowsHide: true,
+      })
+      let stdout = ''
+      const timer = setTimeout(() => {
+        try {
+          child.kill()
+        } catch {
+          // Process may have exited already.
+        }
+        finish(false)
+      }, SHELL_PROBE_TIMEOUT_MS)
+
+      child.stdout?.on('data', chunk => {
+        stdout += chunk.toString()
+      })
+      child.on('error', () => {
+        clearTimeout(timer)
+        finish(false)
+      })
+      child.on('close', code => {
+        clearTimeout(timer)
+        finish(code === 0 && stdout.includes(SHELL_PROBE_MARKER))
+      })
+    } catch {
+      finish(false)
+    }
+  })
+
+  shellProbeCache.set(shellPath, usable)
+  return usable
+}
+
+/**
  * Determines the best available shell to use.
  */
 export async function findSuitableShell(): Promise<string> {
@@ -78,8 +176,13 @@ export async function findSuitableShell(): Promise<string> {
     const isSupported =
       shellOverride.includes('bash') || shellOverride.includes('zsh')
     if (isSupported && isExecutable(shellOverride)) {
-      logForDebugging(`Using shell override: ${shellOverride}`)
-      return shellOverride
+      if (await probePosixShell(shellOverride)) {
+        logForDebugging(`Using shell override: ${shellOverride}`)
+        return shellOverride
+      }
+      logForDebugging(
+        `LEVIATHAN_CODE_SHELL="${shellOverride}" exists but failed to run a trivial command; falling back to detection.`,
+      )
     } else {
       // Note, if we ever want to add support for new shells here we'll need to update or Bash tool parsing to account for this
       logForDebugging(
@@ -122,7 +225,39 @@ export async function findSuitableShell(): Promise<string> {
     supportedShells.unshift(env_shell)
   }
 
-  const shellPath = supportedShells.find(shell => shell && isExecutable(shell))
+  // Windows: `which bash` finds the WSL launcher first, which is useless when
+  // the distro cannot start. Git for Windows ships a self-contained bash.
+  // Appended after the discovered shells so an explicitly configured or
+  // working default keeps priority; each candidate is probed below.
+  if (getPlatform() === 'windows') {
+    for (const candidate of getWindowsBashCandidates()) {
+      supportedShells.push(candidate)
+    }
+  }
+
+  const executableCandidates = supportedShells.filter(
+    (shell): shell is string => Boolean(shell) && isExecutable(shell),
+  )
+
+  // Probe each candidate with a real command. The first one that actually runs
+  // wins; an executable that cannot run (broken WSL launcher) is only used as a
+  // last resort so the error surfaces instead of "no shell found".
+  let shellPath: string | undefined
+  for (const candidate of executableCandidates) {
+    if (await probePosixShell(candidate)) {
+      shellPath = candidate
+      break
+    }
+    logForDebugging(
+      `Shell candidate "${candidate}" is executable but failed its probe; trying the next one.`,
+    )
+  }
+  if (!shellPath && executableCandidates.length > 0) {
+    shellPath = executableCandidates[0]
+    logForDebugging(
+      `No shell passed the probe; falling back to "${shellPath}" and letting the command surface its own error.`,
+    )
+  }
 
   // If no valid shell found, throw a helpful error
   if (!shellPath) {

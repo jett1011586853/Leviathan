@@ -2684,12 +2684,14 @@ export function normalizeContentFromAPI(
               toolName: sanitizeToolNameForAnalytics(contentBlock.name),
               inputLen: contentBlock.input.length,
             })
-            if (process.env.USER_TYPE === 'ant') {
-              logForDebugging(
-                `tool input JSON parse fail: ${contentBlock.input.slice(0, 200)}`,
-                { level: 'warn' },
-              )
-            }
+            // Always log locally: without the raw prefix there is no way to
+            // tell a truncated stream from a malformed gateway payload, and
+            // the validation error downstream only reports "required
+            // parameter missing".
+            logForDebugging(
+              `${contentBlock.name} tool input JSON parse fail (len=${contentBlock.input.length}): ${contentBlock.input.slice(0, 200)}`,
+              { level: 'warn' },
+            )
           }
           normalizedInput = parsed ?? {}
         } else {

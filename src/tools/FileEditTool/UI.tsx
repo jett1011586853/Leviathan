@@ -146,8 +146,18 @@ export function renderToolUseErrorMessage(result: ToolResultBlockParam['content'
           <Text color="error">File not found</Text>
         </MessageResponse>;
     }
+    // Keep the short headline, but show the underlying reason instead of
+    // swallowing it: "Error editing file" alone gives the user nothing to act
+    // on when the cause is a stale read, a denied path, or a disk error.
+    const reason = (() => {
+      const line = errorMessage?.split(/\r?\n/).map(candidate => candidate.trim()).find(Boolean);
+      if (!line) return null;
+      const compact = line.replace(/\s+/g, ' ');
+      return compact.length > 200 ? `${compact.slice(0, 197)}...` : compact;
+    })();
     return <MessageResponse>
         <Text color="error">Error editing file</Text>
+        {reason ? <Text dimColor>{reason}</Text> : null}
       </MessageResponse>;
   }
   return <FallbackToolUseErrorMessage result={result} verbose={verbose} />;

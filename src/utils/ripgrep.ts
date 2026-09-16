@@ -1,5 +1,6 @@
 import type { ChildProcess, ExecFileException } from 'child_process'
 import { execFile, spawn } from 'child_process'
+import { existsSync } from 'fs'
 import memoize from 'lodash-es/memoize.js'
 import { homedir } from 'os'
 import * as path from 'path'
@@ -7,7 +8,7 @@ import { logEvent } from 'src/services/analytics/index.js'
 import { fileURLToPath } from 'url'
 import { isInBundledMode } from './bundledMode.js'
 import { logForDebugging } from './debug.js'
-import { isEnvDefinedFalsy } from './envUtils.js'
+import { getLeviathanConfigHomeDir, isEnvDefinedFalsy } from './envUtils.js'
 import { execFileNoThrow } from './execFileNoThrow.js'
 import { findExecutable } from './findExecutable.js'
 import { logError } from './log.js'
@@ -28,18 +29,160 @@ type RipgrepConfig = {
   argv0?: string
 }
 
+/**
+ * Directory name ripgrep binaries are vendored under, matching the layout
+ * used by src/utils/vendor and dist/vendor.
+ */
+function ripgrepPlatformDirName(): string {
+  return process.platform === 'win32'
+    ? `${process.arch}-win32`
+    : `${process.arch}-${process.platform}`
+}
+
+function ripgrepBinaryName(): string {
+  return process.platform === 'win32' ? 'rg.exe' : 'rg'
+}
+
+/**
+ * Resolve the vendored ripgrep binary.
+ *
+ * Search order matters: a build-relative vendor directory is what the
+ * original layout assumed, but dist bundles and dist-release executables do
+ * not ship it. Falling back to the repo root and to the per-user config home
+ * means one downloaded binary (see scripts/fetch-ripgrep.ps1) fixes every
+ * launch mode at once, including `bun run src/entrypoints/cli.tsx` and the
+ * compiled leviathan.exe.
+ */
+function findVendoredRipgrep(): string | null {
+  const platformDir = ripgrepPlatformDirName()
+  const binary = ripgrepBinaryName()
+  const candidates = [
+    // Next to the running executable. This is the only location a compiled
+    // leviathan.exe can reach: import.meta.url points inside the executable's
+    // virtual filesystem, so __dirname-relative lookups never hit the disk.
+    path.resolve(
+      path.dirname(process.execPath),
+      'vendor',
+      'ripgrep',
+      platformDir,
+      binary,
+    ),
+    path.resolve(__dirname, 'vendor', 'ripgrep', platformDir, binary),
+    path.resolve(
+      __dirname,
+      '..',
+      '..',
+      'vendor',
+      'ripgrep',
+      platformDir,
+      binary,
+    ),
+    path.resolve(
+      getLeviathanConfigHomeDir(),
+      'vendor',
+      'ripgrep',
+      platformDir,
+      binary,
+    ),
+  ]
+
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) return candidate
+  }
+  return null
+}
+
+/**
+ * Locate a usable system ripgrep. Returns the bare command name when ripgrep
+ * is on PATH (so the OS resolves it, same anti-hijack reasoning as the
+ * USE_BUILTIN_RIPGREP branch below) or an absolute path from a known install
+ * location.
+ */
+function findSystemRipgrep(): string | null {
+  const { cmd: systemPath } = findExecutable('rg', [])
+  if (systemPath !== 'rg') return 'rg'
+
+  if (process.platform === 'win32') {
+    const home = homedir()
+    const knownLocations = [
+      process.env.LOCALAPPDATA
+        ? path.resolve(
+            process.env.LOCALAPPDATA,
+            'Microsoft',
+            'WinGet',
+            'Links',
+            'rg.exe',
+          )
+        : null,
+      process.env.ProgramData
+        ? path.resolve(
+            process.env.ProgramData,
+            'chocolatey',
+            'bin',
+            'rg.exe',
+          )
+        : null,
+      path.resolve(home, 'scoop', 'shims', 'rg.exe'),
+      path.resolve(home, '.cargo', 'bin', 'rg.exe'),
+    ].filter((value): value is string => value !== null)
+
+    for (const location of knownLocations) {
+      if (existsSync(location)) return location
+    }
+  }
+
+  return null
+}
+
+/**
+ * Actionable message shown when no ripgrep binary can be found anywhere.
+ * Previously this surfaced as a raw ENOENT from spawn, which read like an
+ * unrelated filesystem error.
+ */
+export function getMissingRipgrepMessage(attemptedPath: string): string {
+  const installHint =
+    process.platform === 'win32'
+      ? 'winget install BurntSushi.ripgrep.MSVC'
+      : 'brew install ripgrep'
+  return (
+    `ripgrep is not available, so Grep and Glob cannot run.\n` +
+    `Looked for a bundled binary at: ${attemptedPath}\n` +
+    `Fix with any one of:\n` +
+    `  1. powershell -File scripts/fetch-ripgrep.ps1   (downloads the binary into the Leviathan config home)\n` +
+    `  2. ${installHint}   (then restart Leviathan, or set USE_BUILTIN_RIPGREP=0)\n` +
+    `  3. LEVIATHAN_CODE_RIPGREP_PATH=<path to rg>   (point at an existing binary)`
+  )
+}
+
+// Set when a spawn of the configured binary fails and we successfully switch
+// to a different one. Consulted by ripgrepCommand() so every later call uses
+// the working binary without re-probing.
+let ripgrepOverride: RipgrepConfig | null = null
+let ripgrepFallbackAttempted = false
+
+function setRipgrepFallback(config: RipgrepConfig | null): void {
+  ripgrepOverride = config
+}
+
 const getRipgrepConfig = memoize((): RipgrepConfig => {
+  const explicitPath = process.env.LEVIATHAN_CODE_RIPGREP_PATH
+  if (explicitPath) {
+    if (existsSync(explicitPath)) {
+      return { mode: 'system', command: explicitPath, args: [] }
+    }
+    logForDebugging(
+      `LEVIATHAN_CODE_RIPGREP_PATH "${explicitPath}" does not exist; ignoring it.`,
+    )
+  }
+
   const userWantsSystemRipgrep = isEnvDefinedFalsy(
     process.env.USE_BUILTIN_RIPGREP,
   )
 
   // Try system ripgrep if user wants it
   if (userWantsSystemRipgrep) {
-    const { cmd: systemPath } = findExecutable('rg', [])
-    if (systemPath !== 'rg') {
-      // SECURITY: Use command name 'rg' instead of systemPath to prevent PATH hijacking
-      // If we used systemPath, a malicious ./rg.exe in current directory could be executed
-      // Using just 'rg' lets the OS resolve it safely with NoDefaultCurrentDirectoryInExePath protection
+    const system = findSystemRipgrep()
+    if (system) {
       return { mode: 'system', command: 'rg', args: [] }
     }
   }
@@ -55,13 +198,33 @@ const getRipgrepConfig = memoize((): RipgrepConfig => {
     }
   }
 
-  const rgRoot = path.resolve(__dirname, 'vendor', 'ripgrep')
-  const command =
-    process.platform === 'win32'
-      ? path.resolve(rgRoot, `${process.arch}-win32`, 'rg.exe')
-      : path.resolve(rgRoot, `${process.arch}-${process.platform}`, 'rg')
+  const vendored = findVendoredRipgrep()
+  if (vendored) {
+    return { mode: 'builtin', command: vendored, args: [] }
+  }
 
-  return { mode: 'builtin', command, args: [] }
+  // No vendored binary (the common case for dist/dist-release builds, which do
+  // not copy vendor/). Fall back to a system install before giving up so Grep
+  // and Glob keep working.
+  const system = findSystemRipgrep()
+  if (system) {
+    logForDebugging(
+      'Bundled ripgrep is missing; falling back to system ripgrep.',
+    )
+    return { mode: 'system', command: system, args: [] }
+  }
+
+  return {
+    mode: 'builtin',
+    command: path.resolve(
+      __dirname,
+      'vendor',
+      'ripgrep',
+      ripgrepPlatformDirName(),
+      ripgrepBinaryName(),
+    ),
+    args: [],
+  }
 })
 
 export function ripgrepCommand(): {
@@ -69,7 +232,7 @@ export function ripgrepCommand(): {
   rgArgs: string[]
   argv0?: string
 } {
-  const config = getRipgrepConfig()
+  const config = ripgrepOverride ?? getRipgrepConfig()
   return {
     rgPath: config.command,
     rgArgs: config.args,
@@ -383,6 +546,33 @@ export async function ripGrep(
       // These should be surfaced to the user rather than silently returning empty results
       const CRITICAL_ERROR_CODES = ['ENOENT', 'EACCES', 'EPERM']
       if (CRITICAL_ERROR_CODES.includes(error.code as string)) {
+        // The configured binary is missing or unusable - typically a dist or
+        // dist-release build that never shipped vendor/ripgrep. Swap to a
+        // system ripgrep and retry once before failing the whole search.
+        const config = ripgrepOverride ?? getRipgrepConfig()
+        if (!ripgrepFallbackAttempted && config.mode === 'builtin') {
+          ripgrepFallbackAttempted = true
+          const system = findSystemRipgrep()
+          if (system) {
+            setRipgrepFallback({ mode: 'system', command: system, args: [] })
+            logForDebugging(
+              `ripgrep at ${config.command} failed (${String(error.code)}); retrying with system ripgrep (${system}).`,
+            )
+            ripGrepRaw(
+              args,
+              target,
+              abortSignal,
+              (retryError, retryStdout, retryStderr) => {
+                handleResult(retryError, retryStdout, retryStderr, true)
+              },
+            )
+            return
+          }
+        }
+        if (error.code === 'ENOENT' && config.mode === 'builtin') {
+          reject(new Error(getMissingRipgrepMessage(config.command)))
+          return
+        }
         reject(error)
         return
       }
@@ -537,7 +727,7 @@ export function getRipgrepStatus(): {
   path: string
   working: boolean | null // null if not yet tested
 } {
-  const config = getRipgrepConfig()
+  const config = ripgrepOverride ?? getRipgrepConfig()
   return {
     mode: config.mode,
     path: config.command,
@@ -554,7 +744,7 @@ const testRipgrepOnFirstUse = memoize(async (): Promise<void> => {
     return
   }
 
-  const config = getRipgrepConfig()
+  const config = ripgrepOverride ?? getRipgrepConfig()
 
   try {
     let test: { code: number; stdout: string }

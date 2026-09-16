@@ -40,6 +40,7 @@ import { runCleanupFunctions } from './cleanupRegistry.js'
 import { logForDebugging } from './debug.js'
 import { logForDiagnosticsNoPII } from './diagLogs.js'
 import { isEnvTruthy } from './envUtils.js'
+import { decideInteractiveSigint } from './interactiveSigint.js'
 import { getCurrentSessionTitle, sessionIdExists } from './sessionStorage.js'
 import { sleep } from './sleep.js'
 import { profileReport } from './startupProfiler.js'
@@ -253,6 +254,7 @@ export const setupGracefulShutdown = memoize(() => {
   // active for Ink cleanup.
   onExit(() => {})
 
+  let previousInteractiveSigintAt: number | undefined
   process.on('SIGINT', () => {
     // In print mode, print.ts registers its own SIGINT handler that aborts
     // the in-flight query and calls gracefulShutdown(0); skip here to
@@ -262,6 +264,24 @@ export const setupGracefulShutdown = memoize(() => {
     if (process.argv.includes('-p') || process.argv.includes('--print')) {
       return
     }
+
+    const decision = decideInteractiveSigint(
+      getIsInteractive(),
+      Date.now(),
+      previousInteractiveSigintAt,
+    )
+    previousInteractiveSigintAt = decision.nextSignalAt
+    if (decision.action === 'ignore') {
+      logForDiagnosticsNoPII('warn', 'interactive_sigint_ignored', {
+        reason: 'confirmation_required',
+      })
+      logForDebugging(
+        'Ignored a process-level SIGINT in the interactive REPL; press Ctrl+C again immediately to exit.',
+        { level: 'warn' },
+      )
+      return
+    }
+
     logForDiagnosticsNoPII('info', 'shutdown_signal', { signal: 'SIGINT' })
     void gracefulShutdown(0)
   })

@@ -12,19 +12,30 @@ Workflow:
 4. Use action="cdp_send" for low-level Chrome DevTools Protocol operations after the user has enabled Browser Use and allowed full CDP access for the connected Browser Use session.
 5. After a meaningful page mutation, use action="snapshot" or action="screenshot" to verify the result.
 
+Vision workflow (for models that can see images):
+- action="screenshot" with annotate=true returns the image plus a numbered box on every visible control and their coordinates. Read the number of the control you want and click it with action="click" node_index=<number>. This is the most reliable path for shadow DOM, canvas, and cross-origin frame content, where selectors cannot reach the element.
+- action="click" with x and y clicks raw viewport coordinates when no selector or number fits.
+- action="snapshot" with include_screenshot=true returns the DOM summary and the image in one call.
+
+Site-isolation workflow (pages whose controls live in cross-origin iframes):
+- action="list_tabs" with include_frames=true reports the cross-origin frames of the target tab, each with a cdp_session_id.
+- action="evaluate" with scope="all_frames" runs the expression in the main frame and in every attached cross-origin frame, returning one result per frame. action="evaluate" retries across frames automatically when the main frame reports that something is not defined.
+- action="click" and action="type_text" fall back to the cross-origin frames automatically when the selector is not found in the main frame.
+- action="cdp_send" with cdp_session_id targets one frame directly.
+
 Actions:
 - launch_browser: starts Edge/Chrome/Brave with a DevTools port. Optional url opens immediately.
 - connect: checks that a DevTools endpoint is reachable.
 - list_tabs: lists open DevTools tabs.
 - new_tab: opens a new tab.
 - navigate: navigates a tab to url.
-- snapshot: reads page title, URL, visible text, and selector candidates.
-- evaluate: executes JavaScript in the selected tab, like DevTools console.
-- click: clicks a CSS selector.
+- snapshot: reads page title, URL, visible text, and selector candidates, including cross-origin frames. Set include_screenshot=true to also attach a screenshot.
+- evaluate: executes JavaScript in the selected tab, like DevTools console. Set scope="all_frames" to run in every attached frame. Snippets that redeclare a name already present in the page are retried inside a fresh scope automatically.
+- click: clicks a CSS selector, an element number from the last annotated screenshot (node_index), or raw viewport coordinates (x and y).
 - type_text: writes text into an input, textarea, or contenteditable selector.
-- stream_type_text: focuses a browser code editor and inserts text one character at a time via CDP. It supports Monaco, CodeMirror, Ace, textarea, contenteditable, and role=textbox targets. Leviathan reconciles every newline and leading indentation against the exact source prefix, so the result remains identical in editors with or without automatic indentation, then verifies the final editor contents when the editor API is readable. selector is optional; when omitted, Leviathan auto-detects common code editors. clear defaults to true and replaces current editor contents. Set clear=false to append. typing_delay_ms controls the visible per-character delay and defaults to 200.
+- stream_type_text: focuses a browser code editor and inserts text one character at a time via CDP. It supports Monaco, CodeMirror, Ace, textarea, contenteditable, and role=textbox targets. After every newline, Leviathan reads the live editor state and measures what the editor inserted by itself: an editor with automatic indentation has those characters deleted before the required indentation is streamed, and an editor without automatic indentation is left untouched. Managed editors whose state cannot be read use a line-local keyboard normalization fallback. This works with or without automatic indentation and avoids per-character whole-document rewrites. Final contents are verified when the editor API is readable and repaired only when a mismatch is detected. selector is optional; when omitted, Leviathan auto-detects common code editors. clear defaults to true and replaces current editor contents. Set clear=false to append. typing_delay_ms controls the visible per-character delay and defaults to 200.
 - press_key: sends a simple key such as Enter, Tab, Escape, Backspace, Delete, or arrow keys.
-- screenshot: captures a browser screenshot and sends it to the model.
+- screenshot: captures a browser screenshot and sends it to the model. Set annotate=true for numbered control boxes plus their coordinates.
 - cdp_send: sends a raw Chrome DevTools Protocol command. Provide cdp_method, optional cdp_params, optional cdp_target ("tab" or "browser"), and optional cdp_session_id for flattened sessions. This can inspect or control sensitive browser internals such as targets, cookies, storage, network state, permissions, downloads, and browser process data.
 - close_tab: closes a tab.
 

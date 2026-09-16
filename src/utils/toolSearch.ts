@@ -312,6 +312,19 @@ export function isToolSearchEnabledOptimistic(): boolean {
 
   if (!loggedOptimistic) {
     loggedOptimistic = true
+    // A proxy gateway that does not forward tool_reference blocks leaves
+    // deferred tools without schemas, so the model has to guess parameter
+    // names. Surface the tradeoff once instead of letting it show up as a
+    // stream of InputValidationErrors.
+    if (
+      process.env.ENABLE_TOOL_SEARCH &&
+      getAPIProvider() === 'firstParty' &&
+      !isFirstPartyAnthropicBaseUrl()
+    ) {
+      logForDebugging(
+        `[ToolSearch:optimistic] ENABLE_TOOL_SEARCH=${process.env.ENABLE_TOOL_SEARCH} with non-first-party base URL (${process.env.ANTHROPIC_BASE_URL}). Deferred tools only get their parameter schemas when the gateway forwards tool_reference blocks. If tool calls fail with missing or unexpected parameters, set LEVIATHAN_CODE_DISABLE_EXPERIMENTAL_BETAS=1 (or ENABLE_TOOL_SEARCH=false) to send every schema inline.`,
+      )
+    }
     logForDebugging(
       `[ToolSearch:optimistic] mode=${mode}, ENABLE_TOOL_SEARCH=${process.env.ENABLE_TOOL_SEARCH}, result=true`,
     )

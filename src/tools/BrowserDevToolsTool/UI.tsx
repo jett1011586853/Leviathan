@@ -19,6 +19,23 @@ export function getToolUseSummary(
   if (input.action === 'stream_type_text') {
     return `stream type${input.selector ? ` ${input.selector}` : ''}`
   }
+  if (input.action === 'click' && input.node_index !== undefined) {
+    return `click #${input.node_index}`
+  }
+  if (
+    input.action === 'click' &&
+    input.x !== undefined &&
+    input.y !== undefined &&
+    !input.selector
+  ) {
+    return `click ${input.x},${input.y}`
+  }
+  if (input.action === 'screenshot' && input.annotate) {
+    return 'annotated screenshot'
+  }
+  if (input.action === 'snapshot' && input.include_screenshot) {
+    return 'snapshot + screenshot'
+  }
   if (input.selector) return `${input.action} ${input.selector}`
   if (input.tab_id) return `${input.action} ${input.tab_id}`
   return input.action

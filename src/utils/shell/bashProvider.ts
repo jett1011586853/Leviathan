@@ -225,7 +225,12 @@ export async function createBashShellProvider(
         await ensureSocketInitialized()
       }
       const leviathanTmuxEnv = getLeviathanTmuxEnv()
-      const env: Record<string, string> = {}
+      const env: Record<string, string> = {
+        // Windows Python writes non-ASCII to a redirected stdout using the
+        // locale encoding (cp936 here) unless told otherwise, which shows up as
+        // mojibake in the tool result. Only stdio is affected, not file I/O.
+        PYTHONIOENCODING: 'utf-8',
+      }
       // CRITICAL: Override TMUX to isolate ALL tmux commands to Leviathan's socket.
       // This is NOT the user's TMUX value - it points to Leviathan's isolated socket.
       // When null (before socket initializes), user's TMUX is preserved.

@@ -46,6 +46,25 @@ New-Item -ItemType Directory -Path $stageDirectory -Force | Out-Null
 foreach ($entry in $sources.GetEnumerator()) {
     Copy-Item -LiteralPath $entry.Key -Destination (Join-Path $stageDirectory $entry.Value) -Force
 }
+
+# Ship ripgrep next to the executable when it has been provisioned. The Grep
+# and Glob tools resolve it from <exe dir>\vendor\ripgrep\<arch>-win32\rg.exe
+# in a compiled build. Optional: the package still works without it, but the
+# machine then needs a system ripgrep on PATH.
+$ripgrepSource = Join-Path $repoRoot 'vendor\ripgrep\x64-win32\rg.exe'
+if (-not (Test-Path -LiteralPath $ripgrepSource)) {
+    $ripgrepSource = Join-Path $repoRoot 'src\utils\vendor\ripgrep\x64-win32\rg.exe'
+}
+if (Test-Path -LiteralPath $ripgrepSource) {
+    $ripgrepDestination = Join-Path $stageDirectory 'vendor\ripgrep\x64-win32\rg.exe'
+    New-Item -ItemType Directory -Path (Split-Path -Parent $ripgrepDestination) -Force | Out-Null
+    Copy-Item -LiteralPath $ripgrepSource -Destination $ripgrepDestination -Force
+    Write-Host "Bundled ripgrep into the offline package."
+}
+else {
+    Write-Warning "vendor\ripgrep\x64-win32\rg.exe not found; run scripts\fetch-ripgrep.ps1 before packaging, or the offline install will need a system ripgrep."
+}
+
 [IO.File]::WriteAllText((Join-Path $stageDirectory 'VERSION'), $version, [Text.Encoding]::ASCII)
 
 $hashedAssets = @(
